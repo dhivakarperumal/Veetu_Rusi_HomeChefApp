@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -101,16 +102,19 @@ function countByStatus(status: OrderStatus) {
 function OrderCard({
   order,
   onAccept,
+  onPress,
 }: {
   order: Order;
   onAccept?: (id: string) => void;
+  onPress?: () => void;
 }) {
   const cfg = STATUS_CONFIG[order.status];
   const showAccept = order.status === "New";
   const showStart  = order.status === "Preparing";
 
   return (
-    <View
+    <Pressable
+      onPress={onPress}
       style={{
         backgroundColor: colors.cardBackground,
         borderRadius: 20,
@@ -243,7 +247,7 @@ function OrderCard({
           </Text>
         </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -254,6 +258,7 @@ const TABS: OrderStatus[] = ["New", "Preparing", "Ready", "Completed"];
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderStatus>("New");
   const [orders, setOrders] = useState<Order[]>(ORDERS);
+  const router = useRouter();
 
   const filtered = orders.filter((o) => o.status === activeTab);
 
@@ -459,6 +464,7 @@ export default function OrdersScreen() {
               key={order.id}
               order={order}
               onAccept={handleAccept}
+              onPress={() => router.push(`/order/${order.id}`)}
             />
           ))
         )}
