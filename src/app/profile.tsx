@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +9,12 @@ import BottomBar from "./componets/buttombar";
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 const MENU_ITEMS = [
+  {
+    key: "menu",
+    label: "Manage Menu",
+    icon: "restaurant-outline" as const,
+    route: "/menu",
+  },
   {
     key: "kitchen",
     label: "Kitchen Information",
@@ -78,18 +85,30 @@ function MenuItem({
   icon,
   label,
   onPress,
+  route,
   danger,
   isLast,
 }: {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   onPress?: () => void;
+  route?: string;
   danger?: boolean;
   isLast?: boolean;
 }) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (route) {
+      router.push(route);
+    } else if (onPress) {
+      onPress();
+    }
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => ({
         backgroundColor: pressed ? "#F2F7F4" : colors.cardBackground,
       })}
@@ -316,6 +335,7 @@ export default function ProfileScreen() {
               key={item.key}
               icon={item.icon}
               label={item.label}
+              route={item.route}
               isLast={idx === MENU_ITEMS.length - 1}
             />
           ))}

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -281,6 +282,7 @@ function DishCard({
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function DishesScreen() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [search, setSearch] = useState("");
   const [dishes, setDishes] = useState<Dish[]>(DISHES);
@@ -315,6 +317,7 @@ export default function DishesScreen() {
           {
             customContent: (
               <Pressable
+                onPress={() => router.push("/add-dish")}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
