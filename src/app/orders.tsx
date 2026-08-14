@@ -1,15 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
+import PageHeader from "./componets/pageheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
@@ -87,9 +82,9 @@ const STATUS_CONFIG: Record<
   OrderStatus,
   { color: string; bg: string; label: string }
 > = {
-  New:       { color: "#E65100", bg: "#FFF3E0", label: "New" },
+  New: { color: "#E65100", bg: "#FFF3E0", label: "New" },
   Preparing: { color: "#1565C0", bg: "#E3F2FD", label: "Preparing" },
-  Ready:     { color: "#2E7D32", bg: "#E8F5E9", label: "Ready" },
+  Ready: { color: "#2E7D32", bg: "#E8F5E9", label: "Ready" },
   Completed: { color: "#4A675F", bg: "#ECEFF1", label: "Completed" },
 };
 
@@ -110,7 +105,7 @@ function OrderCard({
 }) {
   const cfg = STATUS_CONFIG[order.status];
   const showAccept = order.status === "New";
-  const showStart  = order.status === "Preparing";
+  const showStart = order.status === "Preparing";
 
   return (
     <Pressable
@@ -150,11 +145,17 @@ function OrderCard({
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text
-            style={{ color: colors.primaryDark, fontSize: 13, fontWeight: "700" }}
+            style={{
+              color: colors.primaryDark,
+              fontSize: 13,
+              fontWeight: "700",
+            }}
           >
             #{order.id}
           </Text>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>{order.time}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>
+            {order.time}
+          </Text>
         </View>
       </View>
 
@@ -168,7 +169,9 @@ function OrderCard({
       />
 
       {/* Customer row */}
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+      >
         <View
           style={{
             height: 42,
@@ -193,7 +196,8 @@ function OrderCard({
             {order.customer}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
-            {order.items} {order.items === 1 ? "item" : "items"} · ₹{order.amount}
+            {order.items} {order.items === 1 ? "item" : "items"} · ₹
+            {order.amount}
           </Text>
         </View>
       </View>
@@ -207,9 +211,7 @@ function OrderCard({
         }}
       >
         <Ionicons name="location-outline" size={14} color={colors.muted} />
-        <Text
-          style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
-        >
+        <Text style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}>
           {order.location}
         </Text>
       </View>
@@ -225,9 +227,7 @@ function OrderCard({
             alignItems: "center",
           }}
         >
-          <Text
-            style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}
-          >
+          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
             Accept
           </Text>
         </Pressable>
@@ -264,149 +264,93 @@ export default function OrdersScreen() {
 
   const handleAccept = (id: string) => {
     setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: "Preparing" as OrderStatus } : o))
+      prev.map((o) =>
+        o.id === id ? { ...o, status: "Preparing" as OrderStatus } : o,
+      ),
     );
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      {/* ── Page Header ── */}
-      <SafeAreaView
-        edges={["top"]}
-        style={{ backgroundColor: colors.pageBackground }}
+      <PageHeader
+        title="Orders"
+        rightActions={[
+          { icon: "search-outline", onPress: () => {} },
+          { icon: "options-outline", onPress: () => {} },
+        ]}
+      />
+      {/* ── Tab bar ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: 14,
+          gap: 8,
+        }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 14,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 26,
-              fontWeight: "800",
-              color: colors.primaryDark,
-            }}
-          >
-            Orders
-          </Text>
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {/* Search */}
+        {TABS.map((tab) => {
+          const count = orders.filter((o) => o.status === tab).length;
+          const isActive = activeTab === tab;
+          return (
             <Pressable
+              key={tab}
+              onPress={() => setActiveTab(tab)}
               style={{
-                height: 40,
-                width: 40,
-                borderRadius: 20,
-                backgroundColor: colors.cardBackground,
+                flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 50,
+                backgroundColor: isActive
+                  ? colors.primary
+                  : colors.cardBackground,
                 shadowColor: "#000",
-                shadowOpacity: 0.06,
+                shadowOpacity: isActive ? 0 : 0.05,
                 shadowOffset: { width: 0, height: 1 },
-                shadowRadius: 4,
-                elevation: 2,
+                shadowRadius: 3,
+                elevation: isActive ? 0 : 1,
               }}
             >
-              <Ionicons name="search-outline" size={20} color={colors.primaryDark} />
-            </Pressable>
-
-            {/* Filter */}
-            <Pressable
-              style={{
-                height: 40,
-                width: 40,
-                borderRadius: 20,
-                backgroundColor: colors.cardBackground,
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#000",
-                shadowOpacity: 0.06,
-                shadowOffset: { width: 0, height: 1 },
-                shadowRadius: 4,
-                elevation: 2,
-              }}
-            >
-              <Ionicons name="options-outline" size={20} color={colors.primaryDark} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* ── Tab bar ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingBottom: 14,
-            gap: 8,
-          }}
-        >
-          {TABS.map((tab) => {
-            const count = orders.filter((o) => o.status === tab).length;
-            const isActive = activeTab === tab;
-            return (
-              <Pressable
-                key={tab}
-                onPress={() => setActiveTab(tab)}
+              <Text
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 50,
-                  backgroundColor: isActive ? colors.primary : colors.cardBackground,
-                  shadowColor: "#000",
-                  shadowOpacity: isActive ? 0 : 0.05,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowRadius: 3,
-                  elevation: isActive ? 0 : 1,
+                  fontSize: 13,
+                  fontWeight: "700",
+                  color: isActive ? "#fff" : colors.label,
                 }}
               >
-                <Text
+                {tab}
+              </Text>
+              {count > 0 && (
+                <View
                   style={{
-                    fontSize: 13,
-                    fontWeight: "700",
-                    color: isActive ? "#fff" : colors.label,
+                    marginLeft: 6,
+                    height: 20,
+                    minWidth: 20,
+                    borderRadius: 10,
+                    backgroundColor: isActive
+                      ? "rgba(255,255,255,0.28)"
+                      : colors.softCard,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 5,
                   }}
                 >
-                  {tab}
-                </Text>
-                {count > 0 && (
-                  <View
+                  <Text
                     style={{
-                      marginLeft: 6,
-                      height: 20,
-                      minWidth: 20,
-                      borderRadius: 10,
-                      backgroundColor: isActive
-                        ? "rgba(255,255,255,0.28)"
-                        : colors.softCard,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingHorizontal: 5,
+                      fontSize: 11,
+                      fontWeight: "800",
+                      color: isActive ? "#fff" : colors.primary,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "800",
-                        color: isActive ? "#fff" : colors.primary,
-                      }}
-                    >
-                      {count}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </SafeAreaView>
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       {/* ── Order list ── */}
       <ScrollView

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
+import PageHeader from "./componets/pageheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Category = "All" | "Veg" | "Non-Veg" | "Combo";
@@ -306,59 +307,35 @@ export default function DishesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <SafeAreaView
-        edges={["top"]}
-        style={{ backgroundColor: colors.pageBackground }}
-      >
-        {/* Title row */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 14,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Pressable>
-              <Ionicons
-                name="menu-outline"
-                size={26}
-                color={colors.primaryDark}
-              />
-            </Pressable>
-            <Text
-              style={{
-                fontSize: 22,
-                fontWeight: "800",
-                color: colors.primaryDark,
-              }}
-            >
-              My Dishes
-            </Text>
-          </View>
+      <PageHeader
+        title="My Dishes"
+        onLeftPress={() => {}}
+        leftIcon="menu-outline"
+        rightActions={[
+          {
+            customContent: (
+              <Pressable
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: colors.primary,
+                  borderRadius: 50,
+                  paddingHorizontal: 16,
+                  paddingVertical: 9,
+                  gap: 5,
+                }}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+                  Add Dish
+                </Text>
+              </Pressable>
+            ),
+          },
+        ]}
+      />
 
-          {/* Add Dish button */}
-          <Pressable
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: colors.primary,
-              borderRadius: 50,
-              paddingHorizontal: 16,
-              paddingVertical: 9,
-              gap: 5,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-              Add Dish
-            </Text>
-          </Pressable>
-        </View>
-
+      <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* Search bar */}
         <View
           style={{
@@ -445,7 +422,7 @@ export default function DishesScreen() {
             );
           })}
         </ScrollView>
-      </SafeAreaView>
+      </View>
 
       {/* ── Dish list ── */}
       <ScrollView
