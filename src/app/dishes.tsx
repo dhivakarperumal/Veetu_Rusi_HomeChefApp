@@ -330,10 +330,7 @@ export default function DishesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <TopHeader
-        showHero={false}
-        title="My Products"
-      />
+      <TopHeader showHero={false} title="My Products" />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* Search bar */}

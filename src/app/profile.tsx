@@ -11,6 +11,12 @@ import BottomBar from "./componets/buttombar";
 // ── Menu items ────────────────────────────────────────────────────────────────
 const MENU_ITEMS = [
   {
+    key: "my_products",
+    label: "My Products",
+    icon: "cube-outline" as const,
+    route: "/myproducts",
+  },
+  {
     key: "menu",
     label: "Manage Menu",
     icon: "restaurant-outline" as const,

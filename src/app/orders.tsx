@@ -1,18 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
-    RefreshControl
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import api from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
-import api from "../api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
@@ -44,8 +44,17 @@ const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
   if (["pending", "new", "new order", "order placed"].includes(s)) return "New";
   if (["accepted", "preparing"].includes(s)) return "Preparing";
-  if (["food ready", "packing", "searching delivery partner", "delivery partner assigned"].includes(s)) return "Ready";
-  if (["out for delivery", "delivered", "completed"].includes(s)) return "Completed";
+  if (
+    [
+      "food ready",
+      "packing",
+      "searching delivery partner",
+      "delivery partner assigned",
+    ].includes(s)
+  )
+    return "Ready";
+  if (["out for delivery", "delivered", "completed"].includes(s))
+    return "Completed";
   return "New";
 };
 
@@ -230,13 +239,30 @@ export default function OrdersScreen() {
         status: mapStatus(o.status),
         rawStatus: o.status,
         customer: o.customer_name || "Unknown",
-        items: o.chef_total_quantity ?? (o.items?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0) || 0),
+        items:
+          o.chef_total_quantity ??
+          (o.items?.reduce(
+            (sum: number, item: any) => sum + (Number(item.quantity) || 1),
+            0,
+          ) ||
+            0),
         amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
-        location: o.customer_address || o.delivery_address || "Unknown Location",
-        time: o.ordered_at || o.created_at ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "-",
+        location:
+          o.customer_address || o.delivery_address || "Unknown Location",
+        time:
+          o.ordered_at || o.created_at
+            ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "-",
       }));
       // Optional: Filter out cancelled
-      setOrders(mappedOrders.filter((o: any) => (o.rawStatus || "").toLowerCase() !== "cancelled"));
+      setOrders(
+        mappedOrders.filter(
+          (o: any) => (o.rawStatus || "").toLowerCase() !== "cancelled",
+        ),
+      );
     } catch (error) {
       console.error("Failed to load orders:", error);
     } finally {
@@ -261,7 +287,9 @@ export default function OrdersScreen() {
 
   const handleMarkReady = async (id: string) => {
     try {
-      await api.patch(`/user-food-orders/status/${id}`, { status: "Food Ready" });
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status: "Food Ready",
+      });
       fetchOrders();
     } catch (e) {
       console.error(e);
@@ -296,74 +324,80 @@ export default function OrdersScreen() {
             gap: 8,
           }}
         >
-        {TABS.map((tab) => {
-          const count = orders.filter((o) => o.status === tab).length;
-          const isActive = activeTab === tab;
-          return (
-            <Pressable
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 50,
-                backgroundColor: isActive
-                  ? colors.primary
-                  : colors.cardBackground,
-                shadowColor: "#000",
-                shadowOpacity: isActive ? 0 : 0.05,
-                shadowOffset: { width: 0, height: 1 },
-                shadowRadius: 3,
-                elevation: isActive ? 0 : 1,
-              }}
-            >
-              <Text
+          {TABS.map((tab) => {
+            const count = orders.filter((o) => o.status === tab).length;
+            const isActive = activeTab === tab;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => setActiveTab(tab)}
                 style={{
-                  fontSize: 13,
-                  fontWeight: "700",
-                  color: isActive ? "#fff" : colors.label,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 50,
+                  backgroundColor: isActive
+                    ? colors.primary
+                    : colors.cardBackground,
+                  shadowColor: "#000",
+                  shadowOpacity: isActive ? 0 : 0.05,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowRadius: 3,
+                  elevation: isActive ? 0 : 1,
                 }}
               >
-                {tab}
-              </Text>
-              {count > 0 && (
-                <View
+                <Text
                   style={{
-                    marginLeft: 6,
-                    height: 20,
-                    minWidth: 20,
-                    borderRadius: 10,
-                    backgroundColor: isActive
-                      ? "rgba(255,255,255,0.28)"
-                      : colors.softCard,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingHorizontal: 5,
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: isActive ? "#fff" : colors.label,
                   }}
                 >
-                  <Text
+                  {tab}
+                </Text>
+                {count > 0 && (
+                  <View
                     style={{
-                      fontSize: 11,
-                      fontWeight: "800",
-                      color: isActive ? "#fff" : colors.primary,
+                      marginLeft: 6,
+                      height: 20,
+                      minWidth: 20,
+                      borderRadius: 10,
+                      backgroundColor: isActive
+                        ? "rgba(255,255,255,0.28)"
+                        : colors.softCard,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 5,
                     }}
                   >
-                    {count}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "800",
+                        color: isActive ? "#fff" : colors.primary,
+                      }}
+                    >
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* ── Order list ── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchOrders} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={fetchOrders}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 4,
