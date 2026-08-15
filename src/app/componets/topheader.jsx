@@ -24,7 +24,9 @@ export default function TopHeader({
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileDrop, setShowProfileDrop] = useState(false);
+  const [showNotifDrop, setShowNotifDrop] = useState(false);
   const [user, setUser] = useState(null);
+  const [todayNewOrders, setTodayNewOrders] = useState([]);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -32,8 +34,32 @@ export default function TopHeader({
       const storedUser = await getStoredUser();
       setUser(storedUser || null);
     };
-
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    // Fetch today's new orders for notifications
+    const fetchNotifications = async () => {
+      try {
+        const { default: api } = await import("../../api");
+        const res = await api.get("/user-food-orders/chef");
+        const today = new Date().toDateString();
+        const orders = res.data || [];
+        const newToday = orders.filter((o) => {
+          const s = (o.status || "").toLowerCase();
+          const isNew = ["pending", "new", "new order", "order placed"].includes(s);
+          const orderDate = new Date(o.ordered_at || o.created_at || Date.now()).toDateString();
+          return isNew && orderDate === today;
+        });
+        setTodayNewOrders(newToday);
+      } catch (err) {
+        console.log("Error fetching notifications", err);
+      }
+    };
+    fetchNotifications();
+    // Poll every 20 seconds while header is mounted
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => clearInterval(interval);
   }, []);
 
   const profileName =
@@ -62,7 +88,6 @@ export default function TopHeader({
           <View style={styles.modalScrim}>
             <TouchableWithoutFeedback>
               <View style={[styles.drawer, { paddingTop: insets.top + 20 }]}>
-                {/* Close button */}
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setShowMenu(false)}
@@ -71,14 +96,9 @@ export default function TopHeader({
                   <Ionicons name="close" size={24} color="#fff" />
                 </TouchableOpacity>
 
-                {/* Brand */}
                 <View style={styles.drawerBrandRow}>
                   <View style={styles.drawerBrandIconWrap}>
-                    <MaterialCommunityIcons
-                      name="home-heart"
-                      size={26}
-                      color="#fff"
-                    />
+                    <MaterialCommunityIcons name="home-heart" size={26} color="#fff" />
                   </View>
                   <View style={styles.drawerBrandTextWrap}>
                     <Text style={styles.drawerBrandTitle}>Veetu Rusi</Text>
@@ -86,16 +106,17 @@ export default function TopHeader({
                   </View>
                 </View>
 
-                {/* Nav items */}
                 {[
-                  { icon: "speedometer-outline", label: "Dashboard" },
-                  { icon: "settings-outline", label: "Settings" },
-                  { icon: "help-circle-outline", label: "Help & Support" },
-                ].map(({ icon, label }) => (
+                  { icon: "speedometer-outline", label: "Dashboard", route: "/orders" },
+                  { icon: "settings-outline", label: "Settings", route: "/profile" },
+                ].map(({ icon, label, route }) => (
                   <TouchableOpacity
                     key={label}
                     activeOpacity={0.7}
-                    onPress={() => setShowMenu(false)}
+                    onPress={() => {
+                      setShowMenu(false);
+                      if (route) router.push(route);
+                    }}
                     style={styles.drawerNavItem}
                   >
                     <Ionicons name={icon} size={22} color="#fff" />
@@ -113,12 +134,11 @@ export default function TopHeader({
         <TouchableWithoutFeedback onPress={() => setShowProfileDrop(false)}>
           <View style={styles.dropScrim}>
             <TouchableWithoutFeedback>
-              <View style={[styles.dropDownBox, { top: insets.top + 55 }]}>
+              <View style={[styles.dropDownBox, { top: insets.top + 55, right: 16 }]}>
                 <View style={styles.dropHeader}>
                   <Text style={styles.dropName}>{profileName}</Text>
                   <Text style={styles.dropEmail}>{profileEmail}</Text>
                 </View>
-
                 <TouchableOpacity
                   activeOpacity={0.7}
                   style={styles.dropItem}
@@ -130,20 +150,60 @@ export default function TopHeader({
                   <Ionicons name="person-outline" size={18} color={DARK} />
                   <Text style={styles.dropItemText}>My Profile</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  style={[
-                    styles.dropItem,
-                    { borderTopWidth: 1, borderColor: "#F0F0F0" },
-                  ]}
+                  style={[styles.dropItem, { borderTopWidth: 1, borderColor: "#F0F0F0" }]}
                   onPress={handleLogout}
                 >
                   <Ionicons name="log-out-outline" size={18} color="#D32F2F" />
-                  <Text style={[styles.dropItemText, { color: "#D32F2F" }]}>
-                    Logout
-                  </Text>
+                  <Text style={[styles.dropItemText, { color: "#D32F2F" }]}>Logout</Text>
                 </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* ── Notifications Dropdown Modal ── */}
+      <Modal visible={showNotifDrop} transparent animationType="fade">
+        <TouchableWithoutFeedback onPress={() => setShowNotifDrop(false)}>
+          <View style={styles.dropScrim}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.dropDownBox, { top: insets.top + 55, right: 60, width: 250 }]}>
+                <View style={styles.dropHeader}>
+                  <Text style={styles.dropName}>Notifications</Text>
+                  <Text style={styles.dropEmail}>{todayNewOrders.length} new orders today</Text>
+                </View>
+                {todayNewOrders.length === 0 ? (
+                  <View style={{ padding: 20, alignItems: "center" }}>
+                    <Text style={{ color: "#7A8E87", fontSize: 13 }}>No new orders right now.</Text>
+                  </View>
+                ) : (
+                  todayNewOrders.map((o, idx) => (
+                    <TouchableOpacity
+                      key={o.id || o._id || idx}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.dropItem,
+                        { borderBottomWidth: 1, borderColor: "#F0F0F0" }
+                      ]}
+                      onPress={() => {
+                        setShowNotifDrop(false);
+                        router.push(`/order/${o.id || o._id}`);
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropItemText, { fontSize: 13 }]}>
+                          #{o.order_id || o.id} - {o.customer_name || "Unknown"}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: "#E65100", marginTop: 2, fontWeight: "700" }}>
+                          New Order
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -152,10 +212,8 @@ export default function TopHeader({
 
       {/* ── Header Area ── */}
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
-        {/* Nav row */}
         <View style={styles.navRow}>
           <View style={styles.leftGroup}>
-            {/* Hamburger */}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setShowMenu(true)}
@@ -168,13 +226,11 @@ export default function TopHeader({
               </View>
             </TouchableOpacity>
 
-            {/* Brand */}
             <View style={styles.brandCenter}>
               <Text style={styles.brandCenterText}>{title}</Text>
             </View>
           </View>
 
-          {/* Right actions: custom content + notifications + profile avatar */}
           <View style={styles.rightActions}>
             {rightContent && (
               <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, gap: 8 }}>
@@ -185,9 +241,29 @@ export default function TopHeader({
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.notificationButton}
-              onPress={() => {}}
+              onPress={() => setShowNotifDrop(true)}
             >
               <Ionicons name="notifications-outline" size={22} color="#fff" />
+              {todayNewOrders.length > 0 && (
+                <View style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -2,
+                  backgroundColor: "#E65100",
+                  height: 16,
+                  minWidth: 16,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 4,
+                  borderWidth: 1.5,
+                  borderColor: GREEN
+                }}>
+                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}>
+                    {todayNewOrders.length}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -200,26 +276,18 @@ export default function TopHeader({
           </View>
         </View>
 
-        {/* ── Hero card ── */}
         {showHero && (
           <View style={styles.heroCard}>
-            {/* Chef image — right half */}
             <Image
               source={require("../../../assets/images/chef_hero.jpg")}
               style={styles.heroImage}
               contentFit="cover"
             />
-
-            {/* Gradient fade so text stays readable */}
             <View style={styles.heroOverlay} />
-
-            {/* Text — left side */}
             <View style={styles.heroContent}>
               <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
               <Text style={styles.heroTitle}>Good morning!</Text>
               <Text style={styles.heroSub}>Let's make today{"\n"}delicious.</Text>
-
-              {/* Badge */}
               <View style={styles.heroBadge}>
                 <Ionicons name="heart" size={12} color="#FF8A65" />
                 <Text style={styles.heroBadgeText}>Cooked with Love</Text>
