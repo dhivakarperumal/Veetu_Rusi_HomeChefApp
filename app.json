@@ -8,14 +8,15 @@
     "scheme": "homechefapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon/Assets/grid.png"
+      "icon": "./assets/images/logo.png"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#208AEF",
         "foregroundImage": "./assets/images/logo.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.HomeChefApp"
     },
     "web": {
       "output": "static",

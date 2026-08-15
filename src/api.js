@@ -1,13 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-export const API_BASE_URL = " https://veeturusi.qtechx.com/api";
-// export const API_BASE_URL = "http://192.168.1.5:5000/api";
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.2:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 8000,
+  timeout: 15000,
 });
 
 const MAX_RETRIES = 1;
@@ -15,6 +15,21 @@ let cachedToken = null;
 
 export function clearTokenCache() {
   cachedToken = null;
+}
+
+export async function setAuthToken(token) {
+  if (token) {
+    cachedToken = token;
+    await AsyncStorage.setItem("userToken", token);
+  } else {
+    cachedToken = null;
+    await AsyncStorage.removeItem("userToken");
+  }
+}
+
+export async function getStoredUser() {
+  const storedUser = await AsyncStorage.getItem("userProfile");
+  return storedUser ? JSON.parse(storedUser) : null;
 }
 
 api.interceptors.request.use(async (config) => {
@@ -45,9 +60,14 @@ api.interceptors.response.use(
     }
 
     if (error.response) {
+      const message =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        "Server error";
+
       return Promise.reject({
         status: error.response.status,
-        message: error.response.data?.message || "Server error",
+        message,
         data: error.response.data,
       });
     }
@@ -58,5 +78,29 @@ api.interceptors.response.use(
     });
   },
 );
+
+export async function loginWithIdentifier(identifier, password) {
+  const response = await api.post("/auth/login", {
+    identifier: String(identifier || "").trim(),
+    password: String(password || ""),
+  });
+
+  const { token, user, message } = response.data || {};
+
+  if (token) {
+    await setAuthToken(token);
+  }
+
+  if (user) {
+    await AsyncStorage.setItem("userProfile", JSON.stringify(user));
+  }
+
+  return { ...response.data, message: message || "Login successful" };
+}
+
+export async function logoutUser() {
+  await AsyncStorage.multiRemove(["userToken", "userProfile"]);
+  clearTokenCache();
+}
 
 export default api;
