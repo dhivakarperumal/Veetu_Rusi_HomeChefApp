@@ -1,11 +1,15 @@
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  FontAwesome5,
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,31 +18,52 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { loginWithIdentifier } from "../api";
 
 const { width } = Dimensions.get("window");
 
 const GREEN = "#2E7A4F";
-const DARK  = "#1A3328";
+const DARK = "#1A3328";
 const MUTED = "#7A8E87";
-const BG    = "#F7F2EA";
+const BG = "#F7F2EA";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [mode, setMode]           = useState<"mobile" | "email">("mobile");
-  const [identifier, setIdentifier] = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState("");
-  const [focused, setFocused]     = useState(false);
 
+  const [mode, setMode] = useState<"mobile" | "email">("mobile");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
+
+  const identifierRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
+  /* ── Reset on tab switch ── */
+  const switchMode = (m: "mobile" | "email") => {
+    Keyboard.dismiss();
+    setMode(m);
+    setIdentifier("");
+    setPassword("");
+    setError("");
+    setShowPass(false);
+  };
+
+  /* ── Validate & Send OTP ── */
   const handleSendOTP = async () => {
+    Keyboard.dismiss();
     const clean = identifier.trim();
     if (!clean) {
-      setError(mode === "mobile" ? "Please enter your mobile number." : "Please enter your email address.");
+      setError("Please enter your mobile number.");
       return;
     }
-    if (mode === "mobile" && clean.replace(/\D/g, "").length !== 10) {
+    if (clean.replace(/\D/g, "").length !== 10) {
       setError("Enter a valid 10-digit mobile number.");
       return;
     }
@@ -46,8 +71,11 @@ export default function LoginScreen() {
     setError("");
     try {
       await new Promise((r) => setTimeout(r, 700));
-      const formatted = mode === "mobile" ? `+91 ${clean.slice(0, 5)} ${clean.slice(5)}` : clean;
-      router.push({ pathname: "/verify-otp", params: { identifier: formatted, mode } });
+      const formatted = `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+      router.push({
+        pathname: "/verify-otp",
+        params: { identifier: formatted, mode: "mobile" },
+      });
     } catch {
       setError("Failed to send OTP. Please try again.");
     } finally {
@@ -55,32 +83,81 @@ export default function LoginScreen() {
     }
   };
 
+  /* ── Validate & Email Login ── */
+  const handleEmailLogin = async () => {
+    Keyboard.dismiss();
+    const cleanEmail = identifier.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (!cleanPass) {
+      setError("Please enter your password.");
+      return;
+    }
+    if (cleanPass.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const response = await loginWithIdentifier(cleanEmail, cleanPass);
+      if (response?.token) {
+        router.replace("/dashboard");
+      } else {
+        throw new Error(response?.message || "Login failed. Please try again.");
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Invalid email or password.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrimaryAction = () =>
+    mode === "mobile" ? handleSendOTP() : handleEmailLogin();
+
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={0}
+    >
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
         bounces={false}
+        alwaysBounceVertical={false}
       >
-        {/* ─── Logo Icon ─── */}
+        {/* ── Logo ── */}
         <View style={styles.logoIconWrap}>
           <MaterialCommunityIcons name="home-heart" size={38} color={GREEN} />
         </View>
 
-        {/* ─── Brand Name ─── */}
+        {/* ── Brand ── */}
         <Text style={styles.brandName}>
           <Text style={styles.brandGreen}>Veetu </Text>
           <Text style={styles.brandOrange}>Rusi</Text>
         </Text>
 
-        {/* ─── Greeting ─── */}
+        {/* ── Greeting ── */}
         <Text style={styles.greeting}>Welcome Back!</Text>
         <Text style={styles.greetingSub}>Login to continue</Text>
 
-        {/* ─── Chef Illustration ─── */}
+        {/* ── Chef Illustration ── */}
         <View style={styles.illustWrap}>
           <Image
             source={require("../../assets/images/chef_hero.jpg")}
@@ -89,69 +166,168 @@ export default function LoginScreen() {
           />
         </View>
 
-        {/* ─── Form Container ─── */}
+        {/* ── Form ── */}
         <View style={styles.formWrap}>
-
           {/* Toggle */}
           <View style={styles.toggle}>
             {(["mobile", "email"] as const).map((m) => (
               <Pressable
                 key={m}
-                onPress={() => { setMode(m); setIdentifier(""); setError(""); }}
+                onPress={() => switchMode(m)}
                 style={[styles.toggleTab, mode === m && styles.toggleTabActive]}
               >
-                <Text style={[styles.toggleTabText, mode === m && styles.toggleTabTextActive]}>
+                <Text
+                  style={[
+                    styles.toggleTabText,
+                    mode === m && styles.toggleTabTextActive,
+                  ]}
+                >
                   {m === "mobile" ? "Mobile Number" : "Email"}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          {/* Input */}
-          <View style={[styles.inputBox, focused && styles.inputBoxFocused, !!error && styles.inputBoxError]}>
+          {/* ── Identifier input (mobile number or email) ── */}
+          <View
+            style={[
+              styles.inputBox,
+              emailFocused && styles.inputBoxFocused,
+              !!error && !passFocused && styles.inputBoxError,
+            ]}
+          >
             {mode === "mobile" ? (
-              <View style={styles.dialWrap}>
+              <View style={styles.prefixWrap}>
                 <Text style={styles.flag}>🇮🇳</Text>
                 <Text style={styles.dial}> +91</Text>
                 <View style={styles.inputSep} />
               </View>
             ) : (
-              <View style={styles.dialWrap}>
-                <Ionicons name="mail-outline" size={17} color={MUTED} />
+              <View style={styles.prefixWrap}>
+                <Ionicons
+                  name="mail-outline"
+                  size={17}
+                  color={emailFocused ? GREEN : MUTED}
+                />
                 <View style={styles.inputSep} />
               </View>
             )}
+
             <TextInput
+              ref={identifierRef}
               value={identifier}
-              onChangeText={(t) => { setIdentifier(t); if (error) setError(""); }}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onChangeText={(t) => {
+                setIdentifier(t);
+                if (error) setError("");
+              }}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
               keyboardType={mode === "mobile" ? "phone-pad" : "email-address"}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder={mode === "mobile" ? "Enter mobile number" : "Enter email address"}
+              autoComplete={mode === "email" ? "email" : "tel"}
+              placeholder={
+                mode === "mobile"
+                  ? "Enter mobile number"
+                  : "Enter email address"
+              }
               placeholderTextColor="#B2C2BC"
               style={styles.textInput}
               maxLength={mode === "mobile" ? 10 : 100}
+              returnKeyType={mode === "mobile" ? "done" : "next"}
+              enablesReturnKeyAutomatically
+              onSubmitEditing={() => {
+                if (mode === "mobile") {
+                  handleSendOTP();
+                } else {
+                  passwordRef.current?.focus();
+                }
+              }}
             />
           </View>
 
-          {/* Error */}
-          {!!error && (
-            <Text style={styles.errorText}>{error}</Text>
+          {/* ── Password input (email mode only) ── */}
+          {mode === "email" && (
+            <View
+              style={[
+                styles.inputBox,
+                styles.inputBoxTop,
+                passFocused && styles.inputBoxFocused,
+              ]}
+            >
+              <View style={styles.prefixWrap}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={17}
+                  color={passFocused ? GREEN : MUTED}
+                />
+                <View style={styles.inputSep} />
+              </View>
+
+              <TextInput
+                ref={passwordRef}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (error) setError("");
+                }}
+                onFocus={() => setPassFocused(true)}
+                onBlur={() => setPassFocused(false)}
+                placeholder="Enter password"
+                placeholderTextColor="#B2C2BC"
+                secureTextEntry={!showPass}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                style={styles.textInput}
+                returnKeyType="done"
+                enablesReturnKeyAutomatically
+                onSubmitEditing={handleEmailLogin}
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowPass((v) => !v)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.eyeBtn}
+              >
+                <Ionicons
+                  name={showPass ? "eye-outline" : "eye-off-outline"}
+                  size={18}
+                  color={passFocused ? GREEN : MUTED}
+                />
+              </TouchableOpacity>
+            </View>
           )}
 
-          {/* Send OTP */}
+          {/* Forgot password */}
+          {mode === "email" && (
+            <TouchableOpacity activeOpacity={0.7} style={styles.forgotWrap}>
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Error */}
+          {!!error && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle-outline" size={13} color="#D32F2F" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Primary Button */}
           <TouchableOpacity
-            onPress={handleSendOTP}
+            onPress={handlePrimaryAction}
             disabled={loading}
             activeOpacity={0.82}
-            style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
+            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
           >
-            {loading
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.sendBtnText}>Send OTP</Text>
-            }
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                {mode === "mobile" ? "Send OTP" : "Login"}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {/* Divider */}
@@ -162,10 +338,7 @@ export default function LoginScreen() {
           </View>
 
           {/* Google */}
-          <TouchableOpacity
-            activeOpacity={0.78}
-            style={styles.googleBtn}
-          >
+          <TouchableOpacity activeOpacity={0.78} style={styles.googleBtn}>
             <FontAwesome5 name="google" size={16} color="#EA4335" />
             <Text style={styles.googleBtnText}>Continue with Google</Text>
           </TouchableOpacity>
@@ -182,15 +355,13 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
+  screen: { flex: 1, backgroundColor: BG },
+
   scroll: {
     flexGrow: 1,
     alignItems: "center",
     paddingTop: Platform.OS === "android" ? 44 : 52,
-    paddingBottom: 32,
+    paddingBottom: 40,
     paddingHorizontal: 24,
   },
 
@@ -218,12 +389,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 12,
   },
-  brandGreen: {
-    color: GREEN,
-  },
-  brandOrange: {
-    color: "#C9631A",
-  },
+  brandGreen: { color: GREEN },
+  brandOrange: { color: "#C9631A" },
 
   /* Greeting */
   greeting: {
@@ -255,15 +422,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  illustImg: {
-    width: "100%",
-    height: "100%",
-  },
+  illustImg: { width: "100%", height: "100%" },
 
   /* Form */
-  formWrap: {
-    width: "100%",
-  },
+  formWrap: { width: "100%" },
 
   /* Toggle */
   toggle: {
@@ -271,7 +433,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#D5E2DC",
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#EEF5F0",
     padding: 3,
     marginBottom: 14,
   },
@@ -289,17 +451,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  toggleTabText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: MUTED,
-  },
-  toggleTabTextActive: {
-    color: GREEN,
-    fontWeight: "700",
-  },
+  toggleTabText: { fontSize: 13, fontWeight: "600", color: MUTED },
+  toggleTabTextActive: { color: GREEN, fontWeight: "700" },
 
-  /* Input */
+  /* Input box */
   inputBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -307,61 +462,67 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#D5E2DC",
     borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 52,
-    marginBottom: 4,
+    paddingHorizontal: 14,
+    height: 54,
+  },
+  inputBoxTop: {
+    marginTop: 10,
   },
   inputBoxFocused: {
     borderColor: GREEN,
     shadowColor: GREEN,
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 4,
   },
   inputBoxError: {
     borderColor: "#D32F2F",
   },
-  dialWrap: {
+
+  /* Prefix / icon area */
+  prefixWrap: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 4,
   },
-  flag: {
-    fontSize: 19,
-  },
-  dial: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#2E5A47",
-    marginRight: 2,
-  },
+  flag: { fontSize: 19 },
+  dial: { fontSize: 14, fontWeight: "700", color: "#2E5A47" },
   inputSep: {
     width: 1.5,
-    height: 20,
+    height: 22,
     backgroundColor: "#C8D8D2",
-    marginLeft: 8,
+    marginHorizontal: 10,
   },
+
+  /* Text input */
   textInput: {
     flex: 1,
     fontSize: 15,
     color: DARK,
-    paddingVertical: 13,
-    paddingHorizontal: 8,
+    height: "100%",
+    paddingVertical: 0,
   },
+
+  /* Eye toggle */
+  eyeBtn: { padding: 4 },
+
+  /* Forgot */
+  forgotWrap: { alignSelf: "flex-end", marginTop: 8, marginBottom: 2 },
+  forgotText: { fontSize: 12.5, color: GREEN, fontWeight: "600" },
 
   /* Error */
-  errorText: {
-    fontSize: 12,
-    color: "#D32F2F",
-    paddingLeft: 4,
-    marginTop: 4,
-    marginBottom: 2,
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 8,
+    paddingLeft: 2,
   },
+  errorText: { fontSize: 12, color: "#D32F2F", flex: 1 },
 
-  /* Send OTP Button */
-  sendBtn: {
-    marginTop: 14,
+  /* Primary button */
+  primaryBtn: {
+    marginTop: 16,
     backgroundColor: GREEN,
     borderRadius: 12,
     height: 52,
@@ -369,17 +530,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
     shadowColor: "#104028",
-    shadowOpacity: 0.38,
+    shadowOpacity: 0.35,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  sendBtnDisabled: {
+  primaryBtnDisabled: {
     backgroundColor: "#8DB8A0",
     shadowOpacity: 0,
     elevation: 0,
   },
-  sendBtnText: {
+  primaryBtnText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
@@ -392,11 +553,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 16,
   },
-  divLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#D5E0DA",
-  },
+  divLine: { flex: 1, height: 1, backgroundColor: "#D5E0DA" },
   divLabel: {
     marginHorizontal: 14,
     fontSize: 13,
@@ -404,7 +561,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  /* Google */
+  /* Google button */
   googleBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -417,21 +574,9 @@ const styles = StyleSheet.create({
     height: 52,
     overflow: "hidden",
   },
-  googleBtnText: {
-    fontSize: 14.5,
-    fontWeight: "600",
-    color: DARK,
-  },
+  googleBtnText: { fontSize: 14.5, fontWeight: "600", color: DARK },
 
   /* Footer */
-  footer: {
-    marginTop: 22,
-    fontSize: 13.5,
-    color: MUTED,
-    textAlign: "center",
-  },
-  footerLink: {
-    color: GREEN,
-    fontWeight: "700",
-  },
+  footer: { marginTop: 22, fontSize: 13.5, color: MUTED, textAlign: "center" },
+  footerLink: { color: GREEN, fontWeight: "700" },
 });

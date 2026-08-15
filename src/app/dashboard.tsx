@@ -3,6 +3,8 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { logoutUser } from "../api";
 import { colors } from "../theme/colors";
+import BottomBar from "./componets/buttombar";
+import TopHeader from "./componets/topheader";
 
 const stats = [
   {
@@ -44,134 +46,110 @@ export default function DashboardScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>Welcome back</Text>
-          <Text style={styles.title}>HomeChef Dashboard</Text>
-        </View>
-        <Pressable onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
-      </View>
+    <View style={styles.container}>
+      {/* ── Top Header ── */}
+      <TopHeader />
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Today’s Overview</Text>
-        <View style={styles.statsRow}>
-          {stats.map((item) => (
-            <View key={item.label} style={styles.statBox}>
-              <View style={[styles.statIcon, { backgroundColor: item.tint }]}>
-                <Ionicons
-                  name={item.icon as any}
-                  size={22}
-                  color={item.color}
-                />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        
+        {/* ── Today's Overview ── */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Today’s Overview</Text>
+          <View style={styles.statsRow}>
+            {stats.map((item) => (
+              <View key={item.label} style={styles.statBox}>
+                <View style={[styles.statIcon, { backgroundColor: item.tint }]}>
+                  <Ionicons
+                    name={item.icon as any}
+                    size={22}
+                    color={item.color}
+                  />
+                </View>
+                <Text style={styles.statValue}>{item.value}</Text>
+                <Text style={styles.statLabel}>{item.label}</Text>
               </View>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Earnings Today</Text>
-        <Text style={styles.amount}>₹ 2,450</Text>
-        <Text style={styles.muted}>vs yesterday</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickGrid}>
-          <Pressable
-            style={styles.quickItem}
-            onPress={() => router.push("/dishes")}
-          >
-            <Ionicons
-              name="restaurant-outline"
-              size={24}
-              color={colors.primary}
-            />
-            <Text style={styles.quickText}>Dishes</Text>
-          </Pressable>
-          <Pressable
-            style={styles.quickItem}
-            onPress={() => router.push("/orders")}
-          >
-            <Ionicons name="receipt-outline" size={24} color="#F57C00" />
-            <Text style={styles.quickText}>Orders</Text>
-          </Pressable>
-          <Pressable
-            style={styles.quickItem}
-            onPress={() => router.push("/earnings")}
-          >
-            <Ionicons name="cash-outline" size={24} color="#1565C0" />
-            <Text style={styles.quickText}>Earnings</Text>
-          </Pressable>
-          <Pressable
-            style={styles.quickItem}
-            onPress={() => router.push("/profile")}
-          >
-            <Ionicons name="person-outline" size={24} color="#6A1B9A" />
-            <Text style={styles.quickText}>Profile</Text>
-          </Pressable>
+        {/* ── Earnings ── */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Earnings Today</Text>
+          <Text style={styles.amount}>₹ 2,450</Text>
+          <Text style={styles.muted}>vs yesterday</Text>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* ── Quick Actions ── */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickGrid}>
+            <Pressable
+              style={styles.quickItem}
+              onPress={() => router.push("/dishes")}
+            >
+              <Ionicons
+                name="restaurant-outline"
+                size={24}
+                color="#2E7A4F"
+              />
+              <Text style={styles.quickText}>Dishes</Text>
+            </Pressable>
+            <Pressable
+              style={styles.quickItem}
+              onPress={() => router.push("/orders")}
+            >
+              <Ionicons name="receipt-outline" size={24} color="#F57C00" />
+              <Text style={styles.quickText}>Orders</Text>
+            </Pressable>
+            <Pressable
+              style={styles.quickItem}
+              onPress={() => router.push("/earnings")}
+            >
+              <Ionicons name="cash-outline" size={24} color="#1565C0" />
+              <Text style={styles.quickText}>Earnings</Text>
+            </Pressable>
+            <Pressable
+              style={styles.quickItem}
+              onPress={() => router.push("/profile")}
+            >
+              <Ionicons name="person-outline" size={24} color="#6A1B9A" />
+              <Text style={styles.quickText}>Profile</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* ── Bottom Bar ── */}
+      <BottomBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.pageBackground,
+    backgroundColor: "#F8F6F1", // match bottom bar
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
-    padding: 18,
-    paddingBottom: 80,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 18,
-  },
-  eyebrow: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-  },
-  title: {
-    color: colors.primaryDark,
-    fontSize: 26,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  logoutButton: {
-    backgroundColor: "#1E6A4B",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  logoutText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 13,
+    padding: 16,
+    paddingBottom: 24,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
+    borderRadius: 20,
     padding: 18,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
   sectionTitle: {
-    color: colors.primaryDark,
+    color: "#1A3328",
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 16,
@@ -186,32 +164,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statIcon: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   statValue: {
-    color: colors.primaryDark,
-    fontSize: 22,
+    color: "#1A3328",
+    fontSize: 20,
     fontWeight: "800",
     marginTop: 8,
   },
   statLabel: {
-    color: colors.muted,
+    color: "#7A8E87",
     fontSize: 11,
     textAlign: "center",
     marginTop: 2,
+    fontWeight: "500",
   },
   amount: {
-    color: colors.primaryDark,
-    fontSize: 32,
+    color: "#1A3328",
+    fontSize: 30,
     fontWeight: "800",
     marginBottom: 4,
   },
   muted: {
-    color: colors.muted,
+    color: "#7A8E87",
     fontSize: 12,
   },
   quickGrid: {
@@ -223,13 +202,13 @@ const styles = StyleSheet.create({
   quickItem: {
     width: "48%",
     padding: 16,
-    borderRadius: 18,
-    backgroundColor: colors.softCard,
+    borderRadius: 16,
+    backgroundColor: "#F9F3E8",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   quickText: {
-    color: colors.primaryDark,
+    color: "#1A3328",
     fontSize: 13,
     fontWeight: "700",
     marginTop: 8,

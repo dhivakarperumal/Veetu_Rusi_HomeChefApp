@@ -27,6 +27,11 @@ export async function setAuthToken(token) {
   }
 }
 
+export async function getStoredToken() {
+  const storageToken = await AsyncStorage.getItem("userToken");
+  return storageToken || cachedToken || null;
+}
+
 export async function getStoredUser() {
   const storedUser = await AsyncStorage.getItem("userProfile");
   return storedUser ? JSON.parse(storedUser) : null;
