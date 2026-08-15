@@ -16,7 +16,7 @@ import { getStoredUser, logoutUser } from "../../api";
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
 
-export default function TopHeader() {
+export default function TopHeader({ showHero = true }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileDrop, setShowProfileDrop] = useState(false);
@@ -191,30 +191,32 @@ export default function TopHeader() {
         </View>
 
         {/* ── Hero card ── */}
-        <View style={styles.heroCard}>
-          {/* Chef image — right half */}
-          <Image
-            source={require("../../../assets/images/chef_hero.jpg")}
-            style={styles.heroImage}
-            contentFit="cover"
-          />
+        {showHero && (
+          <View style={styles.heroCard}>
+            {/* Chef image — right half */}
+            <Image
+              source={require("../../../assets/images/chef_hero.jpg")}
+              style={styles.heroImage}
+              contentFit="cover"
+            />
 
-          {/* Gradient fade so text stays readable */}
-          <View style={styles.heroOverlay} />
+            {/* Gradient fade so text stays readable */}
+            <View style={styles.heroOverlay} />
 
-          {/* Text — left side */}
-          <View style={styles.heroContent}>
-            <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
-            <Text style={styles.heroTitle}>Good morning!</Text>
-            <Text style={styles.heroSub}>Let's make today{"\n"}delicious.</Text>
+            {/* Text — left side */}
+            <View style={styles.heroContent}>
+              <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
+              <Text style={styles.heroTitle}>Good morning!</Text>
+              <Text style={styles.heroSub}>Let's make today{"\n"}delicious.</Text>
 
-            {/* Badge */}
-            <View style={styles.heroBadge}>
-              <Ionicons name="heart" size={12} color="#FF8A65" />
-              <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+              {/* Badge */}
+              <View style={styles.heroBadge}>
+                <Ionicons name="heart" size={12} color="#FF8A65" />
+                <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
       </View>
     </>
   );

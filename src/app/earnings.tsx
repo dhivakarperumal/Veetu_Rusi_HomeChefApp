@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import TopHeader from "./componets/topheader";
 
 // ── Period data ───────────────────────────────────────────────────────────────
 type Period = "Day" | "Week" | "Month";
@@ -284,12 +284,7 @@ export default function EarningsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <PageHeader
-        title="Earnings"
-        rightActions={[
-          { icon: "calendar-outline", onPress: () => {} },
-        ]}
-      />
+      <TopHeader showHero={false} />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* ── Period tabs ── */}
