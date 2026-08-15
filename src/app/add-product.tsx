@@ -2,7 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View, ActivityIndicator } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View, ActivityIndicator } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { getStoredUser } from "../api";
 import { colors } from "../theme/colors";
@@ -12,6 +13,66 @@ const DIETARY_OPTIONS = ["veg", "non-veg"];
 const PACKAGING_OPTIONS = ["Pouch", "Box", "Foil", "Bottle", "Packet"];
 const CUISINE_OPTIONS = ["Multi Cuisine", "North Indian", "South Indian", "Continental", "Chinese", "Italian", "Thai", "Mexican"];
 const PRODUCT_TYPE_OPTIONS = ["Food", "Food Product"];
+
+function DatePickerField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (date: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  const parsed = value ? new Date(value) : new Date();
+  const isValid = value && !isNaN(new Date(value).getTime());
+
+  return (
+    <View style={{ marginBottom: 18 }}>
+      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark, marginBottom: 8 }}>
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => setShow(true)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: colors.cardBackground,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+          paddingHorizontal: 14,
+          paddingVertical: 14,
+          gap: 10,
+        }}
+      >
+        <Ionicons name="calendar-outline" size={18} color={isValid ? colors.primary : colors.muted} />
+        <Text style={{ fontSize: 15, color: isValid ? colors.primaryDark : colors.muted, flex: 1 }}>
+          {isValid ? value : "Select date"}
+        </Text>
+        {isValid && (
+          <Pressable onPress={() => onChange("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+      </Pressable>
+      {show && (
+        <DateTimePicker
+          value={parsed}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={(_event: any, selected?: Date) => {
+            setShow(Platform.OS === "ios");
+            if (selected) {
+              onChange(selected.toISOString().slice(0, 10));
+            }
+            if (Platform.OS !== "ios") setShow(false);
+          }}
+        />
+      )}
+    </View>
+  );
+}
 
 function FormGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -105,10 +166,25 @@ function SectionHeader({ title }: { title: string }) {
 
 const initialForm = {
   category: "",
-  product_type: "Food",
+  product_type: "Food Product",
   name: "",
   description: "",
-  cuisine: "Multi Cuisine",
+  subcategory: "",
+  cuisine: "",
+  product_code: "",
+  total_stock: "0",
+  rating: "5",
+  status: "Active",
+  material: "",
+  nutrition_info: "",
+  storage_instructions: "Keep Refrigerated",
+  presentation_style: "",
+  portion_format: "",
+  service_type: "",
+  packaging_notes: "",
+  heat_profile: "",
+  serving_size: "",
+  spice_level: "Medium",
   prep_time: "",
   preparation_url: "",
   shelf_life_days: "",
@@ -117,14 +193,15 @@ const initialForm = {
   final_price: "",
   dietary_tag: "veg",
   net_weight: "",
+  package_count: "",
   packaging_type: "Pouch",
+  manufacture_date: "",
+  expiry_date: "",
   packaging_image: "",
-  ingredients: "",
-  instructions: "",
   images: [] as string[]
 };
 
-export default function AddDishScreen() {
+export default function AddProductScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   
@@ -188,12 +265,15 @@ export default function AddDishScreen() {
     const loadFood = async () => {
       try {
         setFetching(true);
-        const res = await api.get(`/chef-foods/${id}`);
-        const item = res.data;
+        const res = await api.get(`/products/${id}`);
+        // Handle potentially nested data
+        const item = res.data?.data || res.data;
         if (!item) return;
+
         setForm({
+          ...initialForm,
           category: item.category || "",
-          product_type: item.product_type || "Food",
+          product_type: item.product_type || "Food Product",
           name: item.name || "",
           description: item.description || "",
           cuisine: item.cuisine || "",
@@ -207,9 +287,9 @@ export default function AddDishScreen() {
           net_weight: item.net_weight || "",
           packaging_type: item.packaging_type || "Pouch",
           packaging_image: item.packaging_image || "",
-          ingredients: item.ingredients || "",
-          instructions: item.instructions || "",
-          images: Array.isArray(item.images) ? item.images : []
+          total_stock: item.total_stock?.toString() || "0",
+          status: item.status || "Active",
+          images: Array.isArray(item.images) ? item.images : (item.images ? JSON.parse(item.images) : [])
         });
       } catch (err) {
         console.error(err);
@@ -268,29 +348,43 @@ export default function AddDishScreen() {
     }
     
     setLoading(true);
+    
+    // Construct single variant based on form MRP/Offer
+    const singleVariant = {
+      weight: form.net_weight || null,
+      price: Number(form.mrp) || 0,
+      offer: Number(form.offer) || 0,
+      final_price: Number(computedFinalPrice) || 0,
+      stock: Number(form.total_stock) || 0,
+      images: []
+    };
+
     const payload = {
       ...form,
       shelf_life_days: form.shelf_life_days ? Number(form.shelf_life_days) : null,
-      mrp: Number(form.mrp),
-      product_type: form.product_type || "Food",
+      mrp: Number(form.mrp) || 0,
       offer: Number(form.offer) || 0,
-      final_price: Number(computedFinalPrice) || null,
+      offer_price: Number(computedFinalPrice) || 0,
+      product_type: form.product_type || "Food Product",
       packaging_image: form.packaging_image || null,
-      preparation_url: form.preparation_url || null
+      preparation_url: form.preparation_url || null,
+      total_stock: Number(form.total_stock) || 0,
+      variants: [singleVariant],
+      status: form.status || "Active",
     };
 
     try {
       if (id && id !== 'new') {
-        await api.put(`/chef-foods/${id}`, payload);
-        Alert.alert("Success", "Food item updated successfully.");
+        await api.put(`/products/${id}`, payload);
+        Alert.alert("Success", "Product updated successfully.");
       } else {
-        await api.post("/chef-foods", payload);
-        Alert.alert("Success", "Food item added successfully.");
+        await api.post("/products", payload);
+        Alert.alert("Success", "Product added successfully.");
       }
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert("Error", err.response?.data?.message || "Failed to save food item.");
+      Alert.alert("Error", err.response?.data?.message || "Failed to save product.");
     } finally {
       setLoading(false);
     }
@@ -307,7 +401,7 @@ export default function AddDishScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <PageHeader
-        title={id && id !== 'new' ? "Edit Dish" : "Add New Dish"}
+        title={id && id !== 'new' ? "Edit Product" : "Add New Product"}
         onLeftPress={() => router.back()}
         leftIcon="arrow-back"
       />
@@ -319,16 +413,37 @@ export default function AddDishScreen() {
           paddingBottom: 40,
         }}
       >
-        {/* ── Food Details ── */}
-        <SectionHeader title="Food Details" />
+        {/* ── Product Details ── */}
+        <SectionHeader title="Product Details" />
         
-        <FormGroup label="Dish Name *">
+        <FormGroup label="Product Name *">
           <InputField
             value={form.name}
             onChangeText={(t) => updateForm("name", t)}
-            placeholder="e.g. Chicken Biryani"
+            placeholder="e.g. Chicken Biryani or Turmeric Powder"
           />
         </FormGroup>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Product Code">
+              <InputField
+                value={form.product_code}
+                onChangeText={(t) => updateForm("product_code", t)}
+                placeholder="e.g. P123"
+              />
+            </FormGroup>
+          </View>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Subcategory">
+              <InputField
+                value={form.subcategory}
+                onChangeText={(t) => updateForm("subcategory", t)}
+                placeholder="e.g. Spices"
+              />
+            </FormGroup>
+          </View>
+        </View>
 
         <FormGroup label="Product Type *">
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -481,19 +596,102 @@ export default function AddDishScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Shelf Life (Days)">
+            <FormGroup label="Spice Level">
               <InputField
-                value={form.shelf_life_days}
-                onChangeText={(t) => updateForm("shelf_life_days", t)}
-                placeholder="e.g. 2"
-                keyboardType="numeric"
+                value={form.spice_level}
+                onChangeText={(t) => updateForm("spice_level", t)}
+                placeholder="e.g. Medium"
               />
             </FormGroup>
           </View>
         </View>
 
+        <SectionHeader title="Product Info" />
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Storage Instructions">
+              <InputField
+                value={form.storage_instructions}
+                onChangeText={(t) => updateForm("storage_instructions", t)}
+                placeholder="e.g. Keep Refrigerated"
+              />
+            </FormGroup>
+          </View>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Serving Size">
+              <InputField
+                value={form.serving_size}
+                onChangeText={(t) => updateForm("serving_size", t)}
+                placeholder="e.g. 2 Persons"
+              />
+            </FormGroup>
+          </View>
+        </View>
+
+        <FormGroup label="Nutrition Info">
+          <InputField
+            value={form.nutrition_info}
+            onChangeText={(t) => updateForm("nutrition_info", t)}
+            placeholder="e.g. Calories: 250, Protein: 10g"
+            multiline
+          />
+        </FormGroup>
+
+        <FormGroup label="Material / Ingredients">
+          <InputField
+            value={form.material}
+            onChangeText={(t) => updateForm("material", t)}
+            placeholder="e.g. Cotton (for non-food) or Main ingredients..."
+          />
+        </FormGroup>
+
         {/* ── Pricing & Packaging ── */}
-        <SectionHeader title="Pricing & Packaging" />
+        <SectionHeader title="Pricing & Inventory" />
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Total Stock">
+              <InputField
+                value={form.total_stock}
+                onChangeText={(t) => updateForm("total_stock", t)}
+                placeholder="0"
+                keyboardType="numeric"
+              />
+            </FormGroup>
+          </View>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Status">
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {["Active", "Inactive"].map((opt) => (
+                  <Pressable
+                    key={opt}
+                    onPress={() => updateForm("status", opt)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      alignItems: "center",
+                      borderColor: form.status === opt ? colors.primary : colors.border,
+                      backgroundColor: form.status === opt ? "#E8F5E9" : colors.cardBackground,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: form.status === opt ? colors.primary : colors.primaryDark,
+                      }}
+                    >
+                      {opt}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </FormGroup>
+          </View>
+        </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
@@ -542,6 +740,56 @@ export default function AddDishScreen() {
           </View>
         </View>
 
+        <SectionHeader title="Packaging Details" />
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Shelf Life (Days)">
+              <InputField
+                value={form.shelf_life_days}
+                onChangeText={(t) => updateForm("shelf_life_days", t)}
+                placeholder="e.g. 2"
+                keyboardType="numeric"
+              />
+            </FormGroup>
+          </View>
+          <View style={{ flex: 1 }}>
+            <FormGroup label="Package Count">
+              <InputField
+                value={form.package_count}
+                onChangeText={(t) => updateForm("package_count", t)}
+                placeholder="e.g. 1"
+                keyboardType="numeric"
+              />
+            </FormGroup>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <DatePickerField
+              label="Manufacture Date"
+              value={form.manufacture_date}
+              onChange={(d) => updateForm("manufacture_date", d)}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <DatePickerField
+              label="Expiry Date"
+              value={form.expiry_date}
+              onChange={(d) => updateForm("expiry_date", d)}
+            />
+          </View>
+        </View>
+
+        <FormGroup label="Packaging Notes">
+          <InputField
+            value={form.packaging_notes}
+            onChangeText={(t) => updateForm("packaging_notes", t)}
+            placeholder="Any specific packaging notes..."
+          />
+        </FormGroup>
+
         <FormGroup label="Packaging Type">
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
             {PACKAGING_OPTIONS.map((opt) => {
@@ -574,8 +822,8 @@ export default function AddDishScreen() {
           </ScrollView>
         </FormGroup>
 
-        {/* ── Ingredients & Instructions ── */}
-        <SectionHeader title="Details & Instructions" />
+        {/* ── Instructions & Description ── */}
+        <SectionHeader title="Instructions & Description" />
 
         <FormGroup label="Description *">
           <InputField
@@ -586,11 +834,11 @@ export default function AddDishScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Ingredients">
+        <FormGroup label="Ingredients List">
           <InputField
             value={form.ingredients}
             onChangeText={(t) => updateForm("ingredients", t)}
-            placeholder="List ingredients..."
+            placeholder="Detailed list of ingredients..."
             multiline
           />
         </FormGroup>
@@ -618,7 +866,7 @@ export default function AddDishScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Dish Image">
+            <FormGroup label="Product Image">
               <Pressable
                 onPress={() => handlePickImage('images')}
                 style={{
@@ -634,7 +882,7 @@ export default function AddDishScreen() {
               >
                 <Ionicons name="image-outline" size={32} color={colors.primary} />
                 <Text style={{ fontSize: 14, fontWeight: "600", color: colors.primary, marginTop: 8 }}>
-                  Upload Food Image
+                  Upload Product Image
                 </Text>
                 {form.images.length > 0 && <Text style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}>Image Selected</Text>}
               </Pressable>
@@ -688,7 +936,7 @@ export default function AddDishScreen() {
              <ActivityIndicator size="small" color="#fff" />
           ) : (
              <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>
-               {id && id !== 'new' ? 'Save Changes' : 'Save Dish'}
+               {id && id !== 'new' ? 'Save Changes' : 'Save Product'}
              </Text>
           )}
         </Pressable>

@@ -208,7 +208,7 @@ export default function MyProductsScreen() {
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/chef/add-products/${id}` as any);
+    router.push({ pathname: "/add-product", params: { id } } as any);
   };
 
   const handleDelete = (id: string) => {
@@ -280,7 +280,7 @@ export default function MyProductsScreen() {
         )}
       </ScrollView>
 
-      <Pressable onPress={() => router.push("/chef/add-products/new" as any)} style={{ position: "absolute", right: 20, bottom: 130, width: 58, height: 58, borderRadius: 29, backgroundColor: "#E65100", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.18, shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, elevation: 6 }}>
+      <Pressable onPress={() => router.push({ pathname: "/add-product", params: { id: "new" } } as any)} style={{ position: "absolute", right: 20, bottom: 130, width: 58, height: 58, borderRadius: 29, backgroundColor: "#E65100", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.18, shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, elevation: 6 }}>
         <Ionicons name="add" size={30} color="#fff" />
       </Pressable>
 

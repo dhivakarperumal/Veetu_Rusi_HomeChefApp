@@ -1,10 +1,55 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../theme/colors";
-import api from "../../api";
+import api, { API_BASE_URL } from "../../api";
+
+const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+const resolveImageUrl = (path: string) => {
+  if (!path) return path;
+  let resolvedPath = path;
+  if (path.includes("localhost:5000")) {
+    resolvedPath = path.replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL);
+  } else if (path.includes("127.0.0.1:5000")) {
+    resolvedPath = path.replace(/https?:\/\/127.0.0.1:5000/g, IMAGE_BASE_URL);
+  }
+  if (resolvedPath.startsWith("http")) return resolvedPath;
+  return resolvedPath.startsWith("/")
+    ? `${IMAGE_BASE_URL}${resolvedPath}`
+    : `${IMAGE_BASE_URL}/${resolvedPath}`;
+};
+
+const getProductImage = (item: any) => {
+  try {
+    if (item.image) {
+      let imgs = item.image;
+      if (typeof imgs === 'string') {
+        try {
+          const parsed = JSON.parse(imgs);
+          if (typeof parsed === 'string') {
+            imgs = JSON.parse(parsed); // Handle double stringified
+          } else {
+            imgs = parsed;
+          }
+        } catch {
+          if (imgs.includes('/') || imgs.includes('.')) {
+             return resolveImageUrl(imgs);
+          }
+        }
+      }
+      if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
+        return resolveImageUrl(imgs[0]);
+      }
+    }
+  } catch (e) {
+    console.error('Error parsing images:', e);
+  }
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'P')}&background=10b981&color=fff&size=400`;
+};
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -316,6 +361,11 @@ export default function OrderDetailScreen() {
                   paddingVertical: 10,
                 }}
               >
+                <Image
+                  source={{ uri: getProductImage(item) }}
+                  style={{ width: 40, height: 40, borderRadius: 8, marginRight: 12 }}
+                  contentFit="cover"
+                />
                 <Text style={{ fontSize: 14, color: colors.primaryDark, flex: 1 }}>
                   {item.name}
                 </Text>
