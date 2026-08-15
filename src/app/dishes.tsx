@@ -15,23 +15,31 @@ import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
 
+// Strip /api suffix to get the bare server origin e.g. http://192.168.1.2:5000
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
-const resolveImageUrl = (path: string) => {
-  if (!path) return path;
+const resolveImageUrl = (path: string): string => {
+  if (!path || typeof path !== "string") return "";
+  const trimmed = path.trim();
+  if (!trimmed) return "";
 
-  // Replace localhost or 127.0.0.1 references with the actual running server IP
-  let resolvedPath = path;
-  if (path.includes("localhost:5000")) {
-    resolvedPath = path.replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL);
-  } else if (path.includes("127.0.0.1:5000")) {
-    resolvedPath = path.replace(/https?:\/\/127.0.0.1:5000/g, IMAGE_BASE_URL);
+  // Replace any localhost / 127.0.0.1 origin with the real server IP
+  if (
+    trimmed.includes("localhost:5000") ||
+    trimmed.includes("127.0.0.1:5000")
+  ) {
+    const fixed = trimmed
+      .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
+      .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
+    console.log("[dishes] resolved:", fixed);
+    return fixed;
   }
 
-  if (resolvedPath.startsWith("http")) return resolvedPath;
-  return resolvedPath.startsWith("/")
-    ? `${IMAGE_BASE_URL}${resolvedPath}`
-    : `${IMAGE_BASE_URL}/${resolvedPath}`;
+  if (trimmed.startsWith("http")) return trimmed;
+  // relative path
+  return trimmed.startsWith("/")
+    ? `${IMAGE_BASE_URL}${trimmed}`
+    : `${IMAGE_BASE_URL}/${trimmed}`;
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -49,38 +57,87 @@ interface Dish {
   reviews: number;
   orders: number;
   image: string;
+  fallbackName: string;
 }
 
 const CATEGORIES = ["All", "Veg", "Non-Veg", "Combo"];
 
 // ── Helper ────────────────────────────────────────────────────────────────────
-const getFoodImage = (item: any) => {
+const FALLBACK_AVATAR = (name: string) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    name || "Chef Food",
+  )}&background=2E7A4F&color=fff&size=400`;
+
+const getFoodImage = (item: any): string => {
   try {
-    if (item.images) {
-      let imgs = item.images;
-      if (typeof imgs === "string") {
-        try {
-          imgs = JSON.parse(imgs);
-        } catch {
-          imgs = null;
-        }
-      }
-      if (typeof imgs === "string") {
-        try {
-          imgs = JSON.parse(imgs);
-        } catch {
-          imgs = null;
-        }
-      }
-      if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
-        return resolveImageUrl(imgs[0]);
+    let imgs: any = item.images;
+
+    // Debug: log the raw value coming from API
+    console.log("[dishes] raw images field:", JSON.stringify(imgs));
+
+    // Case 1: already parsed into an array by axios
+    if (Array.isArray(imgs)) {
+      const first = imgs.find((u: any) => typeof u === "string" && u.trim());
+      if (first) {
+        const url = resolveImageUrl(first.trim());
+        console.log("[dishes] Case1 url:", url);
+        return url;
       }
     }
-    if (item.packaging_image) return resolveImageUrl(item.packaging_image);
-  } catch (e) {}
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    item.name || "Chef Food",
-  )}&background=2E7A4F&color=fff&size=400`;
+
+    // Case 2: string – JSON array, JSON string, or bare URL
+    if (typeof imgs === "string" && imgs.trim()) {
+      let parsed: any = imgs.trim();
+
+      // Up to 2 parse passes (handles double-stringified JSON)
+      for (let i = 0; i < 2; i++) {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch {
+          break;
+        }
+        if (Array.isArray(parsed)) {
+          const first = parsed.find(
+            (u: any) => typeof u === "string" && u.trim(),
+          );
+          if (first) {
+            const url = resolveImageUrl(first.trim());
+            console.log("[dishes] Case2-array url:", url);
+            return url;
+          }
+        }
+        if (
+          typeof parsed === "string" &&
+          (parsed.startsWith("http") || parsed.startsWith("/"))
+        ) {
+          const url = resolveImageUrl(parsed.trim());
+          console.log("[dishes] Case2-str url:", url);
+          return url;
+        }
+      }
+
+      // Raw URL string — not JSON at all
+      const raw = imgs.trim();
+      if (raw.startsWith("http") || raw.startsWith("/")) {
+        const url = resolveImageUrl(raw);
+        console.log("[dishes] Case2-raw url:", url);
+        return url;
+      }
+    }
+
+    // Case 3: packaging_image fallback
+    if (item.packaging_image) {
+      const url = resolveImageUrl(String(item.packaging_image));
+      console.log("[dishes] Case3 packaging url:", url);
+      return url;
+    }
+  } catch (e) {
+    console.warn("[dishes] getFoodImage error:", e);
+  }
+
+  const avatar = FALLBACK_AVATAR(item.name);
+  console.log("[dishes] fallback avatar for:", item.name);
+  return avatar;
 };
 
 // ── Dish Card ─────────────────────────────────────────────────────────────────
@@ -92,6 +149,8 @@ function DishCard({
   onToggle: (id: string) => void;
 }) {
   const isActive = (dish.status || "").toLowerCase() === "active";
+  // useState fallback: if the resolved URL fails to load, swap to avatar
+  const [imgSrc, setImgSrc] = useState<string>(dish.image);
 
   return (
     <View
@@ -121,9 +180,15 @@ function DishCard({
         }}
       >
         <Image
-          source={{ uri: dish.image }}
+          source={{ uri: imgSrc }}
           style={{ width: "100%", height: "100%" }}
           contentFit="cover"
+          transition={200}
+          onError={(e) => {
+            console.warn("[dishes] Image load error:", imgSrc, e);
+            // Swap to avatar fallback so the box is never blank
+            setImgSrc(FALLBACK_AVATAR(dish.fallbackName));
+          }}
         />
       </View>
 
@@ -285,10 +350,11 @@ export default function DishesScreen() {
         mrp: Number(item.mrp || 0),
         category: item.category || "All",
         status: item.status || "Active",
-        rating: item.rating || 4.5, // Mock rating since API might not return it
+        rating: item.rating || 4.5,
         reviews: item.reviews || Math.floor(Math.random() * 100),
         orders: item.orders || Math.floor(Math.random() * 30),
         image: getFoodImage(item),
+        fallbackName: item.name || "Chef Food",
       }));
 
       setDishes(mappedDishes);

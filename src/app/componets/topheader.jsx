@@ -16,6 +16,20 @@ import { getStoredUser, logoutUser } from "../../api";
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
 
+// ── Time-based greeting ──────────────────────────────────────────────────
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return { text: "Good Morning!", emoji: "☀️", sub: "Let's make today\ndelicious." };
+  } else if (hour >= 12 && hour < 17) {
+    return { text: "Good Afternoon!", emoji: "🌞", sub: "Keep up the great\nwork today." };
+  } else if (hour >= 17 && hour < 21) {
+    return { text: "Good Evening!", emoji: "🌇", sub: "Hope your day\nwas wonderful." };
+  } else {
+    return { text: "Good Night!", emoji: "🌙", sub: "Rest well and\ncome back refreshed." };
+  }
+}
+
 export default function TopHeader({
   showHero = true,
   title = "Home Chef",
@@ -276,25 +290,28 @@ export default function TopHeader({
           </View>
         </View>
 
-        {showHero && (
-          <View style={styles.heroCard}>
-            <Image
-              source={require("../../../assets/images/chef_hero.jpg")}
-              style={styles.heroImage}
-              contentFit="cover"
-            />
-            <View style={styles.heroOverlay} />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
-              <Text style={styles.heroTitle}>Good morning!</Text>
-              <Text style={styles.heroSub}>Let's make today{"\n"}delicious.</Text>
-              <View style={styles.heroBadge}>
-                <Ionicons name="heart" size={12} color="#FF8A65" />
-                <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+        {showHero && (() => {
+          const greeting = getGreeting();
+          return (
+            <View style={styles.heroCard}>
+              <Image
+                source={require("../../../assets/images/chef_hero.jpg")}
+                style={styles.heroImage}
+                contentFit="cover"
+              />
+              <View style={styles.heroOverlay} />
+              <View style={styles.heroContent}>
+                <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
+                <Text style={styles.heroTitle}>{greeting.emoji} {greeting.text}</Text>
+                <Text style={styles.heroSub}>{greeting.sub}</Text>
+                <View style={styles.heroBadge}>
+                  <Ionicons name="heart" size={12} color="#FF8A65" />
+                  <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
       </View>
     </>
   );
