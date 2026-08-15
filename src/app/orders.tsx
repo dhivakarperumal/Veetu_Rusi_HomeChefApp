@@ -155,7 +155,7 @@ function OrderCard({
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
             {order.items} {order.items === 1 ? "item" : "items"} · ₹
-            {order.amount}
+            {order.amount % 1 === 0 ? order.amount : order.amount.toFixed(2)}
           </Text>
         </View>
       </View>
@@ -285,15 +285,17 @@ export default function OrdersScreen() {
         }
       />
       {/* ── Tab bar ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingBottom: 14,
-          gap: 8,
-        }}
-      >
+      <View style={{ height: 60, marginTop: 16, marginBottom: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
         {TABS.map((tab) => {
           const count = orders.filter((o) => o.status === tab).length;
           const isActive = activeTab === tab;
@@ -356,6 +358,7 @@ export default function OrdersScreen() {
           );
         })}
       </ScrollView>
+      </View>
 
       {/* ── Order list ── */}
       <ScrollView
