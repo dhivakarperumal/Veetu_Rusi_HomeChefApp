@@ -1,87 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Pressable,
     ScrollView,
     Text,
     TouchableOpacity,
     View,
+    RefreshControl
 } from "react-native";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
+import api from "../api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
 
 interface Order {
   id: string;
+  order_id: string;
   status: OrderStatus;
+  rawStatus: string;
   customer: string;
   items: number;
   amount: number;
   location: string;
   time: string;
 }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const ORDERS: Order[] = [
-  {
-    id: "ORD1234",
-    status: "New",
-    customer: "Ramesh Kumar",
-    items: 2,
-    amount: 280,
-    location: "Anna Nagar, Chennai",
-    time: "10:30 AM",
-  },
-  {
-    id: "ORD1235",
-    status: "New",
-    customer: "Priya S",
-    items: 1,
-    amount: 150,
-    location: "Kilpauk, Chennai",
-    time: "10:28 AM",
-  },
-  {
-    id: "ORD1232",
-    status: "Preparing",
-    customer: "Sangeetha",
-    items: 3,
-    amount: 410,
-    location: "T.Nagar, Chennai",
-    time: "10:15 AM",
-  },
-  {
-    id: "ORD1230",
-    status: "Ready",
-    customer: "Karthik",
-    items: 2,
-    amount: 230,
-    location: "Vadapalani, Chennai",
-    time: "09:50 AM",
-  },
-  {
-    id: "ORD1228",
-    status: "Completed",
-    customer: "Deepa M",
-    items: 4,
-    amount: 560,
-    location: "Mylapore, Chennai",
-    time: "09:20 AM",
-  },
-  {
-    id: "ORD1227",
-    status: "Completed",
-    customer: "Arjun R",
-    items: 2,
-    amount: 320,
-    location: "Adyar, Chennai",
-    time: "09:00 AM",
-  },
-];
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<
@@ -94,19 +40,25 @@ const STATUS_CONFIG: Record<
   Completed: { color: "#4A675F", bg: "#ECEFF1", label: "Completed" },
 };
 
-// ── Tab counts ────────────────────────────────────────────────────────────────
-function countByStatus(status: OrderStatus) {
-  return ORDERS.filter((o) => o.status === status).length;
-}
+const mapStatus = (status: string): OrderStatus => {
+  const s = (status || "").toLowerCase();
+  if (["pending", "new", "new order", "order placed"].includes(s)) return "New";
+  if (["accepted", "preparing"].includes(s)) return "Preparing";
+  if (["food ready", "packing", "searching delivery partner", "delivery partner assigned"].includes(s)) return "Ready";
+  if (["out for delivery", "delivered", "completed"].includes(s)) return "Completed";
+  return "New";
+};
 
 // ── Order Card ────────────────────────────────────────────────────────────────
 function OrderCard({
   order,
   onAccept,
+  onMarkReady,
   onPress,
 }: {
   order: Order;
   onAccept?: (id: string) => void;
+  onMarkReady?: (id: string) => void;
   onPress?: () => void;
 }) {
   const cfg = STATUS_CONFIG[order.status];
@@ -157,7 +109,7 @@ function OrderCard({
               fontWeight: "700",
             }}
           >
-            #{order.id}
+            #{order.order_id}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
             {order.time}
@@ -241,6 +193,7 @@ function OrderCard({
 
       {showStart && (
         <Pressable
+          onPress={() => onMarkReady?.(order.id)}
           style={{
             backgroundColor: "#1565C0",
             borderRadius: 14,
@@ -263,17 +216,56 @@ const TABS: OrderStatus[] = ["New", "Preparing", "Ready", "Completed"];
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderStatus>("New");
-  const [orders, setOrders] = useState<Order[]>(ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const res = await api.get("/user-food-orders/chef");
+      const mappedOrders = res.data.map((o: any) => ({
+        id: o.id || o._id,
+        order_id: o.order_id || o.id || "Unknown",
+        status: mapStatus(o.status),
+        rawStatus: o.status,
+        customer: o.customer_name || "Unknown",
+        items: o.chef_total_quantity ?? (o.items?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0) || 0),
+        amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
+        location: o.customer_address || o.delivery_address || "Unknown Location",
+        time: o.ordered_at || o.created_at ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "-",
+      }));
+      // Optional: Filter out cancelled
+      setOrders(mappedOrders.filter((o: any) => (o.rawStatus || "").toLowerCase() !== "cancelled"));
+    } catch (error) {
+      console.error("Failed to load orders:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const filtered = orders.filter((o) => o.status === activeTab);
 
-  const handleAccept = (id: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, status: "Preparing" as OrderStatus } : o,
-      ),
-    );
+  const handleAccept = async (id: string) => {
+    try {
+      await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
+      fetchOrders();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleMarkReady = async (id: string) => {
+    try {
+      await api.patch(`/user-food-orders/status/${id}`, { status: "Food Ready" });
+      fetchOrders();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -368,6 +360,7 @@ export default function OrdersScreen() {
       {/* ── Order list ── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchOrders} tintColor={colors.primary} />}
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 4,
@@ -421,6 +414,7 @@ export default function OrdersScreen() {
               key={order.id}
               order={order}
               onAccept={handleAccept}
+              onMarkReady={handleMarkReady}
               onPress={() => router.push(`/order/${order.id}`)}
             />
           ))

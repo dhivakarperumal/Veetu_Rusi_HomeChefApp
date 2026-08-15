@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import api, { getStoredUser, API_BASE_URL } from "../api";
+import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -19,8 +19,19 @@ const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
 const resolveImageUrl = (path: string) => {
   if (!path) return path;
-  if (path.startsWith("http")) return path;
-  return path.startsWith("/") ? `${IMAGE_BASE_URL}${path}` : `${IMAGE_BASE_URL}/${path}`;
+
+  // Replace localhost or 127.0.0.1 references with the actual running server IP
+  let resolvedPath = path;
+  if (path.includes("localhost:5000")) {
+    resolvedPath = path.replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL);
+  } else if (path.includes("127.0.0.1:5000")) {
+    resolvedPath = path.replace(/https?:\/\/127.0.0.1:5000/g, IMAGE_BASE_URL);
+  }
+
+  if (resolvedPath.startsWith("http")) return resolvedPath;
+  return resolvedPath.startsWith("/")
+    ? `${IMAGE_BASE_URL}${resolvedPath}`
+    : `${IMAGE_BASE_URL}/${resolvedPath}`;
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -68,7 +79,7 @@ const getFoodImage = (item: any) => {
     if (item.packaging_image) return resolveImageUrl(item.packaging_image);
   } catch (e) {}
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    item.name || "Chef Food"
+    item.name || "Chef Food",
   )}&background=2E7A4F&color=fff&size=400`;
 };
 
@@ -140,11 +151,7 @@ function DishCard({
             {dish.name}
           </Text>
           <Pressable hitSlop={8}>
-            <Ionicons
-              name="ellipsis-vertical"
-              size={16}
-              color={colors.muted}
-            />
+            <Ionicons name="ellipsis-vertical" size={16} color={colors.muted} />
           </Pressable>
         </View>
 
@@ -157,7 +164,9 @@ function DishCard({
             gap: 8,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+          <View
+            style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
+          >
             <Text
               style={{
                 fontSize: 15,
@@ -312,8 +321,8 @@ export default function DishesScreen() {
                   ? "Inactive"
                   : "Active",
             }
-          : d
-      )
+          : d,
+      ),
     );
     // Note: To fully persist, you should add an API call here to update the dish status.
   };
@@ -323,26 +332,7 @@ export default function DishesScreen() {
       {/* ── Header ── */}
       <TopHeader
         showHero={false}
-        title="My Dishes"
-        rightContent={
-          <Pressable
-            onPress={() => router.push("/add-dish")}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#E65100",
-              borderRadius: 50,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              gap: 5,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-              Add Dish
-            </Text>
-          </Pressable>
-        }
+        title="My Products"
       />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
@@ -369,7 +359,7 @@ export default function DishesScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search your dishes..."
+            placeholder="Search your products..."
             placeholderTextColor={colors.muted}
             style={{
               flex: 1,
@@ -380,11 +370,7 @@ export default function DishesScreen() {
           />
           {search.length > 0 && (
             <Pressable onPress={() => setSearch("")}>
-              <Ionicons
-                name="close-circle"
-                size={18}
-                color={colors.muted}
-              />
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
             </Pressable>
           )}
         </View>
@@ -466,7 +452,7 @@ export default function DishesScreen() {
                 color: colors.primaryDark,
               }}
             >
-              No dishes found
+              No products found
             </Text>
             <Text
               style={{
