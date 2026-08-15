@@ -37,10 +37,19 @@ const getProductImage = (product: any) => {
     if (product.images) {
       let imgs = product.images;
       if (typeof imgs === 'string') {
-        try { imgs = JSON.parse(imgs); } catch { imgs = null; }
-      }
-      if (typeof imgs === 'string') {
-        try { imgs = JSON.parse(imgs); } catch { imgs = null; }
+        try {
+          const parsed = JSON.parse(imgs);
+          if (typeof parsed === 'string') {
+            imgs = JSON.parse(parsed); // Handle double stringified
+          } else {
+            imgs = parsed;
+          }
+        } catch {
+          // If it fails to parse, it might just be a plain URL string
+          if (imgs.includes('/') || imgs.includes('.')) {
+             return resolveImageUrl(imgs);
+          }
+        }
       }
       if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
         return resolveImageUrl(imgs[0]);
@@ -52,10 +61,12 @@ const getProductImage = (product: any) => {
     if (product.variants?.length > 0 && product.variants[0]?.images) {
       let imgs = product.variants[0].images;
       if (typeof imgs === 'string') {
-        try { imgs = JSON.parse(imgs); } catch { imgs = null; }
+        try { imgs = JSON.parse(imgs); } catch { /* ignore */ }
       }
       if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
         return resolveImageUrl(imgs[0]);
+      } else if (typeof imgs === 'string' && imgs.length > 0) {
+        return resolveImageUrl(imgs);
       }
     }
   } catch (e) {
@@ -73,7 +84,19 @@ function ProductCard({
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
 }) {
-  const isActive = (product.status || "").toLowerCase() === "active";
+  const stock = Number(product.total_stock || 0);
+  const isOutOfStock = stock <= 0;
+  
+  // Use DB status, but override to Out of Stock if stock is 0
+  const rawStatus = (product.status || "").toLowerCase();
+  let displayStatus = product.status || "Inactive";
+  if (isOutOfStock && rawStatus === "active") {
+    displayStatus = "Out of Stock";
+  }
+
+  const isActive = displayStatus.toLowerCase() === "active";
+  const isLowStock = displayStatus.toLowerCase() === "low stock";
+  
   const imageUri = getProductImage(product);
 
   return (
@@ -99,9 +122,14 @@ function ProductCard({
       />
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primaryDark, flex: 1 }} numberOfLines={1}>
-            {product.name}
-          </Text>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primaryDark }} numberOfLines={1}>
+              {product.name}
+            </Text>
+            {product.product_code && (
+              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}>#{product.product_code}</Text>
+            )}
+          </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Pressable onPress={() => onEdit(product.id)} hitSlop={8}>
               <Ionicons name="pencil" size={18} color={colors.primary} />
@@ -115,16 +143,16 @@ function ProductCard({
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
             <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark }}>
-              ₹{Number(product.price || 0).toFixed(2).replace(/\.00$/, "")}
+              ₹{Number(product.offer_price || product.price || product.mrp || 0).toFixed(2).replace(/\.00$/, "")}
             </Text>
-            {product.mrp && product.mrp > product.price && (
+            {product.mrp && Number(product.mrp) > Number(product.offer_price || product.price || 0) && (
               <Text style={{ fontSize: 12, fontWeight: "500", color: colors.muted, textDecorationLine: "line-through" }}>
                 ₹{Number(product.mrp).toFixed(2).replace(/\.00$/, "")}
               </Text>
             )}
           </View>
           <View style={{
-            backgroundColor: isActive ? "#E8F5E9" : (product.status === 'Low Stock' ? '#FFF8E1' : "#FFEBEE"),
+            backgroundColor: isActive ? "#E8F5E9" : (isLowStock ? '#FFF8E1' : "#FFEBEE"),
             borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 3,
@@ -132,16 +160,21 @@ function ProductCard({
             <Text style={{
               fontSize: 12,
               fontWeight: "700",
-              color: isActive ? "#2E7D32" : (product.status === 'Low Stock' ? '#F57F17' : "#C62828"),
+              color: isActive ? "#2E7D32" : (isLowStock ? '#F57F17' : "#C62828"),
               textTransform: "capitalize",
             }}>
-              {product.status || "Inactive"}
+              {displayStatus}
             </Text>
           </View>
         </View>
-        <Text style={{ fontSize: 12, color: colors.muted }}>
-           {product.category || "Uncategorized"}
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontSize: 12, color: colors.muted }}>
+             {product.category || "Uncategorized"}
+          </Text>
+          <Text style={{ fontSize: 12, color: isOutOfStock ? '#C62828' : colors.muted, fontWeight: '500' }}>
+            Stock: {stock}
+          </Text>
+        </View>
       </View>
     </View>
   );

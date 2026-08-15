@@ -1,84 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, Text, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../theme/colors";
-
-// ── Mock order database (shared shape with orders.tsx) ─────────────────────
-const ORDER_DB: Record<string, {
-  id: string;
-  status: string;
-  customer: string;
-  phone: string;
-  address: string;
-  time: string;
-  date: string;
-  items: { name: string; qty: number; price: number }[];
-  deliveryCharge: number;
-  platformFee: number;
-}> = {
-  ORD1234: {
-    id: "ORD1234",
-    status: "New",
-    customer: "Ramesh Kumar",
-    phone: "+91 98765 43210",
-    address: "No.12, 3rd Street, Anna Nagar,\nChennai - 600040",
-    time: "10:30 AM",
-    date: "Today",
-    items: [
-      { name: "Chicken Biryani", qty: 1, price: 150 },
-      { name: "Curd Rice",       qty: 1, price: 80  },
-      { name: "Sambar Rice",     qty: 1, price: 90  },
-    ],
-    deliveryCharge: 30,
-    platformFee: 10,
-  },
-  ORD1235: {
-    id: "ORD1235",
-    status: "New",
-    customer: "Priya S",
-    phone: "+91 97654 32109",
-    address: "No.5, Kilpauk Garden Road,\nChennai - 600010",
-    time: "10:28 AM",
-    date: "Today",
-    items: [
-      { name: "Veg Pulao", qty: 1, price: 150 },
-    ],
-    deliveryCharge: 30,
-    platformFee: 10,
-  },
-  ORD1232: {
-    id: "ORD1232",
-    status: "Preparing",
-    customer: "Sangeetha",
-    phone: "+91 96543 21098",
-    address: "T.Nagar, Chennai - 600017",
-    time: "10:15 AM",
-    date: "Today",
-    items: [
-      { name: "Chicken Biryani", qty: 2, price: 300 },
-      { name: "Curd Rice",       qty: 1, price: 80  },
-      { name: "Sambar Rice",     qty: 1, price: 30  },
-    ],
-    deliveryCharge: 30,
-    platformFee: 10,
-  },
-  ORD1230: {
-    id: "ORD1230",
-    status: "Ready",
-    customer: "Karthik",
-    phone: "+91 95432 10987",
-    address: "Vadapalani, Chennai - 600026",
-    time: "09:50 AM",
-    date: "Today",
-    items: [
-      { name: "Chicken Curry",   qty: 1, price: 140 },
-      { name: "Sambar Rice",     qty: 1, price: 90  },
-    ],
-    deliveryCharge: 30,
-    platformFee: 10,
-  },
-};
+import api from "../../api";
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -86,6 +12,15 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   Preparing: { color: "#1565C0", bg: "#E3F2FD" },
   Ready:     { color: "#2E7D32", bg: "#E8F5E9" },
   Completed: { color: "#4A675F", bg: "#ECEFF1" },
+};
+
+const mapStatus = (status: string) => {
+  const s = (status || "").toLowerCase();
+  if (["pending", "new", "new order", "order placed"].includes(s)) return "New";
+  if (["accepted", "preparing"].includes(s)) return "Preparing";
+  if (["food ready", "packing", "searching delivery partner", "delivery partner assigned"].includes(s)) return "Ready";
+  if (["out for delivery", "delivered", "completed"].includes(s)) return "Completed";
+  return "New";
 };
 
 // ── Divider ───────────────────────────────────────────────────────────────────
@@ -115,7 +50,45 @@ function SectionTitle({ title }: { title: string }) {
 export default function OrderDetailScreen() {
   const router  = useRouter();
   const { id }  = useLocalSearchParams<{ id: string }>();
-  const order   = ORDER_DB[id ?? ""] ?? null;
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [id]);
+
+  const fetchOrder = async () => {
+    try {
+      setLoading(true);
+      // Try to fetch specific order if endpoint exists, otherwise fallback to finding from chef orders list
+      let foundOrder = null;
+      try {
+         const res = await api.get(`/user-food-orders/${id}`);
+         if (res.data && res.data.id) foundOrder = res.data;
+      } catch (e) {
+         // fallback if single order endpoint requires different auth or path
+      }
+
+      if (!foundOrder) {
+         const res = await api.get("/user-food-orders/chef");
+         foundOrder = res.data.find((o: any) => String(o.id) === String(id) || String(o._id) === String(id));
+      }
+
+      setOrder(foundOrder);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.pageBackground }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!order) {
     return (
@@ -125,14 +98,33 @@ export default function OrderDetailScreen() {
     );
   }
 
-  const cfg        = STATUS_CONFIG[order.status] ?? STATUS_CONFIG["New"];
-  const itemTotal  = order.items.reduce((s, i) => s + i.price, 0);
-  const grandTotal = itemTotal + order.deliveryCharge + order.platformFee;
-  const isNew      = order.status === "New";
+  const uiStatus   = mapStatus(order.status);
+  const cfg        = STATUS_CONFIG[uiStatus] ?? STATUS_CONFIG["New"];
+  
+  // Calculate totals gracefully
+  const parsedItems = Array.isArray(order.items) ? order.items : [];
+  const itemTotal  = parsedItems.reduce((s: number, i: any) => s + (Number(i.price) * Number(i.quantity || 1)), 0);
+  // We use chef_total_amount if available, otherwise total_amount
+  const grandTotal = Number(order.chef_total_amount ?? order.total_amount ?? itemTotal);
+  
+  // Platform fees / Delivery are typically handled by franchise, but we display if backend provided them
+  const deliveryCharge = Number(order.delivery_charge || 0);
+  const platformFee = Number(order.platform_fee || 0);
 
-  const handleAccept = () => {
-    Alert.alert("Order Accepted", `#${order.id} has been accepted!`);
-    router.back();
+  const isNew      = uiStatus === "New";
+  const addressString = order.street_address ? `${order.street_address}\n${order.city}, ${order.state}` : (order.customer_address || "Unknown Address");
+  
+  const displayTime = order.delivery_time ? order.delivery_time : (order.ordered_at ? new Date(order.ordered_at).toLocaleTimeString() : "");
+  const displayDate = order.delivery_date ? order.delivery_date : (order.ordered_at ? new Date(order.ordered_at).toLocaleDateString() : "");
+
+  const handleAccept = async () => {
+    try {
+      await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
+      Alert.alert("Order Accepted", `#${order.order_id || id} has been accepted!`);
+      router.back();
+    } catch (err) {
+      Alert.alert("Error", "Could not accept order.");
+    }
   };
 
   const handleReject = () => {
@@ -141,7 +133,14 @@ export default function OrderDetailScreen() {
       "Are you sure you want to reject this order?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Reject", style: "destructive", onPress: () => router.back() },
+        { text: "Reject", style: "destructive", onPress: async () => {
+            try {
+              await api.patch(`/user-food-orders/status/${id}`, { status: "Cancelled" });
+              router.back();
+            } catch (err) {
+              Alert.alert("Error", "Could not reject order.");
+            }
+        }},
       ]
     );
   };
@@ -186,19 +185,19 @@ export default function OrderDetailScreen() {
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
-              #{order.id}
+              #{order.order_id || order.id}
             </Text>
             <View style={{ backgroundColor: cfg.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
               <Text style={{ color: cfg.color, fontSize: 12, fontWeight: "700" }}>
-                {order.status}
+                {uiStatus}
               </Text>
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primaryDark }}>
-              {order.time}
+              {displayTime}
             </Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>{order.date}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>{displayDate}</Text>
           </View>
         </View>
 
@@ -219,7 +218,7 @@ export default function OrderDetailScreen() {
             elevation: 2,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
             <View
               style={{
                 height: 46,
@@ -232,30 +231,33 @@ export default function OrderDetailScreen() {
             >
               <Ionicons name="person" size={22} color={colors.primarySoft} />
             </View>
-            <View>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark }}>
-                {order.customer}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark }} numberOfLines={1}>
+                {order.customer_name || "Unknown Customer"}
               </Text>
               <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>
-                {order.phone}
+                {order.customer_phone || ""}
               </Text>
             </View>
           </View>
 
           {/* Call button */}
-          <Pressable
-            onPress={() => Linking.openURL(`tel:${order.phone.replace(/\s/g, "")}`)}
-            style={{
-              height: 42,
-              width: 42,
-              borderRadius: 21,
-              backgroundColor: "#E8F5E9",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="call" size={20} color={colors.primary} />
-          </Pressable>
+          {(order.customer_phone || order.phone) && (
+            <Pressable
+              onPress={() => Linking.openURL(`tel:${(order.customer_phone || order.phone).replace(/\s/g, "")}`)}
+              style={{
+                height: 42,
+                width: 42,
+                borderRadius: 21,
+                backgroundColor: "#E8F5E9",
+                alignItems: "center",
+                justifyContent: "center",
+                marginLeft: 10
+              }}
+            >
+              <Ionicons name="call" size={20} color={colors.primary} />
+            </Pressable>
+          )}
         </View>
 
         {/* ── Delivery address card ── */}
@@ -274,7 +276,7 @@ export default function OrderDetailScreen() {
         >
           <SectionTitle title="Delivery Address" />
           <Text style={{ fontSize: 14, color: colors.primaryDark, lineHeight: 22 }}>
-            {order.address}
+            {addressString}
           </Text>
           <Pressable
             onPress={() => Linking.openURL("https://maps.google.com")}
@@ -302,7 +304,9 @@ export default function OrderDetailScreen() {
           }}
         >
           <SectionTitle title="Order Items" />
-          {order.items.map((item, idx) => (
+          {parsedItems.length === 0 ? (
+             <Text style={{ fontSize: 14, color: colors.muted }}>No items found.</Text>
+          ) : parsedItems.map((item: any, idx: number) => (
             <View key={idx}>
               <View
                 style={{
@@ -316,13 +320,13 @@ export default function OrderDetailScreen() {
                   {item.name}
                 </Text>
                 <Text style={{ fontSize: 13, color: colors.muted, marginRight: 24, fontWeight: "500" }}>
-                  x {item.qty}
+                  x {item.quantity || 1}
                 </Text>
                 <Text style={{ fontSize: 14, fontWeight: "600", color: colors.primaryDark }}>
-                  ₹{item.price}
+                  ₹{Number(item.price || item.total_price || 0).toFixed(2).replace(/\.00$/, "")}
                 </Text>
               </View>
-              {idx < order.items.length - 1 && (
+              {idx < parsedItems.length - 1 && (
                 <View style={{ height: 1, backgroundColor: colors.border }} />
               )}
             </View>
@@ -348,25 +352,29 @@ export default function OrderDetailScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
             <Text style={{ fontSize: 14, color: colors.muted }}>Item Total</Text>
             <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
-              ₹{itemTotal}
+              ₹{itemTotal.toFixed(2).replace(/\.00$/, "")}
             </Text>
           </View>
 
           {/* Delivery charge */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-            <Text style={{ fontSize: 14, color: colors.muted }}>Delivery Charge</Text>
-            <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
-              ₹{order.deliveryCharge}
-            </Text>
-          </View>
+          {deliveryCharge > 0 && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
+              <Text style={{ fontSize: 14, color: colors.muted }}>Delivery Charge</Text>
+              <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
+                ₹{deliveryCharge.toFixed(2).replace(/\.00$/, "")}
+              </Text>
+            </View>
+          )}
 
           {/* Platform fee */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 14 }}>
-            <Text style={{ fontSize: 14, color: colors.muted }}>Platform Fee</Text>
-            <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
-              ₹{order.platformFee}
-            </Text>
-          </View>
+          {platformFee > 0 && (
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, color: colors.muted }}>Platform Fee</Text>
+              <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
+                ₹{platformFee.toFixed(2).replace(/\.00$/, "")}
+              </Text>
+            </View>
+          )}
 
           <Divider />
 
@@ -376,7 +384,7 @@ export default function OrderDetailScreen() {
               Total
             </Text>
             <Text style={{ fontSize: 20, fontWeight: "800", color: colors.primary }}>
-              ₹{grandTotal}
+              ₹{grandTotal.toFixed(2).replace(/\.00$/, "")}
             </Text>
           </View>
         </View>
@@ -384,14 +392,20 @@ export default function OrderDetailScreen() {
 
       {/* ── Action buttons (fixed at bottom) ── */}
       {isNew && (
-        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.pageBackground }}>
+        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.pageBackground, position: "absolute", bottom: 0, left: 0, right: 0 }}>
           <View
             style={{
               flexDirection: "row",
               paddingHorizontal: 16,
               paddingTop: 12,
-              paddingBottom: 8,
+              paddingBottom: 16,
               gap: 12,
+              backgroundColor: colors.pageBackground,
+              shadowColor: "#000",
+              shadowOpacity: 0.1,
+              shadowOffset: { width: 0, height: -3 },
+              shadowRadius: 6,
+              elevation: 10,
             }}
           >
             {/* Reject */}
