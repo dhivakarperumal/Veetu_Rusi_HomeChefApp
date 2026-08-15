@@ -183,7 +183,8 @@ export default function ProfileScreen() {
     profile?.email ||
     "Chef";
 
-  const displayEmail = profile?.email || profile?.identifier || "chef@example.com";
+  const displayEmail =
+    profile?.email || profile?.identifier || "chef@example.com";
   const displayRole = profile?.role || "Home Chef";
 
   return (

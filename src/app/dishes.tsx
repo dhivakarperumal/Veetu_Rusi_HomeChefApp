@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import TopHeader from "./componets/topheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Category = "All" | "Veg" | "Non-Veg" | "Combo";
@@ -309,33 +309,28 @@ export default function DishesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <PageHeader
+      <TopHeader
+        showHero={false}
         title="My Dishes"
-        onLeftPress={() => {}}
-        leftIcon="menu-outline"
-        rightActions={[
-          {
-            customContent: (
-              <Pressable
-                onPress={() => router.push("/add-dish")}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: colors.primary,
-                  borderRadius: 50,
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  gap: 5,
-                }}
-              >
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-                  Add Dish
-                </Text>
-              </Pressable>
-            ),
-          },
-        ]}
+        rightContent={
+          <Pressable
+            onPress={() => router.push("/add-dish")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#E65100", // using accent color for Add Dish button to contrast green
+              borderRadius: 50,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              gap: 5,
+            }}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+              Add Dish
+            </Text>
+          </Pressable>
+        }
       />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>

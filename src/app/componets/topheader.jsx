@@ -16,7 +16,11 @@ import { getStoredUser, logoutUser } from "../../api";
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
 
-export default function TopHeader({ showHero = true }) {
+export default function TopHeader({
+  showHero = true,
+  title = "Home Chef",
+  rightContent,
+}) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileDrop, setShowProfileDrop] = useState(false);
@@ -166,12 +170,18 @@ export default function TopHeader({ showHero = true }) {
 
             {/* Brand */}
             <View style={styles.brandCenter}>
-              <Text style={styles.brandCenterText}>Home Chef</Text>
+              <Text style={styles.brandCenterText}>{title}</Text>
             </View>
           </View>
 
-          {/* Right actions: notifications + profile avatar */}
+          {/* Right actions: custom content + notifications + profile avatar */}
           <View style={styles.rightActions}>
+            {rightContent && (
+              <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, gap: 8 }}>
+                {rightContent}
+              </View>
+            )}
+
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.notificationButton}

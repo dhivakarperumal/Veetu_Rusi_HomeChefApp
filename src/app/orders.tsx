@@ -1,10 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+    Pressable,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import TopHeader from "./componets/topheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
@@ -272,12 +278,19 @@ export default function OrdersScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      <PageHeader
+      <TopHeader
+        showHero={false}
         title="Orders"
-        rightActions={[
-          { icon: "search-outline", onPress: () => {} },
-          { icon: "options-outline", onPress: () => {} },
-        ]}
+        rightContent={
+          <>
+            <TouchableOpacity style={{ marginRight: 8 }}>
+              <Ionicons name="search-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity>
+              <Ionicons name="options-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+          </>
+        }
       />
       {/* ── Tab bar ── */}
       <ScrollView
