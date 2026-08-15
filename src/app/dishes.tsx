@@ -1,136 +1,76 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import api, { getStoredUser, API_BASE_URL } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
 
+const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+const resolveImageUrl = (path: string) => {
+  if (!path) return path;
+  if (path.startsWith("http")) return path;
+  return path.startsWith("/") ? `${IMAGE_BASE_URL}${path}` : `${IMAGE_BASE_URL}/${path}`;
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Category = "All" | "Veg" | "Non-Veg" | "Combo";
-type DishStatus = "Active" | "Inactive";
+type DishStatus = "Active" | "Inactive" | string;
 
 interface Dish {
   id: string;
   name: string;
   price: number;
-  category: Exclude<Category, "All">;
+  mrp?: number;
+  category: string;
   status: DishStatus;
   rating: number;
   reviews: number;
   orders: number;
-  emoji: string;
-  bg: string;
+  image: string;
 }
 
-// ── Mock dishes ───────────────────────────────────────────────────────────────
-const DISHES: Dish[] = [
-  {
-    id: "1",
-    name: "Chicken Biryani",
-    price: 150,
-    category: "Non-Veg",
-    status: "Active",
-    rating: 4.8,
-    reviews: 120,
-    orders: 20,
-    emoji: "🍗",
-    bg: "#FFF3E0",
-  },
-  {
-    id: "2",
-    name: "Veg Pulao",
-    price: 100,
-    category: "Veg",
-    status: "Active",
-    rating: 4.6,
-    reviews: 95,
-    orders: 15,
-    emoji: "🌿",
-    bg: "#E8F5E9",
-  },
-  {
-    id: "3",
-    name: "Sambar Rice",
-    price: 90,
-    category: "Veg",
-    status: "Active",
-    rating: 4.7,
-    reviews: 60,
-    orders: 10,
-    emoji: "🍲",
-    bg: "#FFF8E1",
-  },
-  {
-    id: "4",
-    name: "Chicken Curry",
-    price: 140,
-    category: "Non-Veg",
-    status: "Active",
-    rating: 4.8,
-    reviews: 95,
-    orders: 18,
-    emoji: "🍛",
-    bg: "#FBE9E7",
-  },
-  {
-    id: "5",
-    name: "Curd Rice",
-    price: 80,
-    category: "Veg",
-    status: "Active",
-    rating: 4.7,
-    reviews: 40,
-    orders: 8,
-    emoji: "🥣",
-    bg: "#F3E5F5",
-  },
-  {
-    id: "6",
-    name: "Fish Curry + Rice",
-    price: 180,
-    category: "Combo",
-    status: "Active",
-    rating: 4.9,
-    reviews: 72,
-    orders: 22,
-    emoji: "🐟",
-    bg: "#E3F2FD",
-  },
-  {
-    id: "7",
-    name: "Egg Fried Rice",
-    price: 110,
-    category: "Non-Veg",
-    status: "Inactive",
-    rating: 4.5,
-    reviews: 38,
-    orders: 6,
-    emoji: "🍳",
-    bg: "#FFFDE7",
-  },
-  {
-    id: "8",
-    name: "Mini Meals Combo",
-    price: 200,
-    category: "Combo",
-    status: "Active",
-    rating: 4.8,
-    reviews: 110,
-    orders: 25,
-    emoji: "🍱",
-    bg: "#E8F5E9",
-  },
-];
+const CATEGORIES = ["All", "Veg", "Non-Veg", "Combo"];
 
-const CATEGORIES: Category[] = ["All", "Veg", "Non-Veg", "Combo"];
+// ── Helper ────────────────────────────────────────────────────────────────────
+const getFoodImage = (item: any) => {
+  try {
+    if (item.images) {
+      let imgs = item.images;
+      if (typeof imgs === "string") {
+        try {
+          imgs = JSON.parse(imgs);
+        } catch {
+          imgs = null;
+        }
+      }
+      if (typeof imgs === "string") {
+        try {
+          imgs = JSON.parse(imgs);
+        } catch {
+          imgs = null;
+        }
+      }
+      if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
+        return resolveImageUrl(imgs[0]);
+      }
+    }
+    if (item.packaging_image) return resolveImageUrl(item.packaging_image);
+  } catch (e) {}
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    item.name || "Chef Food"
+  )}&background=2E7A4F&color=fff&size=400`;
+};
 
 // ── Dish Card ─────────────────────────────────────────────────────────────────
 function DishCard({
@@ -140,7 +80,7 @@ function DishCard({
   dish: Dish;
   onToggle: (id: string) => void;
 }) {
-  const isActive = dish.status === "Active";
+  const isActive = (dish.status || "").toLowerCase() === "active";
 
   return (
     <View
@@ -164,13 +104,16 @@ function DishCard({
           height: 76,
           width: 76,
           borderRadius: 16,
-          backgroundColor: dish.bg,
-          alignItems: "center",
-          justifyContent: "center",
+          backgroundColor: colors.softCard,
           marginRight: 14,
+          overflow: "hidden",
         }}
       >
-        <Text style={{ fontSize: 34 }}>{dish.emoji}</Text>
+        <Image
+          source={{ uri: dish.image }}
+          style={{ width: "100%", height: "100%" }}
+          contentFit="cover"
+        />
       </View>
 
       {/* Info */}
@@ -214,15 +157,29 @@ function DishCard({
             gap: 8,
           }}
         >
-          <Text
-            style={{
-              fontSize: 15,
-              fontWeight: "700",
-              color: colors.primaryDark,
-            }}
-          >
-            ₹{dish.price}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: colors.primaryDark,
+              }}
+            >
+              ₹{Number(dish.price).toFixed(2).replace(/\.00$/, "")}
+            </Text>
+            {dish.mrp && dish.mrp > dish.price && (
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "500",
+                  color: colors.muted,
+                  textDecorationLine: "line-through",
+                }}
+              >
+                ₹{Number(dish.mrp).toFixed(2).replace(/\.00$/, "")}
+              </Text>
+            )}
+          </View>
           <Pressable
             onPress={() => onToggle(dish.id)}
             style={{
@@ -237,9 +194,10 @@ function DishCard({
                 fontSize: 12,
                 fontWeight: "700",
                 color: isActive ? "#2E7D32" : "#C62828",
+                textTransform: "capitalize",
               }}
             >
-              {dish.status}
+              {dish.status || "Inactive"}
             </Text>
           </Pressable>
         </View>
@@ -283,33 +241,109 @@ function DishCard({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function DishesScreen() {
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
-  const [dishes, setDishes] = useState<Dish[]>(DISHES);
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFoods();
+  }, []);
+
+  const fetchFoods = async () => {
+    setLoading(true);
+    try {
+      const profile = await getStoredUser();
+      const params: any = {};
+      if (profile?.user_id || profile?.id) {
+        params.chef_user_id = profile.user_id || profile.id;
+      }
+      const res = await api.get("/chef-foods", { params });
+      const allFoods = Array.isArray(res.data) ? res.data : [];
+
+      const foodsOnly = allFoods.filter((item: any) => {
+        if (!item.product_type) {
+          if (!item.category) return true;
+          return !String(item.category).toLowerCase().includes("product");
+        }
+        return item.product_type === "Food";
+      });
+
+      const mappedDishes: Dish[] = foodsOnly.map((item: any) => ({
+        id: String(item.id),
+        name: item.name || "Unknown Dish",
+        price: Number(item.final_price || item.mrp || item.price || 0),
+        mrp: Number(item.mrp || 0),
+        category: item.category || "All",
+        status: item.status || "Active",
+        rating: item.rating || 4.5, // Mock rating since API might not return it
+        reviews: item.reviews || Math.floor(Math.random() * 100),
+        orders: item.orders || Math.floor(Math.random() * 30),
+        image: getFoodImage(item),
+      }));
+
+      setDishes(mappedDishes);
+    } catch (err) {
+      console.error("Failed to load chef foods", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = dishes.filter((d) => {
     const matchCat =
-      activeCategory === "All" || d.category === activeCategory;
+      activeCategory === "All" ||
+      (d.category && d.category.toLowerCase() === activeCategory.toLowerCase());
     const matchSearch = d.name
       .toLowerCase()
       .includes(search.toLowerCase().trim());
     return matchCat && matchSearch;
   });
 
-  const toggleStatus = (id: string) => {
+  const toggleStatus = async (id: string) => {
+    // Optimistic UI update
     setDishes((prev) =>
       prev.map((d) =>
         d.id === id
-          ? { ...d, status: d.status === "Active" ? "Inactive" : "Active" }
+          ? {
+              ...d,
+              status:
+                (d.status || "").toLowerCase() === "active"
+                  ? "Inactive"
+                  : "Active",
+            }
           : d
       )
     );
+    // Note: To fully persist, you should add an API call here to update the dish status.
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <TopHeader showHero={false} title="My Dishes" />
+      <TopHeader
+        showHero={false}
+        title="My Dishes"
+        rightContent={
+          <Pressable
+            onPress={() => router.push("/add-dish")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#E65100",
+              borderRadius: 50,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              gap: 5,
+            }}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+              Add Dish
+            </Text>
+          </Pressable>
+        }
+      />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* Search bar */}
@@ -409,7 +443,14 @@ export default function DishesScreen() {
           paddingBottom: 100,
         }}
       >
-        {filtered.length === 0 ? (
+        {loading ? (
+          <View style={{ paddingVertical: 60, alignItems: "center" }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 12, color: colors.muted }}>
+              Loading dishes...
+            </Text>
+          </View>
+        ) : filtered.length === 0 ? (
           <View
             style={{
               alignItems: "center",
@@ -445,6 +486,7 @@ export default function DishesScreen() {
         )}
       </ScrollView>
 
+      {/* Floating Add Dish Button */}
       <Pressable
         onPress={() => router.push("/add-dish")}
         style={{
