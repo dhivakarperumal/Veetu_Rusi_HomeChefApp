@@ -2,10 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -227,6 +229,10 @@ export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderStatus>("New");
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
+  // Optional: you can add a filterSort state here if needed, e.g. "Newest", "Oldest", "Highest Amount"
+  const [filterSort, setFilterSort] = useState<"Newest" | "Oldest" | "Highest Amount">("Newest");
   const router = useRouter();
 
   const fetchOrders = useCallback(async () => {
@@ -276,7 +282,26 @@ export default function OrdersScreen() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const filtered = orders.filter((o) => o.status === activeTab);
+  let filtered = orders.filter((o) => o.status === activeTab);
+  
+  if (search) {
+    const s = search.toLowerCase();
+    filtered = filtered.filter(
+      (o) =>
+        o.customer.toLowerCase().includes(s) ||
+        o.order_id.toLowerCase().includes(s) ||
+        o.location.toLowerCase().includes(s)
+    );
+  }
+
+  // Apply sorting
+  if (filterSort === "Newest") {
+    // Assuming higher ID or time means newer if we don't have exact timestamps to parse reliably
+    // In a real app we'd parse o.time or keep a raw date.
+    // We'll leave the default order from API for "Newest"
+  } else if (filterSort === "Highest Amount") {
+    filtered.sort((a, b) => b.amount - a.amount);
+  }
 
   const handleAccept = async (id: string) => {
     try {
@@ -300,22 +325,54 @@ export default function OrdersScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      <TopHeader
-        showHero={false}
-        title="Orders"
-        rightContent={
-          <>
-            <TouchableOpacity style={{ marginRight: 8 }}>
-              <Ionicons name="search-outline" size={22} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Ionicons name="options-outline" size={22} color="#fff" />
-            </TouchableOpacity>
-          </>
-        }
-      />
+      <TopHeader showHero={false} title="Orders" />
+      
+      {/* Search bar with filter icon */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 16,
+          backgroundColor: colors.cardBackground,
+          borderRadius: 50,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          gap: 8,
+          shadowColor: "#000",
+          shadowOpacity: 0.04,
+          shadowOffset: { width: 0, height: 1 },
+          shadowRadius: 4,
+          elevation: 1,
+        }}
+      >
+        <Ionicons name="search-outline" size={18} color={colors.muted} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search customer, ID, location..."
+          placeholderTextColor={colors.muted}
+          style={{
+            flex: 1,
+            fontSize: 14,
+            color: colors.primaryDark,
+            padding: 0,
+          }}
+        />
+        {search.length > 0 && (
+          <Pressable onPress={() => setSearch("")} style={{ marginRight: 8 }}>
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </Pressable>
+        )}
+        
+        <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 4 }} />
+        
+        <Pressable onPress={() => setShowFilter(true)} style={{ padding: 4 }}>
+          <Ionicons name="options-outline" size={20} color={colors.primary} />
+        </Pressable>
+      </View>
       {/* ── Tab bar ── */}
-      <View style={{ height: 60, marginTop: 16, marginBottom: 10 }}>
+      <View style={{ height: 60, marginTop: 12, marginBottom: 10 }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -461,6 +518,80 @@ export default function OrdersScreen() {
       </ScrollView>
 
       <BottomBar />
+
+      {/* ── Filter Bottom Sheet Modal ── */}
+      <Modal
+        visible={showFilter}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilter(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setShowFilter(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
+              paddingBottom: 40,
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
+                Sort Orders
+              </Text>
+              <Pressable onPress={() => setShowFilter(false)}>
+                <Ionicons name="close" size={24} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark, marginBottom: 12 }}>
+              Sort By
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+              {(["Newest", "Oldest", "Highest Amount"] as const).map((sort) => {
+                const isActive = filterSort === sort;
+                return (
+                  <Pressable
+                    key={sort}
+                    onPress={() => setFilterSort(sort)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: isActive ? colors.primary : colors.softCard,
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: isActive ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: isActive ? "#fff" : colors.primaryDark }}>
+                      {sort}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowFilter(false)}
+              style={{
+                backgroundColor: colors.primary,
+                paddingVertical: 14,
+                borderRadius: 16,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Apply</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
