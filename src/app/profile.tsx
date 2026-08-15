@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 
@@ -163,6 +164,28 @@ function MenuItem({
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
+  const router = useRouter();
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const storedUser = await getStoredUser();
+      setProfile(storedUser || null);
+    };
+
+    loadProfile();
+  }, []);
+
+  const displayName =
+    profile?.fullName ||
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+    profile?.name ||
+    profile?.email ||
+    "Chef";
+
+  const displayEmail = profile?.email || profile?.identifier || "chef@example.com";
+  const displayRole = profile?.role || "Home Chef";
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <ScrollView
@@ -234,7 +257,7 @@ export default function ProfileScreen() {
                 marginBottom: 4,
               }}
             >
-              Akshaya Kitchen
+              {displayName}
             </Text>
 
             {/* Role */}
@@ -245,7 +268,18 @@ export default function ProfileScreen() {
                 marginBottom: 10,
               }}
             >
-              Home Chef
+              {displayRole}
+            </Text>
+
+            {/* Email */}
+            <Text
+              style={{
+                fontSize: 12,
+                color: "rgba(255,255,255,0.8)",
+                marginBottom: 10,
+              }}
+            >
+              {displayEmail}
             </Text>
 
             {/* Rating */}
