@@ -32,7 +32,7 @@ function getGreeting() {
 
 export default function TopHeader({
   showHero = true,
-  title = "Home Chef",
+  title = "V2Home Chef",
   rightContent,
 }) {
   const router = useRouter();

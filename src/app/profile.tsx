@@ -919,7 +919,7 @@ export default function ProfileScreen() {
             marginBottom: 4,
           }}
         >
-          Veetu Rusi Home Chef · v1.0.0
+          Veetu Rusi V2Home Chef · v1.0.0
         </Text>
       </ScrollView>
 

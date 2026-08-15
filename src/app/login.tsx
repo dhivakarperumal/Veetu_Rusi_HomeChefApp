@@ -124,9 +124,9 @@ export default function LoginScreen() {
               <View className="w-12 h-12 rounded-xl bg-[#FFF0E6] items-center justify-center mr-3">
                 <MaterialCommunityIcons name="chef-hat" size={28} color="#ea580c" />
               </View>
-              <View className="flex-1">
-                <Text className="text-lg font-bold text-[#431407] mb-0.5">Home Chef Login</Text>
-                <Text className="text-[13px] text-[#777777]">Enter your credentials to continue</Text>
+              <View>
+                <Text className="text-lg font-bold text-[#431407] mb-0.5">V2Home Chef Login</Text>
+                <Text className="text-xs text-[#777777]">Please sign in to continue</Text>
               </View>
             </View>
 
@@ -228,8 +228,8 @@ export default function LoginScreen() {
 
             {/* Secure Note */}
             <View className="flex-row items-center justify-center">
-              <MaterialCommunityIcons name="shield-check-outline" size={16} color="#ea580c" />
-              <Text className="text-xs text-[#777777] ml-1.5">Secure login for Home Chefs only</Text>
+              <Ionicons name="shield-checkmark" size={14} color="#22C55E" />
+              <Text className="text-xs text-[#777777] ml-1.5">Secure login for V2Home Chefs only</Text>
             </View>
           </View>
 
