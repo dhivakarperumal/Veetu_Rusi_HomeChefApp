@@ -4,10 +4,12 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import api, { API_BASE_URL, getStoredUser } from "../api";
@@ -319,6 +321,8 @@ export default function DishesScreen() {
   const [search, setSearch] = useState("");
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<"All" | "Active" | "Inactive">("All");
 
   useEffect(() => {
     fetchFoods();
@@ -365,18 +369,31 @@ export default function DishesScreen() {
     }
   };
 
-  const filtered = dishes.filter((d) => {
+  const filteredDishes = dishes.filter((d) => {
+    // 1. Search term
+    if (
+      search &&
+      !d.name.toLowerCase().includes(search.toLowerCase()) &&
+      !(d.category || "").toLowerCase().includes(search.toLowerCase())
+    ) {
+      return false;
+    }
+    // 2. Category filter
     const matchCat =
       activeCategory === "All" ||
       (d.category && d.category.toLowerCase() === activeCategory.toLowerCase());
-    const matchSearch = d.name
-      .toLowerCase()
-      .includes(search.toLowerCase().trim());
-    return matchCat && matchSearch;
+    if (!matchCat) return false;
+
+    // 3. Status filter
+    if (filterStatus !== "All") {
+      const dStatus = (d.status || "").toLowerCase();
+      if (filterStatus === "Active" && dStatus !== "active") return false;
+      if (filterStatus === "Inactive" && dStatus === "active") return false;
+    }
+    return true;
   });
 
-  const toggleStatus = async (id: string) => {
-    // Optimistic UI update
+  const handleToggleStatus = async (id: string) => {
     setDishes((prev) =>
       prev.map((d) =>
         d.id === id
@@ -390,22 +407,22 @@ export default function DishesScreen() {
           : d,
       ),
     );
-    // Note: To fully persist, you should add an API call here to update the dish status.
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <TopHeader showHero={false} title="My Products" />
+      <TopHeader showHero={false} title="My Dishes" />
 
-      <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
-        {/* Search bar */}
+      <View style={{ backgroundColor: colors.pageBackground, paddingTop: 16 }}>
+        {/* Search bar with margin top and filter icon */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
             marginHorizontal: 20,
             marginBottom: 14,
+            marginTop: 4,
             backgroundColor: colors.cardBackground,
             borderRadius: 50,
             paddingHorizontal: 14,
@@ -422,7 +439,7 @@ export default function DishesScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search your products..."
+            placeholder="Search your dishes..."
             placeholderTextColor={colors.muted}
             style={{
               flex: 1,
@@ -432,10 +449,16 @@ export default function DishesScreen() {
             }}
           />
           {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}>
+            <Pressable onPress={() => setSearch("")} style={{ marginRight: 8 }}>
               <Ionicons name="close-circle" size={18} color={colors.muted} />
             </Pressable>
           )}
+
+          <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 4 }} />
+
+          <Pressable onPress={() => setShowFilter(true)} style={{ padding: 4 }}>
+            <Ionicons name="options-outline" size={20} color={colors.primary} />
+          </Pressable>
         </View>
 
         {/* Category filter tabs */}
@@ -489,7 +512,7 @@ export default function DishesScreen() {
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 4,
-          paddingBottom: 100,
+          paddingBottom: 120,
         }}
       >
         {loading ? (
@@ -499,7 +522,7 @@ export default function DishesScreen() {
               Loading dishes...
             </Text>
           </View>
-        ) : filtered.length === 0 ? (
+        ) : filteredDishes.length === 0 ? (
           <View
             style={{
               alignItems: "center",
@@ -515,7 +538,7 @@ export default function DishesScreen() {
                 color: colors.primaryDark,
               }}
             >
-              No products found
+              No dishes found
             </Text>
             <Text
               style={{
@@ -529,8 +552,8 @@ export default function DishesScreen() {
             </Text>
           </View>
         ) : (
-          filtered.map((dish) => (
-            <DishCard key={dish.id} dish={dish} onToggle={toggleStatus} />
+          filteredDishes.map((dish) => (
+            <DishCard key={dish.id} dish={dish} onToggle={handleToggleStatus} />
           ))
         )}
       </ScrollView>
@@ -559,6 +582,80 @@ export default function DishesScreen() {
       </Pressable>
 
       <BottomBar />
+
+      {/* ── Filter Bottom Sheet Modal ── */}
+      <Modal
+        visible={showFilter}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilter(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setShowFilter(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
+              paddingBottom: 40,
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
+                Filter Dishes
+              </Text>
+              <Pressable onPress={() => setShowFilter(false)}>
+                <Ionicons name="close" size={24} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark, marginBottom: 12 }}>
+              Status
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
+              {(["All", "Active", "Inactive"] as const).map((status) => {
+                const isActive = filterStatus === status;
+                return (
+                  <Pressable
+                    key={status}
+                    onPress={() => setFilterStatus(status)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      borderRadius: 12,
+                      backgroundColor: isActive ? colors.primary : colors.softCard,
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: isActive ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: isActive ? "#fff" : colors.primaryDark }}>
+                      {status}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowFilter(false)}
+              style={{
+                backgroundColor: colors.primary,
+                paddingVertical: 14,
+                borderRadius: 16,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Apply Filters</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
