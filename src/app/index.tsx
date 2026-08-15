@@ -151,7 +151,8 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : "padding"}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
@@ -159,6 +160,7 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
@@ -258,6 +260,8 @@ export default function LoginScreen() {
                 maxLength={mode === "mobile" ? 10 : 100}
                 returnKeyType={mode === "mobile" ? "done" : "next"}
                 enablesReturnKeyAutomatically
+                editable={true}
+                selectTextOnFocus
                 onSubmitEditing={() => {
                   if (mode === "mobile") handleSendOTP();
                   else passwordRef.current?.focus();
@@ -300,6 +304,8 @@ export default function LoginScreen() {
                   style={styles.textInput}
                   returnKeyType="done"
                   enablesReturnKeyAutomatically
+                  editable={true}
+                  selectTextOnFocus
                   onSubmitEditing={handleEmailLogin}
                 />
                 <TouchableOpacity
