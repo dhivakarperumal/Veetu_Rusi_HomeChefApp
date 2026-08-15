@@ -5,108 +5,64 @@ import {
 } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { loginWithIdentifier } from "../api";
-
-const { width } = Dimensions.get("window");
-
-const GREEN = "#2E7A4F";
-const DARK = "#1A3328";
-const MUTED = "#7A8E87";
-const BG = "#F7F2EA";
+import { getStoredToken, loginWithIdentifier } from "../api";
 
 export default function LoginScreen() {
   const router = useRouter();
 
-  const [mode, setMode] = useState<"mobile" | "email">("mobile");
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passFocused, setPassFocused] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
-  const identifierRef = useRef<TextInput>(null);
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = await getStoredToken();
+      if (token) {
+        router.replace("/dashboard");
+        return;
+      }
+      setCheckingSession(false);
+    };
+    restoreSession();
+  }, [router]);
+
   const passwordRef = useRef<TextInput>(null);
 
-  /* ── Reset on tab switch ── */
-  const switchMode = (m: "mobile" | "email") => {
+  const handleLogin = async () => {
     Keyboard.dismiss();
-    setMode(m);
-    setIdentifier("");
-    setPassword("");
-    setError("");
-    setShowPass(false);
-  };
-
-  /* ── Validate & Send OTP ── */
-  const handleSendOTP = async () => {
-    Keyboard.dismiss();
-    const clean = identifier.trim();
-    if (!clean) {
-      setError("Please enter your mobile number.");
-      return;
-    }
-    if (clean.replace(/\D/g, "").length !== 10) {
-      setError("Enter a valid 10-digit mobile number.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      await new Promise((r) => setTimeout(r, 700));
-      const formatted = `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
-      router.push({
-        pathname: "/verify-otp",
-        params: { identifier: formatted, mode: "mobile" },
-      });
-    } catch {
-      setError("Failed to send OTP. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ── Validate & Email Login ── */
-  const handleEmailLogin = async () => {
-    Keyboard.dismiss();
-    const cleanEmail = identifier.trim();
+    const cleanEmail = email.trim();
     const cleanPass = password.trim();
 
     if (!cleanEmail) {
       setError("Please enter your email address.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError("Enter a valid email address.");
-      return;
-    }
     if (!cleanPass) {
       setError("Please enter your password.");
       return;
     }
-    if (cleanPass.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
+
     setLoading(true);
     setError("");
+
     try {
       const response = await loginWithIdentifier(cleanEmail, cleanPass);
       if (response?.token) {
@@ -115,468 +71,191 @@ export default function LoginScreen() {
         throw new Error(response?.message || "Login failed. Please try again.");
       }
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Invalid email or password.";
+      const msg = err instanceof Error ? err.message : "Invalid email or password.";
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePrimaryAction = () =>
-    mode === "mobile" ? handleSendOTP() : handleEmailLogin();
+  if (checkingSession) {
+    return (
+      <View className="flex-1 bg-[#FFF8F2] items-center justify-center">
+        <ActivityIndicator size="large" color="#ea580c" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={0}
+      className="flex-1 bg-[#FFF8F2]"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={BG} />
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="interactive"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        alwaysBounceVertical={false}
-      >
-        {/* ── Logo ── */}
-        <View style={styles.logoIconWrap}>
-          <MaterialCommunityIcons name="home-heart" size={38} color={GREEN} />
-        </View>
-
-        {/* ── Brand ── */}
-        <Text style={styles.brandName}>
-          <Text style={styles.brandGreen}>Veetu </Text>
-          <Text style={styles.brandOrange}>Rusi</Text>
-        </Text>
-
-        {/* ── Greeting ── */}
-        <Text style={styles.greeting}>Welcome Back!</Text>
-        <Text style={styles.greetingSub}>Login to continue</Text>
-
-        {/* ── Chef Illustration ── */}
-        <View style={styles.illustWrap}>
-          <Image
-            source={require("../../assets/images/chef_hero.jpg")}
-            style={styles.illustImg}
-            contentFit="cover"
-          />
-        </View>
-
-        {/* ── Form ── */}
-        <View style={styles.formWrap}>
-          {/* Toggle */}
-          <View style={styles.toggle}>
-            {(["mobile", "email"] as const).map((m) => (
-              <Pressable
-                key={m}
-                onPress={() => switchMode(m)}
-                style={[styles.toggleTab, mode === m && styles.toggleTabActive]}
-              >
-                <Text
-                  style={[
-                    styles.toggleTabText,
-                    mode === m && styles.toggleTabTextActive,
-                  ]}
-                >
-                  {m === "mobile" ? "Mobile Number" : "Email"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* ── Identifier input (mobile number or email) ── */}
-          <View
-            style={[
-              styles.inputBox,
-              emailFocused && styles.inputBoxFocused,
-              !!error && !passFocused && styles.inputBoxError,
-            ]}
-          >
-            {mode === "mobile" ? (
-              <View style={styles.prefixWrap}>
-                <Text style={styles.flag}>🇮🇳</Text>
-                <Text style={styles.dial}> +91</Text>
-                <View style={styles.inputSep} />
-              </View>
-            ) : (
-              <View style={styles.prefixWrap}>
-                <Ionicons
-                  name="mail-outline"
-                  size={17}
-                  color={emailFocused ? GREEN : MUTED}
-                />
-                <View style={styles.inputSep} />
-              </View>
-            )}
-
-            <TextInput
-              ref={identifierRef}
-              value={identifier}
-              onChangeText={(t) => {
-                setIdentifier(t);
-                if (error) setError("");
-              }}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
-              keyboardType={mode === "mobile" ? "phone-pad" : "email-address"}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete={mode === "email" ? "email" : "tel"}
-              placeholder={
-                mode === "mobile"
-                  ? "Enter mobile number"
-                  : "Enter email address"
-              }
-              placeholderTextColor="#B2C2BC"
-              style={styles.textInput}
-              maxLength={mode === "mobile" ? 10 : 100}
-              returnKeyType={mode === "mobile" ? "done" : "next"}
-              enablesReturnKeyAutomatically
-              onSubmitEditing={() => {
-                if (mode === "mobile") {
-                  handleSendOTP();
-                } else {
-                  passwordRef.current?.focus();
-                }
-              }}
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF8F2" />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          contentContainerClassName="flex-grow items-center pt-[60px] pb-10 px-5"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Logo Section */}
+          <View className="w-[200px] h-[120px] mb-2.5 items-center justify-center">
+            <Image
+              source={require("../../assets/images/logo.png")}
+              className="w-full h-full"
+              contentFit="contain"
             />
           </View>
 
-          {/* ── Password input (email mode only) ── */}
-          {mode === "email" && (
-            <View
-              style={[
-                styles.inputBox,
-                styles.inputBoxTop,
-                passFocused && styles.inputBoxFocused,
-              ]}
-            >
-              <View style={styles.prefixWrap}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={17}
-                  color={passFocused ? GREEN : MUTED}
-                />
-                <View style={styles.inputSep} />
-              </View>
-
-              <TextInput
-                ref={passwordRef}
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  if (error) setError("");
-                }}
-                onFocus={() => setPassFocused(true)}
-                onBlur={() => setPassFocused(false)}
-                placeholder="Enter password"
-                placeholderTextColor="#B2C2BC"
-                secureTextEntry={!showPass}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="password"
-                style={styles.textInput}
-                returnKeyType="done"
-                enablesReturnKeyAutomatically
-                onSubmitEditing={handleEmailLogin}
-              />
-
-              <TouchableOpacity
-                onPress={() => setShowPass((v) => !v)}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={styles.eyeBtn}
-              >
-                <Ionicons
-                  name={showPass ? "eye-outline" : "eye-off-outline"}
-                  size={18}
-                  color={passFocused ? GREEN : MUTED}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Forgot password */}
-          {mode === "email" && (
-            <TouchableOpacity activeOpacity={0.7} style={styles.forgotWrap}>
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Error */}
-          {!!error && (
-            <View style={styles.errorRow}>
-              <Ionicons name="alert-circle-outline" size={13} color="#D32F2F" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* Primary Button */}
-          <TouchableOpacity
-            onPress={handlePrimaryAction}
-            disabled={loading}
-            activeOpacity={0.82}
-            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.primaryBtnText}>
-                {mode === "mobile" ? "Send OTP" : "Login"}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.divLine} />
-            <Text style={styles.divLabel}>or</Text>
-            <View style={styles.divLine} />
+          {/* Greeting Section */}
+          <View className="items-center mb-6">
+            <Text className="text-2xl font-bold text-[#431407] mb-1.5">Welcome Back!</Text>
+            <Text className="text-sm text-[#777777] text-center leading-5">
+              Login to access your kitchen dashboard{"\n"}and manage your delicious dishes.
+            </Text>
           </View>
 
-          {/* Google */}
-          <TouchableOpacity activeOpacity={0.78} style={styles.googleBtn}>
-            <FontAwesome5 name="google" size={16} color="#EA4335" />
-            <Text style={styles.googleBtnText}>Continue with Google</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Login Card */}
+          <View className="w-full bg-white rounded-[24px] p-6 shadow-sm mb-6">
+            {/* Card Header */}
+            <View className="flex-row items-center mb-6">
+              <View className="w-12 h-12 rounded-xl bg-[#FFF0E6] items-center justify-center mr-3">
+                <MaterialCommunityIcons name="chef-hat" size={28} color="#ea580c" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-[#431407] mb-0.5">Home Chef Login</Text>
+                <Text className="text-[13px] text-[#777777]">Enter your credentials to continue</Text>
+              </View>
+            </View>
 
-        {/* Footer */}
-        <Text style={styles.footer}>
-          New to Veetu Rusi?{"  "}
-          <Text style={styles.footerLink}>Sign Up</Text>
-        </Text>
-      </ScrollView>
+            {/* Error Message */}
+            {!!error && (
+              <View className="flex-row items-center mb-4 bg-[#FFF3F3] p-2.5 rounded-lg">
+                <Ionicons name="alert-circle-outline" size={14} color="#D32F2F" />
+                <Text className="text-[13px] text-[#D32F2F] ml-1.5 flex-1">{error}</Text>
+              </View>
+            )}
+
+            {/* Email Address Input */}
+            <View className="mb-4">
+              <Text className="text-[13px] font-semibold text-[#333333] mb-1.5 ml-0.5">Email Address</Text>
+              <View className={`flex-row items-center border border-[#E5E7EB] rounded-xl h-[52px] px-3 bg-[#FAFAFA] ${error ? 'border-[#D32F2F] bg-[#FFF3F3]' : ''}`}>
+                <Ionicons name="mail-outline" size={20} color="#777777" className="mr-2" />
+                <TextInput
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="Enter your email address"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className="flex-1 text-[15px] text-[#333333] h-full py-0"
+                  maxLength={100}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                />
+              </View>
+            </View>
+
+            {/* Password Input */}
+            <View className="mb-4">
+              <Text className="text-[13px] font-semibold text-[#333333] mb-1.5 ml-0.5">Password</Text>
+              <View className={`flex-row items-center border border-[#E5E7EB] rounded-xl h-[52px] px-3 bg-[#FAFAFA] ${error ? 'border-[#D32F2F] bg-[#FFF3F3]' : ''}`}>
+                <Ionicons name="lock-closed-outline" size={20} color="#777777" className="mr-2" />
+                <TextInput
+                  ref={passwordRef}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showPass}
+                  className="flex-1 text-[15px] text-[#333333] h-full py-0"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity onPress={() => setShowPass(!showPass)} className="p-1">
+                  <Ionicons
+                    name={showPass ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color="#777777"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Forgot Password */}
+            <TouchableOpacity className="self-end mb-5" activeOpacity={0.7}>
+              <Text className="text-[13px] text-[#ea580c] font-semibold">Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity
+              className={`flex-row items-center justify-center bg-[#ea580c] rounded-xl h-[52px] shadow-sm ${loading ? 'opacity-70' : ''}`}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="chef-hat" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text className="text-base font-bold text-white">Login</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View className="flex-row items-center my-5">
+              <View className="flex-1 h-px bg-[#E5E7EB]" />
+              <Text className="mx-3 text-[13px] text-[#777777]">or login with</Text>
+              <View className="flex-1 h-px bg-[#E5E7EB]" />
+            </View>
+
+            {/* WhatsApp Button */}
+            <TouchableOpacity className="flex-row items-center justify-center border border-[#E5E7EB] rounded-xl h-[52px] bg-white mb-4" activeOpacity={0.8}>
+              <FontAwesome5 name="whatsapp" size={18} color="#25D366" />
+              <Text className="text-[15px] font-semibold text-[#333333] ml-2">Login with WhatsApp</Text>
+            </TouchableOpacity>
+
+            {/* Secure Note */}
+            <View className="flex-row items-center justify-center">
+              <MaterialCommunityIcons name="shield-check-outline" size={16} color="#ea580c" />
+              <Text className="text-xs text-[#777777] ml-1.5">Secure login for Home Chefs only</Text>
+            </View>
+          </View>
+
+          {/* Bottom Banner Section */}
+          <View className="w-full items-center mt-2.5">
+            <View className="flex-row items-center justify-between w-full mb-5 px-2.5">
+              <View className="opacity-60">
+                 <MaterialCommunityIcons name="account-tie-hat" size={40} color="#ea580c" />
+              </View>
+              <View className="flex-1 items-center px-2.5">
+                <Text className="text-[15px] font-bold text-[#431407] mb-1 text-center">Delicious food made easy!</Text>
+                <Text className="text-xs text-[#777777] text-center leading-4">
+                  Manage your menu, orders and customers{"\n"}all in one place.
+                </Text>
+              </View>
+              <View className="opacity-60">
+                 <MaterialCommunityIcons name="food" size={40} color="#ea580c" />
+              </View>
+            </View>
+
+            <Text className="text-sm text-[#777777]">
+              Don't have an account? <Text className="text-[#ea580c] font-bold">Contact Admin</Text>
+            </Text>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: BG },
-
-  scroll: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingTop: Platform.OS === "android" ? 44 : 52,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-  },
-
-  /* Logo */
-  logoIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: "#EAF3ED",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-    shadowColor: GREEN,
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-
-  /* Brand */
-  brandName: {
-    fontSize: 30,
-    fontWeight: "800",
-    fontStyle: "italic",
-    letterSpacing: -0.5,
-    marginBottom: 12,
-  },
-  brandGreen: { color: GREEN },
-  brandOrange: { color: "#C9631A" },
-
-  /* Greeting */
-  greeting: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: DARK,
-    textAlign: "center",
-    letterSpacing: -0.3,
-  },
-  greetingSub: {
-    fontSize: 13.5,
-    color: MUTED,
-    textAlign: "center",
-    marginTop: 3,
-    marginBottom: 16,
-  },
-
-  /* Illustration */
-  illustWrap: {
-    width: width - 48,
-    height: 170,
-    borderRadius: 18,
-    overflow: "hidden",
-    marginBottom: 20,
-    backgroundColor: "#E8E0D0",
-    shadowColor: "#8B6940",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  illustImg: { width: "100%", height: "100%" },
-
-  /* Form */
-  formWrap: { width: "100%" },
-
-  /* Toggle */
-  toggle: {
-    flexDirection: "row",
-    borderWidth: 1.5,
-    borderColor: "#D5E2DC",
-    borderRadius: 12,
-    backgroundColor: "#EEF5F0",
-    padding: 3,
-    marginBottom: 14,
-  },
-  toggleTab: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 9,
-    alignItems: "center",
-  },
-  toggleTabActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  toggleTabText: { fontSize: 13, fontWeight: "600", color: MUTED },
-  toggleTabTextActive: { color: GREEN, fontWeight: "700" },
-
-  /* Input box */
-  inputBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#D5E2DC",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 54,
-  },
-  inputBoxTop: {
-    marginTop: 10,
-  },
-  inputBoxFocused: {
-    borderColor: GREEN,
-    shadowColor: GREEN,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  inputBoxError: {
-    borderColor: "#D32F2F",
-  },
-
-  /* Prefix / icon area */
-  prefixWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  flag: { fontSize: 19 },
-  dial: { fontSize: 14, fontWeight: "700", color: "#2E5A47" },
-  inputSep: {
-    width: 1.5,
-    height: 22,
-    backgroundColor: "#C8D8D2",
-    marginHorizontal: 10,
-  },
-
-  /* Text input */
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    color: DARK,
-    height: "100%",
-    paddingVertical: 0,
-  },
-
-  /* Eye toggle */
-  eyeBtn: { padding: 4 },
-
-  /* Forgot */
-  forgotWrap: { alignSelf: "flex-end", marginTop: 8, marginBottom: 2 },
-  forgotText: { fontSize: 12.5, color: GREEN, fontWeight: "600" },
-
-  /* Error */
-  errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 8,
-    paddingLeft: 2,
-  },
-  errorText: { fontSize: 12, color: "#D32F2F", flex: 1 },
-
-  /* Primary button */
-  primaryBtn: {
-    marginTop: 16,
-    backgroundColor: GREEN,
-    borderRadius: 12,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    shadowColor: "#104028",
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  primaryBtnDisabled: {
-    backgroundColor: "#8DB8A0",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  primaryBtnText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-
-  /* Divider */
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  divLine: { flex: 1, height: 1, backgroundColor: "#D5E0DA" },
-  divLabel: {
-    marginHorizontal: 14,
-    fontSize: 13,
-    color: MUTED,
-    fontWeight: "500",
-  },
-
-  /* Google button */
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#D5E2DC",
-    borderRadius: 12,
-    height: 52,
-    overflow: "hidden",
-  },
-  googleBtnText: { fontSize: 14.5, fontWeight: "600", color: DARK },
-
-  /* Footer */
-  footer: { marginTop: 22, fontSize: 13.5, color: MUTED, textAlign: "center" },
-  footerLink: { color: GREEN, fontWeight: "700" },
-});
