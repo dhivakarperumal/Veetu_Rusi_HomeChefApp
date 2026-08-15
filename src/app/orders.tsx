@@ -248,7 +248,9 @@ export default function OrdersScreen() {
             0),
         amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
         location:
-          o.customer_address || o.delivery_address || "Unknown Location",
+          o.street_address
+            ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
+            : o.customer_address || o.delivery_address || "Unknown Location",
         time:
           o.ordered_at || o.created_at
             ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
