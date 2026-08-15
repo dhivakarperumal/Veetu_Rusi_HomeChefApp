@@ -309,29 +309,7 @@ export default function DishesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <TopHeader
-        showHero={false}
-        title="My Dishes"
-        rightContent={
-          <Pressable
-            onPress={() => router.push("/add-dish")}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#E65100", // using accent color for Add Dish button to contrast green
-              borderRadius: 50,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              gap: 5,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
-              Add Dish
-            </Text>
-          </Pressable>
-        }
-      />
+      <TopHeader showHero={false} title="My Dishes" />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* Search bar */}
@@ -466,6 +444,28 @@ export default function DishesScreen() {
           ))
         )}
       </ScrollView>
+
+      <Pressable
+        onPress={() => router.push("/add-dish")}
+        style={{
+          position: "absolute",
+          right: 20,
+          bottom: 130,
+          width: 58,
+          height: 58,
+          borderRadius: 29,
+          backgroundColor: "#E65100",
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: "#000",
+          shadowOpacity: 0.18,
+          shadowOffset: { width: 0, height: 6 },
+          shadowRadius: 10,
+          elevation: 6,
+        }}
+      >
+        <Ionicons name="add" size={30} color="#fff" />
+      </Pressable>
 
       <BottomBar />
     </View>

@@ -284,7 +284,7 @@ export default function EarningsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <TopHeader showHero={false} />
+      <TopHeader showHero={false} title="Earnings" />
 
       <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
         {/* ── Period tabs ── */}
