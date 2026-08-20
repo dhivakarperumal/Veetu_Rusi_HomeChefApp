@@ -3,11 +3,7 @@ import { usePathname, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const GREEN = "#2E7A4F";
-const GREEN_SOFT = "#EAF4EE";
 const LABEL = "#5A7A6E";
-const NAV_BG = "#F8F6F1";
-const BORDER = "#E2EDE7";
 
 const TABS = [
   {
@@ -61,9 +57,9 @@ export default function BottomBar() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom || 8 }]}>
       {/* Top border line */}
-      <View style={styles.topBorder} />
+      <View style={styles.border} />
 
-      <View style={styles.row}>
+      <View style={styles.tabs}>
         {TABS.map(({ key, label, icon, activeIcon, route }) => {
           const isActive = activeKey === key;
           return (
@@ -75,7 +71,10 @@ export default function BottomBar() {
             >
               {/* Pill indicator */}
               <View
-                style={[styles.iconWrap, isActive && styles.iconWrapActive]}
+                style={[
+                  styles.iconPill,
+                  isActive ? styles.activeIconPill : styles.inactiveIconPill,
+                ]}
               >
                 <Ionicons
                   name={isActive ? activeIcon : icon}
@@ -84,7 +83,12 @@ export default function BottomBar() {
                 />
               </View>
 
-              <Text style={[styles.label, isActive && styles.labelActive]}>
+              <Text
+                style={[
+                  styles.label,
+                  isActive ? styles.activeLabel : styles.inactiveLabel,
+                ]}
+              >
                 {label}
               </Text>
             </TouchableOpacity>
@@ -97,24 +101,21 @@ export default function BottomBar() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: NAV_BG,
+    backgroundColor: "#F8F6F1",
     shadowColor: "#000",
     shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -3 },
-    elevation: 12,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+    elevation: 4,
   },
-  topBorder: {
-    height: 1,
-    backgroundColor: BORDER,
-  },
-  row: {
+  border: { height: 1, backgroundColor: "#E2EDE7" },
+  tabs: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
+    paddingHorizontal: 8,
     paddingTop: 10,
     paddingBottom: 4,
-    paddingHorizontal: 8,
   },
   tab: {
     flex: 1,
@@ -122,34 +123,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 4,
   },
-  iconWrap: {
-    width: 46,
-    height: 38,
-    borderRadius: 19,
+  iconPill: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
+    borderRadius: 999,
   },
-  iconWrapActive: {
-    backgroundColor: GREEN,
-    width: 64,
+  activeIconPill: {
     height: 40,
-    borderRadius: 20,
-    shadowColor: GREEN,
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    width: 64,
+    backgroundColor: "#2E7A4F",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
-  label: {
-    fontSize: 10.5,
-    fontWeight: "500",
-    color: LABEL,
-    marginTop: 4,
-    letterSpacing: 0.2,
-  },
-  labelActive: {
-    color: GREEN,
-    fontWeight: "700",
-  },
+  inactiveIconPill: { height: 38, width: 46 },
+  label: { marginTop: 4, fontSize: 10.5, letterSpacing: 0.2 },
+  activeLabel: { fontWeight: "700", color: "#2E7A4F" },
+  inactiveLabel: { fontWeight: "500", color: LABEL },
 });
