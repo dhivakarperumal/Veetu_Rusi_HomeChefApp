@@ -5,14 +5,13 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
@@ -53,7 +52,14 @@ function DetailRow({
         borderBottomColor: colors.border,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 3 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          marginBottom: 3,
+        }}
+      >
         {icon && <Ionicons name={icon} size={13} color={colors.primarySoft} />}
         <Text
           style={{
@@ -187,12 +193,21 @@ function StatCol({
   return (
     <View style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: colors.primaryDark }}>
+        <Text
+          style={{ fontSize: 22, fontWeight: "800", color: colors.primaryDark }}
+        >
           {value}
         </Text>
         {suffix}
       </View>
-      <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4, fontWeight: "500" }}>
+      <Text
+        style={{
+          fontSize: 12,
+          color: colors.muted,
+          marginTop: 4,
+          fontWeight: "500",
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -308,8 +323,10 @@ export default function ProfileScreen() {
     authUser?.name ||
     "Chef";
 
-  const displayEmail = chefData?.email || authUser?.email || authUser?.identifier || "—";
-  const displayPhone = chefData?.mobile || authUser?.phone || authUser?.mobile || "—";
+  const displayEmail =
+    chefData?.email || authUser?.email || authUser?.identifier || "—";
+  const displayPhone =
+    chefData?.mobile || authUser?.phone || authUser?.mobile || "—";
   const displayStatus = chefData?.status || null;
   const displayCity = chefData?.city || null;
   const displayKitchenType = chefData?.kitchen_type || null;
@@ -410,15 +427,27 @@ export default function ProfileScreen() {
                   backgroundColor: "rgba(255,255,255,0.2)",
                 }}
               >
-                <Image
-                  source={
-                    profilePhotoUrl
-                      ? { uri: profilePhotoUrl }
-                      : require("../../assets/images/chef_hero.jpg")
-                  }
-                  style={{ width: "100%", height: "100%" }}
-                  contentFit="cover"
-                />
+                {profilePhotoUrl ? (
+                  <Image
+                    source={{ uri: profilePhotoUrl }}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="person"
+                      size={58}
+                      color="rgba(255,255,255,0.9)"
+                    />
+                  </View>
+                )}
               </View>
 
               {/* Edit pencil badge */}
@@ -475,20 +504,40 @@ export default function ProfileScreen() {
                   borderColor: "rgba(255,255,255,0.35)",
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>
-                  {displayStatus === "Approved" ? "✓ " : ""}{displayStatus}
+                <Text
+                  style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}
+                >
+                  {displayStatus === "Approved" ? "✓ " : ""}
+                  {displayStatus}
                 </Text>
               </View>
             )}
 
             {/* Email */}
-            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: "rgba(255,255,255,0.85)",
+                marginBottom: 4,
+              }}
+            >
               {displayEmail}
             </Text>
 
             {/* Phone */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 6 }}>
-              <Ionicons name="call-outline" size={13} color="rgba(255,255,255,0.7)" />
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                marginBottom: 6,
+              }}
+            >
+              <Ionicons
+                name="call-outline"
+                size={13}
+                color="rgba(255,255,255,0.7)"
+              />
               <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
                 {displayPhone}
               </Text>
@@ -496,10 +545,18 @@ export default function ProfileScreen() {
 
             {/* Location */}
             {(displayCity || displayKitchenType) && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.7)" />
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+              >
+                <Ionicons
+                  name="location-outline"
+                  size={13}
+                  color="rgba(255,255,255,0.7)"
+                />
                 <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
-                  {[displayCity, displayKitchenType].filter(Boolean).join(" · ")}
+                  {[displayCity, displayKitchenType]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </Text>
               </View>
             )}
@@ -517,16 +574,30 @@ export default function ProfileScreen() {
             paddingVertical: 18,
             paddingHorizontal: 10,
             shadowColor: "#000",
-            shadowOpacity: 0.10,
+            shadowOpacity: 0.1,
             shadowOffset: { width: 0, height: 6 },
             shadowRadius: 14,
             elevation: 6,
           }}
         >
           <StatCol value={experienceLabel} label="Experience" />
-          <View style={{ width: 1, backgroundColor: colors.border, alignSelf: "stretch", marginVertical: 4 }} />
+          <View
+            style={{
+              width: 1,
+              backgroundColor: colors.border,
+              alignSelf: "stretch",
+              marginVertical: 4,
+            }}
+          />
           <StatCol value={vegLabel} label="Type" />
-          <View style={{ width: 1, backgroundColor: colors.border, alignSelf: "stretch", marginVertical: 4 }} />
+          <View
+            style={{
+              width: 1,
+              backgroundColor: colors.border,
+              alignSelf: "stretch",
+              marginVertical: 4,
+            }}
+          />
           <StatCol
             value="4.8"
             label="Rating"
@@ -549,7 +620,14 @@ export default function ProfileScreen() {
             }}
           >
             <Ionicons name="warning-outline" size={18} color="#E65100" />
-            <Text style={{ flex: 1, color: "#E65100", fontSize: 13, fontWeight: "600" }}>
+            <Text
+              style={{
+                flex: 1,
+                color: "#E65100",
+                fontSize: 13,
+                fontWeight: "600",
+              }}
+            >
               {error}
             </Text>
           </View>
@@ -615,7 +693,13 @@ export default function ProfileScreen() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primaryDark }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "700",
+                    color: colors.primaryDark,
+                  }}
+                >
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -636,7 +720,9 @@ export default function ProfileScreen() {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>
+                  <Text
+                    style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}
+                  >
                     Save
                   </Text>
                 )}
@@ -654,15 +740,39 @@ export default function ProfileScreen() {
             expanded={expanded === "personal"}
             onPress={() => toggle("personal")}
           >
-            <DetailRow label="Full Name" value={chefData?.name} icon="person-outline" />
-            <DetailRow label="Mobile" value={chefData?.mobile} icon="call-outline" />
-            <DetailRow label="Alt Mobile" value={chefData?.alt_mobile} icon="call-outline" />
-            <DetailRow label="Email" value={chefData?.email} icon="mail-outline" />
+            <DetailRow
+              label="Full Name"
+              value={chefData?.name}
+              icon="person-outline"
+            />
+            <DetailRow
+              label="Mobile"
+              value={chefData?.mobile}
+              icon="call-outline"
+            />
+            <DetailRow
+              label="Alt Mobile"
+              value={chefData?.alt_mobile}
+              icon="call-outline"
+            />
+            <DetailRow
+              label="Email"
+              value={chefData?.email}
+              icon="mail-outline"
+            />
             <DetailRow label="Door Number" value={chefData?.door_number} />
-            <DetailRow label="Street" value={chefData?.street_name} icon="map-outline" />
+            <DetailRow
+              label="Street"
+              value={chefData?.street_name}
+              icon="map-outline"
+            />
             <DetailRow label="Area" value={chefData?.area_name} />
             <DetailRow label="Landmark" value={chefData?.landmark} />
-            <DetailRow label="City" value={chefData?.city} icon="location-outline" />
+            <DetailRow
+              label="City"
+              value={chefData?.city}
+              icon="location-outline"
+            />
             <DetailRow label="District" value={chefData?.district} />
             <DetailRow label="State" value={chefData?.state} />
             <DetailRow label="Pincode" value={chefData?.pincode} />
@@ -686,7 +796,11 @@ export default function ProfileScreen() {
               icon="storefront-outline"
             />
             <DetailRow label="Kitchen Type" value={chefData?.kitchen_type} />
-            <DetailRow label="Kitchen Address" value={chefData?.kitchen_address} icon="map-outline" />
+            <DetailRow
+              label="Kitchen Address"
+              value={chefData?.kitchen_address}
+              icon="map-outline"
+            />
             <DetailRow label="Cuisine Type" value={chefData?.cuisine_type} />
             <DetailRow
               label="Veg / Non-Veg"
@@ -704,7 +818,10 @@ export default function ProfileScreen() {
                   : null
               }
             />
-            <DetailRow label="Aadhaar Number" value={chefData?.aadhaar_number} />
+            <DetailRow
+              label="Aadhaar Number"
+              value={chefData?.aadhaar_number}
+            />
             <DetailRow label="PAN Number" value={chefData?.pan_number} />
             <DetailRow label="GST Number" value={chefData?.gst_number} />
           </SectionCard>
@@ -739,7 +856,9 @@ export default function ProfileScreen() {
           >
             <DetailRow
               label="Aadhaar (Front)"
-              value={chefData?.aadhaar_front_url ? "✓ Uploaded" : "Not uploaded"}
+              value={
+                chefData?.aadhaar_front_url ? "✓ Uploaded" : "Not uploaded"
+              }
               icon="checkmark-circle-outline"
             />
             <DetailRow
@@ -752,11 +871,15 @@ export default function ProfileScreen() {
             />
             <DetailRow
               label="FSSAI Certificate"
-              value={chefData?.fssai_certificate_url ? "✓ Uploaded" : "Not uploaded"}
+              value={
+                chefData?.fssai_certificate_url ? "✓ Uploaded" : "Not uploaded"
+              }
             />
             <DetailRow
               label="GST Certificate"
-              value={chefData?.gst_certificate_url ? "✓ Uploaded" : "Not uploaded"}
+              value={
+                chefData?.gst_certificate_url ? "✓ Uploaded" : "Not uploaded"
+              }
             />
             <DetailRow
               label="Selfie Verification"
@@ -800,8 +923,14 @@ export default function ProfileScreen() {
               label="Daily Order Capacity"
               value={chefData?.daily_order_capacity?.toString()}
             />
-            <DetailRow label="Available Days" value={chefData?.available_days} />
-            <DetailRow label="Available Slots" value={chefData?.available_slots} />
+            <DetailRow
+              label="Available Days"
+              value={chefData?.available_days}
+            />
+            <DetailRow
+              label="Available Slots"
+              value={chefData?.available_slots}
+            />
           </SectionCard>
         </View>
 
@@ -821,9 +950,21 @@ export default function ProfileScreen() {
           }}
         >
           {[
-            { label: "My Dishes", icon: "restaurant-outline" as const, route: "/dishes" },
-            { label: "My Products", icon: "cube-outline" as const, route: "/myproducts" },
-            { label: "Manage Menu", icon: "list-outline" as const, route: "/menu" },
+            {
+              label: "My Dishes",
+              icon: "restaurant-outline" as const,
+              route: "/dishes",
+            },
+            {
+              label: "My Products",
+              icon: "cube-outline" as const,
+              route: "/myproducts",
+            },
+            {
+              label: "Manage Menu",
+              icon: "list-outline" as const,
+              route: "/menu",
+            },
           ].map((item, idx, arr) => (
             <TouchableOpacity
               key={item.label}
