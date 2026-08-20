@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -374,6 +375,7 @@ export default function ProfileScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
+      <StatusBar style="light" backgroundColor="#2E7A4F" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -386,7 +388,7 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         {/* ════════════════════════════════════ HERO HEADER */}
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.primary }}>
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: "#2E7A4F" }}>
           <View
             style={{
               alignItems: "center",
