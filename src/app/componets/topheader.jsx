@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
     Modal,
@@ -20,13 +21,29 @@ const DARK = "#1A3328";
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) {
-    return { text: "Good Morning!", emoji: "☀️", sub: "Let's make today\ndelicious." };
+    return {
+      text: "Good Morning!",
+      emoji: "☀️",
+      sub: "Let's make today\ndelicious.",
+    };
   } else if (hour >= 12 && hour < 17) {
-    return { text: "Good Afternoon!", emoji: "🌞", sub: "Keep up the great\nwork today." };
+    return {
+      text: "Good Afternoon!",
+      emoji: "🌞",
+      sub: "Keep up the great\nwork today.",
+    };
   } else if (hour >= 17 && hour < 21) {
-    return { text: "Good Evening!", emoji: "🌇", sub: "Hope your day\nwas wonderful." };
+    return {
+      text: "Good Evening!",
+      emoji: "🌇",
+      sub: "Hope your day\nwas wonderful.",
+    };
   } else {
-    return { text: "Good Night!", emoji: "🌙", sub: "Rest well and\ncome back refreshed." };
+    return {
+      text: "Good Night!",
+      emoji: "🌙",
+      sub: "Rest well and\ncome back refreshed.",
+    };
   }
 }
 
@@ -61,8 +78,15 @@ export default function TopHeader({
         const orders = res.data || [];
         const newToday = orders.filter((o) => {
           const s = (o.status || "").toLowerCase();
-          const isNew = ["pending", "new", "new order", "order placed"].includes(s);
-          const orderDate = new Date(o.ordered_at || o.created_at || Date.now()).toDateString();
+          const isNew = [
+            "pending",
+            "new",
+            "new order",
+            "order placed",
+          ].includes(s);
+          const orderDate = new Date(
+            o.ordered_at || o.created_at || Date.now(),
+          ).toDateString();
           return isNew && orderDate === today;
         });
         setTodayNewOrders(newToday);
@@ -96,6 +120,8 @@ export default function TopHeader({
 
   return (
     <>
+      <StatusBar style="light" backgroundColor={GREEN} />
+
       {/* ── Sidebar Overlay (Drawer Modal) ── */}
       <Modal visible={showMenu} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
@@ -112,7 +138,11 @@ export default function TopHeader({
 
                 <View style={styles.drawerBrandRow}>
                   <View style={styles.drawerBrandIconWrap}>
-                    <MaterialCommunityIcons name="home-heart" size={26} color="#fff" />
+                    <MaterialCommunityIcons
+                      name="home-heart"
+                      size={26}
+                      color="#fff"
+                    />
                   </View>
                   <View style={styles.drawerBrandTextWrap}>
                     <Text style={styles.drawerBrandTitle}>Veetu Rusi</Text>
@@ -121,8 +151,16 @@ export default function TopHeader({
                 </View>
 
                 {[
-                  { icon: "speedometer-outline", label: "Dashboard", route: "/orders" },
-                  { icon: "settings-outline", label: "Settings", route: "/profile" },
+                  {
+                    icon: "speedometer-outline",
+                    label: "Dashboard",
+                    route: "/orders",
+                  },
+                  {
+                    icon: "settings-outline",
+                    label: "Settings",
+                    route: "/profile",
+                  },
                 ].map(({ icon, label, route }) => (
                   <TouchableOpacity
                     key={label}
@@ -148,7 +186,12 @@ export default function TopHeader({
         <TouchableWithoutFeedback onPress={() => setShowProfileDrop(false)}>
           <View style={styles.dropScrim}>
             <TouchableWithoutFeedback>
-              <View style={[styles.dropDownBox, { top: insets.top + 55, right: 16 }]}>
+              <View
+                style={[
+                  styles.dropDownBox,
+                  { top: insets.top + 55, right: 16 },
+                ]}
+              >
                 <View style={styles.dropHeader}>
                   <Text style={styles.dropName}>{profileName}</Text>
                   <Text style={styles.dropEmail}>{profileEmail}</Text>
@@ -166,11 +209,16 @@ export default function TopHeader({
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  style={[styles.dropItem, { borderTopWidth: 1, borderColor: "#F0F0F0" }]}
+                  style={[
+                    styles.dropItem,
+                    { borderTopWidth: 1, borderColor: "#F0F0F0" },
+                  ]}
                   onPress={handleLogout}
                 >
                   <Ionicons name="log-out-outline" size={18} color="#D32F2F" />
-                  <Text style={[styles.dropItemText, { color: "#D32F2F" }]}>Logout</Text>
+                  <Text style={[styles.dropItemText, { color: "#D32F2F" }]}>
+                    Logout
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -183,14 +231,23 @@ export default function TopHeader({
         <TouchableWithoutFeedback onPress={() => setShowNotifDrop(false)}>
           <View style={styles.dropScrim}>
             <TouchableWithoutFeedback>
-              <View style={[styles.dropDownBox, { top: insets.top + 55, right: 60, width: 250 }]}>
+              <View
+                style={[
+                  styles.dropDownBox,
+                  { top: insets.top + 55, right: 60, width: 250 },
+                ]}
+              >
                 <View style={styles.dropHeader}>
                   <Text style={styles.dropName}>Notifications</Text>
-                  <Text style={styles.dropEmail}>{todayNewOrders.length} new orders today</Text>
+                  <Text style={styles.dropEmail}>
+                    {todayNewOrders.length} new orders today
+                  </Text>
                 </View>
                 {todayNewOrders.length === 0 ? (
                   <View style={{ padding: 20, alignItems: "center" }}>
-                    <Text style={{ color: "#7A8E87", fontSize: 13 }}>No new orders right now.</Text>
+                    <Text style={{ color: "#7A8E87", fontSize: 13 }}>
+                      No new orders right now.
+                    </Text>
                   </View>
                 ) : (
                   todayNewOrders.map((o, idx) => (
@@ -199,7 +256,7 @@ export default function TopHeader({
                       activeOpacity={0.7}
                       style={[
                         styles.dropItem,
-                        { borderBottomWidth: 1, borderColor: "#F0F0F0" }
+                        { borderBottomWidth: 1, borderColor: "#F0F0F0" },
                       ]}
                       onPress={() => {
                         setShowNotifDrop(false);
@@ -210,7 +267,14 @@ export default function TopHeader({
                         <Text style={[styles.dropItemText, { fontSize: 13 }]}>
                           #{o.order_id || o.id} - {o.customer_name || "Unknown"}
                         </Text>
-                        <Text style={{ fontSize: 11, color: "#E65100", marginTop: 2, fontWeight: "700" }}>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: "#E65100",
+                            marginTop: 2,
+                            fontWeight: "700",
+                          }}
+                        >
                           New Order
                         </Text>
                       </View>
@@ -247,7 +311,14 @@ export default function TopHeader({
 
           <View style={styles.rightActions}>
             {rightContent && (
-              <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, gap: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginRight: 8,
+                  gap: 8,
+                }}
+              >
                 {rightContent}
               </View>
             )}
@@ -259,21 +330,25 @@ export default function TopHeader({
             >
               <Ionicons name="notifications-outline" size={22} color="#fff" />
               {todayNewOrders.length > 0 && (
-                <View style={{
-                  position: "absolute",
-                  top: -2,
-                  right: -2,
-                  backgroundColor: "#E65100",
-                  height: 16,
-                  minWidth: 16,
-                  borderRadius: 8,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingHorizontal: 4,
-                  borderWidth: 1.5,
-                  borderColor: GREEN
-                }}>
-                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}>
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -2,
+                    backgroundColor: "#E65100",
+                    height: 16,
+                    minWidth: 16,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 4,
+                    borderWidth: 1.5,
+                    borderColor: GREEN,
+                  }}
+                >
+                  <Text
+                    style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}
+                  >
                     {todayNewOrders.length}
                   </Text>
                 </View>
@@ -290,28 +365,33 @@ export default function TopHeader({
           </View>
         </View>
 
-        {showHero && (() => {
-          const greeting = getGreeting();
-          return (
-            <View style={styles.heroCard}>
-              <Image
-                source={require("../../../assets/images/chef_hero.jpg")}
-                style={styles.heroImage}
-                contentFit="cover"
-              />
-              <View style={styles.heroOverlay} />
-              <View style={styles.heroContent}>
-                <Text style={styles.heroGreeting}>Hello, {greetingName}! 👋</Text>
-                <Text style={styles.heroTitle}>{greeting.emoji} {greeting.text}</Text>
-                <Text style={styles.heroSub}>{greeting.sub}</Text>
-                <View style={styles.heroBadge}>
-                  <Ionicons name="heart" size={12} color="#FF8A65" />
-                  <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+        {showHero &&
+          (() => {
+            const greeting = getGreeting();
+            return (
+              <View style={styles.heroCard}>
+                <Image
+                  source={require("../../../assets/images/chef_hero.jpg")}
+                  style={styles.heroImage}
+                  contentFit="cover"
+                />
+                <View style={styles.heroOverlay} />
+                <View style={styles.heroContent}>
+                  <Text style={styles.heroGreeting}>
+                    Hello, {greetingName}! 👋
+                  </Text>
+                  <Text style={styles.heroTitle}>
+                    {greeting.emoji} {greeting.text}
+                  </Text>
+                  <Text style={styles.heroSub}>{greeting.sub}</Text>
+                  <View style={styles.heroBadge}>
+                    <Ionicons name="heart" size={12} color="#FF8A65" />
+                    <Text style={styles.heroBadgeText}>Cooked with Love</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })()}
+            );
+          })()}
       </View>
     </>
   );

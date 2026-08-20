@@ -1,12 +1,13 @@
-import { Stack } from "expo-router";
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
 import Constants from "expo-constants";
-import { useEffect, useState, useRef } from "react";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { Stack } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import "../../global.css";
 import api from "../api";
 import { useOrderPolling } from "../hooks/useOrderPolling";
-import "../../global.css";
 
 // Configure global notification handler
 Notifications.setNotificationHandler({
@@ -30,14 +31,15 @@ async function registerForPushNotificationsAsync() {
   }
 
   if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== "granted") {
       console.log("Failed to get push token for push notification!");
       return;
@@ -47,13 +49,13 @@ async function registerForPushNotificationsAsync() {
       const projectId =
         Constants?.expoConfig?.extra?.eas?.projectId ??
         Constants?.easConfig?.projectId;
-        
+
       token = (
         await Notifications.getExpoPushTokenAsync({
           projectId,
         })
       ).data;
-      
+
       console.log("Expo Push Token:", token);
     } catch (e) {
       console.log("Error getting push token:", e);
@@ -83,26 +85,26 @@ export default function RootLayout() {
         api
           .post("/user/update-push-token", { token })
           .catch((err) =>
-            console.log("Failed to save push token to backend:", err)
+            console.log("Failed to save push token to backend:", err),
           );
       }
     });
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
         console.log("Notification received:", notification);
-      }
-    );
+      });
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
         console.log("Notification tapped:", response);
-      }
-    );
+      });
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        Notifications.removeNotificationSubscription(
+          notificationListener.current,
+        );
       }
       if (responseListener.current) {
         Notifications.removeNotificationSubscription(responseListener.current);
@@ -111,10 +113,12 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+    </SafeAreaProvider>
   );
 }
