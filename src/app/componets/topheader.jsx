@@ -4,12 +4,12 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, logoutUser } from "../../api";
@@ -553,8 +553,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.15)",
   },
   avatarButton: {
-    height: 40,
-    width: 40,
+    height: 38,
+    width: 38,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
