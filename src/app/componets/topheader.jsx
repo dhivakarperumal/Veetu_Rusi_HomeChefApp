@@ -382,8 +382,15 @@ export default function TopHeader({
               <View className="mx-4 mb-5 h-40 overflow-hidden rounded-[24px] bg-black/20">
                 <Image
                   source={require("../../../assets/images/chef_hero.jpg")}
-                  className="absolute bottom-0 right-0 h-[165px] w-40"
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    bottom: 0,
+                    width: 178,
+                    height: 165,
+                  }}
                   contentFit="cover"
+                  contentPosition="center center"
                 />
                 <View className="absolute bottom-0 left-0 right-0 top-0 bg-black/10" />
                 <View className="max-w-[62%] p-5">
