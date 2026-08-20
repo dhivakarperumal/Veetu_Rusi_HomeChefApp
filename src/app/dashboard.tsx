@@ -3,13 +3,13 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import api, { API_BASE_URL } from "../api";
 import { colors } from "../theme/colors";
@@ -260,6 +260,7 @@ export default function DashboardScreen() {
           />
         }
       >
+       
         {/* ── Earnings Today Card ── */}
         <Pressable
           style={styles.earningsCard}
@@ -319,6 +320,37 @@ export default function DashboardScreen() {
             />
           </View>
         </Pressable>
+
+         <Pressable
+          style={styles.featureBanner}
+          onPress={() => router.push("/add-dish" as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Add a new dish"
+        >
+          <Image
+            source={require("../../assets/images/dish_photos_grid.jpg")}
+            style={styles.featureBannerImage}
+            contentFit="cover"
+            contentPosition="right center"
+          />
+          <View style={styles.featureBannerShade} />
+          <View style={styles.featureBannerContent}>
+            <Text style={styles.featureBannerEyebrow}>
+              YOUR MENU, YOUR STORY
+            </Text>
+            <Text style={styles.featureBannerTitle}>
+              Share what you cook best.
+            </Text>
+            <Text style={styles.featureBannerCopy}>
+              Add a fresh dish and let more customers discover your kitchen.
+            </Text>
+            <View style={styles.featureBannerButton}>
+              <Text style={styles.featureBannerButtonText}>Add a dish</Text>
+              <Ionicons name="arrow-forward" size={14} color="#1A3328" />
+            </View>
+          </View>
+        </Pressable>
+
 
         {/* ── Today's Overview Card ── */}
         <Pressable
@@ -463,6 +495,64 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.pageBackground },
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+
+  featureBanner: {
+    height: 186,
+    marginBottom: 16,
+    overflow: "hidden",
+    borderRadius: 22,
+    backgroundColor: "#1A3328",
+    position: "relative",
+  },
+  featureBannerImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+  },
+  featureBannerShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(13, 38, 27, 0.62)",
+  },
+  featureBannerContent: {
+    width: "67%",
+    paddingLeft: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
+  },
+  featureBannerEyebrow: {
+    color: "#F6C453",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.1,
+  },
+  featureBannerTitle: {
+    marginTop: 5,
+    color: "#FFFFFF",
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: "800",
+  },
+  featureBannerCopy: {
+    marginTop: 5,
+    color: "rgba(255, 255, 255, 0.82)",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  featureBannerButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#F6C453",
+  },
+  featureBannerButtonText: {
+    color: "#1A3328",
+    fontSize: 12,
+    fontWeight: "800",
+  },
 
   // Earnings card
   earningsCard: {
