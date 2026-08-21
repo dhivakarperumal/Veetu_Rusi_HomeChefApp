@@ -18,6 +18,12 @@ import TopHeader from "./componets/topheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
+type OrderTab =
+  | OrderStatus
+  | "All Status"
+  | "Packing"
+  | "Searching Delivery Partner"
+  | "Delivery Partner Assigned";
 
 interface Order {
   id: string;
@@ -29,6 +35,9 @@ interface Order {
   amount: number;
   location: string;
   time: string;
+  deliveryPartnerName?: string;
+  deliveryPartnerPhone?: string;
+  deliveryPartnerVehicle?: string;
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -65,16 +74,30 @@ function OrderCard({
   order,
   onAccept,
   onMarkReady,
+  onStatusUpdate,
   onPress,
 }: {
   order: Order;
   onAccept?: (id: string) => void;
   onMarkReady?: (id: string) => void;
+  onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
 }) {
   const cfg = STATUS_CONFIG[order.status];
+  const rawStatus = (order.rawStatus || "").toLowerCase();
   const showAccept = order.status === "New";
   const showStart = order.status === "Preparing";
+  const nextStatus =
+    rawStatus === "food ready" || rawStatus === "ready"
+      ? { label: "Start Packing", status: "Packing" }
+      : rawStatus === "packing"
+        ? {
+            label: "Find Delivery Partner",
+            status: "Searching Delivery Partner",
+          }
+        : rawStatus === "searching delivery partner"
+          ? { label: "Partner Accepted", status: "Delivery Partner Assigned" }
+          : null;
 
   return (
     <Pressable
@@ -176,7 +199,7 @@ function OrderCard({
         style={{
           flexDirection: "row",
           alignItems: "center",
-          marginBottom: showAccept || showStart ? 14 : 0,
+          marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
         }}
       >
         <Ionicons name="location-outline" size={14} color={colors.muted} />
@@ -217,22 +240,100 @@ function OrderCard({
           </Text>
         </Pressable>
       )}
+
+      {nextStatus && (
+        <Pressable
+          onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
+          style={{
+            backgroundColor: colors.primary,
+            borderRadius: 14,
+            paddingVertical: 13,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+            {nextStatus.label}
+          </Text>
+        </Pressable>
+      )}
+
+      {rawStatus === "delivery partner assigned" &&
+        (order.deliveryPartnerName ||
+          order.deliveryPartnerPhone ||
+          order.deliveryPartnerVehicle) && (
+          <View
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: colors.softCard,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              Delivery Partner
+            </Text>
+            {order.deliveryPartnerName && (
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
+                {order.deliveryPartnerName}
+              </Text>
+            )}
+            {order.deliveryPartnerPhone && (
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
+                {order.deliveryPartnerPhone}
+              </Text>
+            )}
+            {order.deliveryPartnerVehicle && (
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
+                {order.deliveryPartnerVehicle}
+              </Text>
+            )}
+          </View>
+        )}
     </Pressable>
   );
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-const TABS: OrderStatus[] = ["New", "Preparing", "Ready", "Completed"];
+const TABS: OrderTab[] = [
+  "All Status",
+  "New",
+  "Preparing",
+  "Ready",
+  "Packing",
+  "Searching Delivery Partner",
+  "Delivery Partner Assigned",
+  "Completed",
+];
+
+const matchesTab = (order: Order, tab: OrderTab) => {
+  if (tab === "All Status") return true;
+  if (
+    tab === "Packing" ||
+    tab === "Searching Delivery Partner" ||
+    tab === "Delivery Partner Assigned"
+  ) {
+    return (order.rawStatus || "").toLowerCase() === tab.toLowerCase();
+  }
+  return order.status === tab;
+};
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
-  const [activeTab, setActiveTab] = useState<OrderStatus>("New");
+  const [activeTab, setActiveTab] = useState<OrderTab>("All Status");
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   // Optional: you can add a filterSort state here if needed, e.g. "Newest", "Oldest", "Highest Amount"
-  const [filterSort, setFilterSort] = useState<"Newest" | "Oldest" | "Highest Amount">("Newest");
+  const [filterSort, setFilterSort] = useState<
+    "Newest" | "Oldest" | "Highest Amount"
+  >("Newest");
   const router = useRouter();
 
   const fetchOrders = useCallback(async () => {
@@ -253,10 +354,21 @@ export default function OrdersScreen() {
           ) ||
             0),
         amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
-        location:
-          o.street_address
-            ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
-            : o.customer_address || o.delivery_address || "Unknown Location",
+        location: o.street_address
+          ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
+          : o.customer_address || o.delivery_address || "Unknown Location",
+        deliveryPartnerName:
+          o.delivery_partner_name ||
+          o.deliveryPartner?.name ||
+          o.delivery_partner?.name,
+        deliveryPartnerPhone:
+          o.delivery_partner_phone ||
+          o.deliveryPartner?.phone ||
+          o.delivery_partner?.phone,
+        deliveryPartnerVehicle:
+          o.delivery_partner_vehicle ||
+          o.deliveryPartner?.vehicle ||
+          o.delivery_partner?.vehicle,
         time:
           o.ordered_at || o.created_at
             ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
@@ -282,15 +394,15 @@ export default function OrdersScreen() {
     fetchOrders();
   }, [fetchOrders]);
 
-  let filtered = orders.filter((o) => o.status === activeTab);
-  
+  let filtered = orders.filter((o) => matchesTab(o, activeTab));
+
   if (search) {
     const s = search.toLowerCase();
     filtered = filtered.filter(
       (o) =>
         o.customer.toLowerCase().includes(s) ||
         o.order_id.toLowerCase().includes(s) ||
-        o.location.toLowerCase().includes(s)
+        o.location.toLowerCase().includes(s),
     );
   }
 
@@ -323,10 +435,19 @@ export default function OrdersScreen() {
     }
   };
 
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      await api.patch(`/user-food-orders/status/${id}`, { status });
+      fetchOrders();
+    } catch (error) {
+      console.error(`Failed to update order to ${status}:`, error);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <TopHeader showHero={false} title="Orders" />
-      
+
       {/* Search bar with filter icon */}
       <View
         style={{
@@ -364,9 +485,16 @@ export default function OrdersScreen() {
             <Ionicons name="close-circle" size={18} color={colors.muted} />
           </Pressable>
         )}
-        
-        <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 4 }} />
-        
+
+        <View
+          style={{
+            width: 1,
+            height: 24,
+            backgroundColor: colors.border,
+            marginHorizontal: 4,
+          }}
+        />
+
         <Pressable onPress={() => setShowFilter(true)} style={{ padding: 4 }}>
           <Ionicons name="options-outline" size={20} color={colors.primary} />
         </Pressable>
@@ -384,7 +512,7 @@ export default function OrdersScreen() {
           }}
         >
           {TABS.map((tab) => {
-            const count = orders.filter((o) => o.status === tab).length;
+            const count = orders.filter((o) => matchesTab(o, tab)).length;
             const isActive = activeTab === tab;
             return (
               <Pressable
@@ -511,6 +639,7 @@ export default function OrdersScreen() {
               order={order}
               onAccept={handleAccept}
               onMarkReady={handleMarkReady}
+              onStatusUpdate={handleStatusUpdate}
               onPress={() => router.push(`/order/${order.id}`)}
             />
           ))
@@ -527,7 +656,11 @@ export default function OrdersScreen() {
         onRequestClose={() => setShowFilter(false)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "flex-end",
+          }}
           activeOpacity={1}
           onPress={() => setShowFilter(false)}
         >
@@ -541,8 +674,21 @@ export default function OrdersScreen() {
               paddingBottom: 40,
             }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "800",
+                  color: colors.primaryDark,
+                }}
+              >
                 Sort Orders
               </Text>
               <Pressable onPress={() => setShowFilter(false)}>
@@ -550,10 +696,24 @@ export default function OrdersScreen() {
               </Pressable>
             </View>
 
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark, marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: colors.primaryDark,
+                marginBottom: 12,
+              }}
+            >
               Sort By
             </Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: 10,
+                marginBottom: 24,
+              }}
+            >
               {(["Newest", "Oldest", "Highest Amount"] as const).map((sort) => {
                 const isActive = filterSort === sort;
                 return (
@@ -564,13 +724,21 @@ export default function OrdersScreen() {
                       paddingHorizontal: 16,
                       paddingVertical: 10,
                       borderRadius: 12,
-                      backgroundColor: isActive ? colors.primary : colors.softCard,
+                      backgroundColor: isActive
+                        ? colors.primary
+                        : colors.softCard,
                       alignItems: "center",
                       borderWidth: 1,
                       borderColor: isActive ? colors.primary : colors.border,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: isActive ? "#fff" : colors.primaryDark }}>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: isActive ? "#fff" : colors.primaryDark,
+                      }}
+                    >
                       {sort}
                     </Text>
                   </Pressable>
@@ -587,7 +755,9 @@ export default function OrdersScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Apply</Text>
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+                Apply
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

@@ -129,8 +129,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   activeIconPill: {
-    height: 40,
-    width: 64,
+    height: 48,
+    width: 52,
+    borderRadius: 999,
     backgroundColor: "#2E7A4F",
     shadowColor: "#000",
     shadowOpacity: 0.12,
