@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   Pressable,
   RefreshControl,
@@ -11,19 +12,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import api from "../api";
+import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type OrderStatus = "New" | "Preparing" | "Ready" | "Completed";
+type OrderStatus = "New" | "Preparing" | "Ready" | "Completed" | "Cancelled";
 type OrderTab =
   | OrderStatus
   | "All Status"
   | "Packing"
   | "Searching Delivery Partner"
-  | "Delivery Partner Assigned";
+  | "Delivery Partner Assigned"
+  | "Cancelled";
 
 interface Order {
   id: string;
@@ -35,6 +37,8 @@ interface Order {
   amount: number;
   location: string;
   time: string;
+  cancellationReason?: string;
+  cancellationNotes?: string;
   deliveryPartnerName?: string;
   deliveryPartnerPhone?: string;
   deliveryPartnerVehicle?: string;
@@ -49,11 +53,13 @@ const STATUS_CONFIG: Record<
   Preparing: { color: "#1565C0", bg: "#E3F2FD", label: "Preparing" },
   Ready: { color: "#2E7D32", bg: "#E8F5E9", label: "Ready" },
   Completed: { color: "#4A675F", bg: "#ECEFF1", label: "Completed" },
+  Cancelled: { color: "#C62828", bg: "#FFEBEE", label: "Cancelled" },
 };
 
 const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
-  if (["pending", "new", "new order", "order placed"].includes(s)) return "New";
+  if (["cancelled", "canceled"].includes(s)) return "Cancelled";
+  if (isNewOrderStatus(s)) return "New";
   if (["accepted", "preparing"].includes(s)) return "Preparing";
   if (
     [
@@ -73,15 +79,19 @@ const mapStatus = (status: string): OrderStatus => {
 function OrderCard({
   order,
   onAccept,
+  onReject,
   onMarkReady,
   onStatusUpdate,
   onPress,
+  busy = false,
 }: {
   order: Order;
   onAccept?: (id: string) => void;
+  onReject?: (order: Order) => void;
   onMarkReady?: (id: string) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
+  busy?: boolean;
 }) {
   const cfg = STATUS_CONFIG[order.status];
   const rawStatus = (order.rawStatus || "").toLowerCase();
@@ -208,26 +218,79 @@ function OrderCard({
         </Text>
       </View>
 
+      {order.status === "Cancelled" &&
+        (order.cancellationReason || order.cancellationNotes) && (
+          <View
+            style={{
+              marginTop: 12,
+              marginBottom: 2,
+              padding: 12,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: "#FFD7D7",
+              backgroundColor: "#FFF7F7",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="information-circle-outline" size={16} color="#C62828" />
+              <Text style={{ color: "#A52A2A", fontSize: 12, fontWeight: "800" }}>
+                Cancellation reason
+              </Text>
+            </View>
+            {order.cancellationReason && (
+              <Text style={{ marginTop: 5, color: "#4A3535", fontSize: 13, fontWeight: "700" }}>
+                {order.cancellationReason}
+              </Text>
+            )}
+            {order.cancellationNotes && (
+              <Text style={{ marginTop: 3, color: "#765F5F", fontSize: 12, lineHeight: 18 }}>
+                {order.cancellationNotes}
+              </Text>
+            )}
+          </View>
+        )}
+
       {/* Action button */}
       {showAccept && (
-        <Pressable
-          onPress={() => onAccept?.(order.id)}
-          style={{
-            backgroundColor: colors.primary,
-            borderRadius: 14,
-            paddingVertical: 13,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-            Accept
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={() => onReject?.(order)}
+            disabled={busy}
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "#C62828",
+              borderRadius: 14,
+              paddingVertical: 13,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#C62828", fontSize: 15, fontWeight: "700" }}>
+              Reject
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onAccept?.(order.id)}
+            disabled={busy}
+            style={{
+              flex: 1.5,
+              backgroundColor: colors.primary,
+              borderRadius: 14,
+              paddingVertical: 13,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+              {busy ? "Accepting..." : "Accept Order"}
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       {showStart && (
         <Pressable
           onPress={() => onMarkReady?.(order.id)}
+          disabled={busy}
           style={{
             backgroundColor: "#1565C0",
             borderRadius: 14,
@@ -244,6 +307,7 @@ function OrderCard({
       {nextStatus && (
         <Pressable
           onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
+          disabled={busy}
           style={{
             backgroundColor: colors.primary,
             borderRadius: 14,
@@ -308,6 +372,7 @@ const TABS: OrderTab[] = [
   "Packing",
   "Searching Delivery Partner",
   "Delivery Partner Assigned",
+  "Cancelled",
   "Completed",
 ];
 
@@ -320,6 +385,7 @@ const matchesTab = (order: Order, tab: OrderTab) => {
   ) {
     return (order.rawStatus || "").toLowerCase() === tab.toLowerCase();
   }
+  if (tab === "Cancelled") return order.status === "Cancelled";
   return order.status === tab;
 };
 
@@ -334,7 +400,20 @@ export default function OrdersScreen() {
   const [filterSort, setFilterSort] = useState<
     "Newest" | "Oldest" | "Highest Amount"
   >("Newest");
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelNotes, setCancelNotes] = useState("");
+  const [showReasons, setShowReasons] = useState(false);
   const router = useRouter();
+
+  const cancellationReasons = [
+    "Item unavailable",
+    "Too busy to prepare",
+    "Delivery issue",
+    "Customer request",
+    "Other",
+  ];
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -357,6 +436,10 @@ export default function OrdersScreen() {
         location: o.street_address
           ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
           : o.customer_address || o.delivery_address || "Unknown Location",
+        cancellationReason:
+          o.cancellation_reason || o.cancel_reason || o.cancellationReason || "",
+        cancellationNotes:
+          o.cancellation_notes || o.cancel_notes || o.cancellationNotes || "",
         deliveryPartnerName:
           o.delivery_partner_name ||
           o.deliveryPartner?.name ||
@@ -377,12 +460,7 @@ export default function OrdersScreen() {
               })
             : "-",
       }));
-      // Optional: Filter out cancelled
-      setOrders(
-        mappedOrders.filter(
-          (o: any) => (o.rawStatus || "").toLowerCase() !== "cancelled",
-        ),
-      );
+      setOrders(mappedOrders);
     } catch (error) {
       console.error("Failed to load orders:", error);
     } finally {
@@ -416,31 +494,74 @@ export default function OrdersScreen() {
   }
 
   const handleAccept = async (id: string) => {
+    if (actionId) return;
+    setActionId(id);
     try {
       await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
-      fetchOrders();
-    } catch (e) {
-      console.error(e);
+      await fetchOrders();
+    } catch (error) {
+      Alert.alert("Could not accept order", getApiErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const openCancelModal = (order: Order) => {
+    setCancelOrder(order);
+    setCancelReason("");
+    setCancelNotes("");
+    setShowReasons(false);
+  };
+
+  const closeCancelModal = () => {
+    if (actionId) return;
+    setCancelOrder(null);
+    setShowReasons(false);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelOrder || !cancelReason || actionId) return;
+    setActionId(cancelOrder.id);
+    try {
+      await api.patch(`/user-food-orders/status/${cancelOrder.id}`, {
+        status: "Cancelled",
+        cancellation_reason: cancelReason,
+        cancellation_notes: cancelNotes.trim() || undefined,
+      });
+      closeCancelModal();
+      await fetchOrders();
+    } catch (error) {
+      Alert.alert("Could not cancel order", getApiErrorMessage(error));
+    } finally {
+      setActionId(null);
     }
   };
 
   const handleMarkReady = async (id: string) => {
+    if (actionId) return;
+    setActionId(id);
     try {
       await api.patch(`/user-food-orders/status/${id}`, {
         status: "Food Ready",
       });
-      fetchOrders();
-    } catch (e) {
-      console.error(e);
+      await fetchOrders();
+    } catch (error) {
+      Alert.alert("Could not update order", getApiErrorMessage(error));
+    } finally {
+      setActionId(null);
     }
   };
 
   const handleStatusUpdate = async (id: string, status: string) => {
+    if (actionId) return;
+    setActionId(id);
     try {
       await api.patch(`/user-food-orders/status/${id}`, { status });
-      fetchOrders();
+      await fetchOrders();
     } catch (error) {
-      console.error(`Failed to update order to ${status}:`, error);
+      Alert.alert("Could not update order", getApiErrorMessage(error));
+    } finally {
+      setActionId(null);
     }
   };
 
@@ -638,8 +759,10 @@ export default function OrdersScreen() {
               key={order.id}
               order={order}
               onAccept={handleAccept}
+              onReject={openCancelModal}
               onMarkReady={handleMarkReady}
               onStatusUpdate={handleStatusUpdate}
+              busy={actionId === order.id}
               onPress={() => router.push(`/order/${order.id}`)}
             />
           ))
@@ -647,6 +770,132 @@ export default function OrdersScreen() {
       </ScrollView>
 
       <BottomBar />
+
+      <Modal
+        visible={Boolean(cancelOrder)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeCancelModal}
+      >
+        <Pressable style={styles.cancelOverlay} onPress={closeCancelModal}>
+          <Pressable style={styles.cancelCard} onPress={() => undefined}>
+            <View style={styles.cancelHeader}>
+              <View style={styles.cancelTitleRow}>
+                <View style={styles.cancelIcon}>
+                  <Ionicons name="close-circle" size={28} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.cancelTitle}>Cancel Order</Text>
+                  <Text style={styles.cancelOrderId}>
+                    #{cancelOrder?.order_id}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={closeCancelModal}
+                disabled={Boolean(actionId)}
+                style={styles.cancelClose}
+              >
+                <Ionicons name="close" size={21} color="#52645B" />
+              </Pressable>
+            </View>
+
+            <View style={styles.cancelWarning}>
+              <Ionicons name="warning-outline" size={22} color="#B26A00" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cancelWarningTitle}>
+                  Are you sure you want to cancel this order?
+                </Text>
+                <Text style={styles.cancelWarningText}>
+                  This action cannot be undone. Select a cancellation reason
+                  before continuing.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.cancelLabel}>
+              Cancellation Reason <Text style={styles.required}>*</Text>
+            </Text>
+            <Pressable
+              onPress={() => setShowReasons((visible) => !visible)}
+              disabled={Boolean(actionId)}
+              style={styles.reasonSelect}
+            >
+              <Text
+                style={[
+                  styles.reasonText,
+                  !cancelReason && styles.reasonPlaceholder,
+                ]}
+              >
+                {cancelReason || "Select a reason..."}
+              </Text>
+              <Ionicons
+                name={showReasons ? "chevron-up" : "chevron-down"}
+                size={19}
+                color="#283A33"
+              />
+            </Pressable>
+            {showReasons && (
+              <View style={styles.reasonMenu}>
+                {cancellationReasons.map((reason) => (
+                  <Pressable
+                    key={reason}
+                    onPress={() => {
+                      setCancelReason(reason);
+                      setShowReasons(false);
+                    }}
+                    style={styles.reasonOption}
+                  >
+                    <Text style={styles.reasonOptionText}>{reason}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            <Text style={styles.cancelLabel}>
+              Additional Notes <Text style={styles.optional}>(Optional)</Text>
+            </Text>
+            <TextInput
+              value={cancelNotes}
+              onChangeText={setCancelNotes}
+              editable={!actionId}
+              multiline
+              numberOfLines={3}
+              placeholder="Provide any extra details about this cancellation..."
+              placeholderTextColor="#8A9691"
+              style={styles.notesInput}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.cancelActions}>
+              <Pressable
+                onPress={closeCancelModal}
+                disabled={Boolean(actionId)}
+                style={styles.keepButton}
+              >
+                <Text style={styles.keepButtonText}>No, Keep Order</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleCancelOrder}
+                disabled={!cancelReason || Boolean(actionId)}
+                style={[
+                  styles.confirmCancelButton,
+                  (!cancelReason || actionId) && styles.confirmCancelDisabled,
+                ]}
+              >
+                <Ionicons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.confirmCancelText}>
+                  {actionId ? "Cancelling..." : "Yes, Cancel Order"}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Filter Bottom Sheet Modal ── */}
       <Modal
@@ -765,3 +1014,98 @@ export default function OrdersScreen() {
     </View>
   );
 }
+
+const styles = {
+  cancelOverlay: {
+    flex: 1,
+    justifyContent: "center" as const,
+    padding: 18,
+    backgroundColor: "rgba(7, 13, 10, 0.72)",
+  },
+  cancelCard: {
+    width: "100%" as const,
+    maxWidth: 440,
+    alignSelf: "center" as const,
+    overflow: "hidden" as const,
+    borderRadius: 26,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  cancelHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    padding: 20,
+    backgroundColor: "#FFF6F6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3E5E5",
+  },
+  cancelTitleRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
+  cancelIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "#F32632",
+    shadowColor: "#F32632",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 5 },
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  cancelTitle: { color: "#202522", fontSize: 21, fontWeight: "800" as const },
+  cancelOrderId: { marginTop: 3, color: "#8A8F8C", fontSize: 13 },
+  cancelClose: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "#F3F4F3",
+  },
+  cancelWarning: {
+    flexDirection: "row" as const,
+    gap: 12,
+    margin: 20,
+    marginBottom: 18,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "#FFD273",
+    borderRadius: 15,
+    backgroundColor: "#FFF9E8",
+  },
+  cancelWarningTitle: { color: "#A76100", fontSize: 15, fontWeight: "800" as const, lineHeight: 21 },
+  cancelWarningText: { marginTop: 5, color: "#A84F1C", fontSize: 13, lineHeight: 20 },
+  cancelLabel: { marginHorizontal: 20, marginBottom: 8, color: "#37434C", fontSize: 15, fontWeight: "800" as const },
+  required: { color: "#E53935" },
+  optional: { color: "#9AA29E", fontWeight: "500" as const },
+  reasonSelect: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginHorizontal: 20,
+    minHeight: 50,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#DDE3E0",
+    borderRadius: 13,
+    backgroundColor: "#FBFCFB",
+  },
+  reasonText: { color: "#283A33", fontSize: 15 },
+  reasonPlaceholder: { color: "#697570" },
+  reasonMenu: { marginHorizontal: 20, marginTop: 5, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 12, backgroundColor: "#FFFFFF" },
+  reasonOption: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#EEF2EF" },
+  reasonOptionText: { color: "#283A33", fontSize: 14 },
+  notesInput: { marginHorizontal: 20, minHeight: 88, padding: 14, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 13, color: "#283A33", fontSize: 14, backgroundColor: "#FBFCFB" },
+  cancelActions: { flexDirection: "row" as const, gap: 12, marginTop: 24, padding: 20, borderTopWidth: 1, borderTopColor: "#EEF1EF" },
+  keepButton: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, minHeight: 56, paddingHorizontal: 10, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 14 },
+  keepButtonText: { color: "#1D3D30", fontSize: 14, fontWeight: "800" as const },
+  confirmCancelButton: { flex: 1.35, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 6, minHeight: 56, borderRadius: 14, backgroundColor: "#F2767B" },
+  confirmCancelDisabled: { opacity: 0.5 },
+  confirmCancelText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" as const },
+};

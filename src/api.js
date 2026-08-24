@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.2:5000/api";
+  process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -35,6 +35,25 @@ export async function getStoredToken() {
 export async function getStoredUser() {
   const storedUser = await AsyncStorage.getItem("userProfile");
   return storedUser ? JSON.parse(storedUser) : null;
+}
+
+export const NEW_ORDER_STATUSES = new Set([
+  "pending",
+  "new",
+  "new order",
+  "order placed",
+]);
+
+export function isNewOrderStatus(status) {
+  return NEW_ORDER_STATUSES.has(
+    String(status || "")
+      .trim()
+      .toLowerCase(),
+  );
+}
+
+export function getApiErrorMessage(error, fallback = "Something went wrong") {
+  return error?.message || error?.response?.data?.message || fallback;
 }
 
 api.interceptors.request.use(async (config) => {

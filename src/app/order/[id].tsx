@@ -2,10 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, View, ActivityIndicator } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api, {
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
+} from "../../api";
 import { colors } from "../../theme/colors";
-import api, { API_BASE_URL } from "../../api";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
@@ -27,17 +39,17 @@ const getProductImage = (item: any) => {
   try {
     if (item.image) {
       let imgs = item.image;
-      if (typeof imgs === 'string') {
+      if (typeof imgs === "string") {
         try {
           const parsed = JSON.parse(imgs);
-          if (typeof parsed === 'string') {
+          if (typeof parsed === "string") {
             imgs = JSON.parse(parsed); // Handle double stringified
           } else {
             imgs = parsed;
           }
         } catch {
-          if (imgs.includes('/') || imgs.includes('.')) {
-             return resolveImageUrl(imgs);
+          if (imgs.includes("/") || imgs.includes(".")) {
+            return resolveImageUrl(imgs);
           }
         }
       }
@@ -46,32 +58,43 @@ const getProductImage = (item: any) => {
       }
     }
   } catch (e) {
-    console.error('Error parsing images:', e);
+    console.error("Error parsing images:", e);
   }
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'P')}&background=10b981&color=fff&size=400`;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || "P")}&background=10b981&color=fff&size=400`;
 };
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
-  New:       { color: "#E65100", bg: "#FFF3E0" },
+  New: { color: "#E65100", bg: "#FFF3E0" },
   Preparing: { color: "#1565C0", bg: "#E3F2FD" },
-  Ready:     { color: "#2E7D32", bg: "#E8F5E9" },
+  Ready: { color: "#2E7D32", bg: "#E8F5E9" },
   Completed: { color: "#4A675F", bg: "#ECEFF1" },
 };
 
 const mapStatus = (status: string) => {
   const s = (status || "").toLowerCase();
-  if (["pending", "new", "new order", "order placed"].includes(s)) return "New";
+  if (isNewOrderStatus(s)) return "New";
   if (["accepted", "preparing"].includes(s)) return "Preparing";
-  if (["food ready", "packing", "searching delivery partner", "delivery partner assigned"].includes(s)) return "Ready";
-  if (["out for delivery", "delivered", "completed"].includes(s)) return "Completed";
+  if (
+    [
+      "food ready",
+      "packing",
+      "searching delivery partner",
+      "delivery partner assigned",
+    ].includes(s)
+  )
+    return "Ready";
+  if (["out for delivery", "delivered", "completed"].includes(s))
+    return "Completed";
   return "New";
 };
 
 // ── Divider ───────────────────────────────────────────────────────────────────
 function Divider() {
   return (
-    <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16 }} />
+    <View
+      style={{ height: 1, backgroundColor: colors.border, marginVertical: 16 }}
+    />
   );
 }
 
@@ -93,10 +116,11 @@ function SectionTitle({ title }: { title: string }) {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrderDetailScreen() {
-  const router  = useRouter();
-  const { id }  = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchOrder();
@@ -108,15 +132,18 @@ export default function OrderDetailScreen() {
       // Try to fetch specific order if endpoint exists, otherwise fallback to finding from chef orders list
       let foundOrder = null;
       try {
-         const res = await api.get(`/user-food-orders/${id}`);
-         if (res.data && res.data.id) foundOrder = res.data;
+        const res = await api.get(`/user-food-orders/${id}`);
+        if (res.data && res.data.id) foundOrder = res.data;
       } catch (e) {
-         // fallback if single order endpoint requires different auth or path
+        // fallback if single order endpoint requires different auth or path
       }
 
       if (!foundOrder) {
-         const res = await api.get("/user-food-orders/chef");
-         foundOrder = res.data.find((o: any) => String(o.id) === String(id) || String(o._id) === String(id));
+        const res = await api.get("/user-food-orders/chef");
+        foundOrder = res.data.find(
+          (o: any) =>
+            String(o.id) === String(id) || String(o._id) === String(id),
+        );
       }
 
       setOrder(foundOrder);
@@ -129,7 +156,14 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.pageBackground }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.pageBackground,
+        }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -137,63 +171,103 @@ export default function OrderDetailScreen() {
 
   if (!order) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.pageBackground }}>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>Order not found.</Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.pageBackground,
+        }}
+      >
+        <Text style={{ color: colors.muted, fontSize: 16 }}>
+          Order not found.
+        </Text>
       </View>
     );
   }
 
-  const uiStatus   = mapStatus(order.status);
-  const cfg        = STATUS_CONFIG[uiStatus] ?? STATUS_CONFIG["New"];
-  
+  const uiStatus = mapStatus(order.status);
+  const cfg = STATUS_CONFIG[uiStatus] ?? STATUS_CONFIG["New"];
+
   // Calculate totals gracefully
   const parsedItems = Array.isArray(order.items) ? order.items : [];
-  const itemTotal  = parsedItems.reduce((s: number, i: any) => s + (Number(i.price) * Number(i.quantity || 1)), 0);
+  const itemTotal = parsedItems.reduce(
+    (s: number, i: any) => s + Number(i.price) * Number(i.quantity || 1),
+    0,
+  );
   // We use chef_total_amount if available, otherwise total_amount
-  const grandTotal = Number(order.chef_total_amount ?? order.total_amount ?? itemTotal);
-  
+  const grandTotal = Number(
+    order.chef_total_amount ?? order.total_amount ?? itemTotal,
+  );
+
   // Platform fees / Delivery are typically handled by franchise, but we display if backend provided them
   const deliveryCharge = Number(order.delivery_charge || 0);
   const platformFee = Number(order.platform_fee || 0);
 
-  const isNew      = uiStatus === "New";
-  const addressString = order.street_address ? `${order.street_address}\n${order.city}, ${order.state}` : (order.customer_address || "Unknown Address");
-  
-  const displayTime = order.delivery_time ? order.delivery_time : (order.ordered_at ? new Date(order.ordered_at).toLocaleTimeString() : "");
-  const displayDate = order.delivery_date ? order.delivery_date : (order.ordered_at ? new Date(order.ordered_at).toLocaleDateString() : "");
+  const isNew = uiStatus === "New";
+  const addressString = order.street_address
+    ? `${order.street_address}\n${order.city}, ${order.state}`
+    : order.customer_address || "Unknown Address";
+
+  const displayTime = order.delivery_time
+    ? order.delivery_time
+    : order.ordered_at
+      ? new Date(order.ordered_at).toLocaleTimeString()
+      : "";
+  const displayDate = order.delivery_date
+    ? order.delivery_date
+    : order.ordered_at
+      ? new Date(order.ordered_at).toLocaleDateString()
+      : "";
 
   const handleAccept = async () => {
+    if (actionLoading) return;
+    setActionLoading(true);
     try {
       await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
-      Alert.alert("Order Accepted", `#${order.order_id || id} has been accepted!`);
+      Alert.alert(
+        "Order Accepted",
+        `#${order.order_id || id} has been accepted!`,
+      );
       router.back();
     } catch (err) {
-      Alert.alert("Error", "Could not accept order.");
+      Alert.alert("Could not accept order", getApiErrorMessage(err));
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleReject = () => {
-    Alert.alert(
-      "Reject Order",
-      "Are you sure you want to reject this order?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Reject", style: "destructive", onPress: async () => {
-            try {
-              await api.patch(`/user-food-orders/status/${id}`, { status: "Cancelled" });
-              router.back();
-            } catch (err) {
-              Alert.alert("Error", "Could not reject order.");
-            }
-        }},
-      ]
-    );
+    Alert.alert("Reject Order", "Are you sure you want to reject this order?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reject",
+        style: "destructive",
+        onPress: async () => {
+          if (actionLoading) return;
+          setActionLoading(true);
+          try {
+            await api.patch(`/user-food-orders/status/${id}`, {
+              status: "Cancelled",
+            });
+            router.back();
+          } catch (err) {
+            Alert.alert("Could not reject order", getApiErrorMessage(err));
+          } finally {
+            setActionLoading(false);
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.pageBackground }}>
+      <SafeAreaView
+        edges={["top"]}
+        style={{ backgroundColor: colors.pageBackground }}
+      >
         <View
           style={{
             flexDirection: "row",
@@ -209,7 +283,16 @@ export default function OrderDetailScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={colors.primaryDark} />
           </Pressable>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark, flex: 1, textAlign: "center", marginRight: 36 }}>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "800",
+              color: colors.primaryDark,
+              flex: 1,
+              textAlign: "center",
+              marginRight: 36,
+            }}
+          >
             Order Details
           </Text>
         </View>
@@ -217,7 +300,11 @@ export default function OrderDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120, paddingTop: 4 }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingBottom: 120,
+          paddingTop: 4,
+        }}
       >
         {/* ── Order ID row ── */}
         <View
@@ -229,20 +316,43 @@ export default function OrderDetailScreen() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "800",
+                color: colors.primaryDark,
+              }}
+            >
               #{order.order_id || order.id}
             </Text>
-            <View style={{ backgroundColor: cfg.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <Text style={{ color: cfg.color, fontSize: 12, fontWeight: "700" }}>
+            <View
+              style={{
+                backgroundColor: cfg.bg,
+                borderRadius: 8,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              }}
+            >
+              <Text
+                style={{ color: cfg.color, fontSize: 12, fontWeight: "700" }}
+              >
                 {uiStatus}
               </Text>
             </View>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: colors.primaryDark }}>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "600",
+                color: colors.primaryDark,
+              }}
+            >
               {displayTime}
             </Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>{displayDate}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>
+              {displayDate}
+            </Text>
           </View>
         </View>
 
@@ -263,7 +373,14 @@ export default function OrderDetailScreen() {
             elevation: 2,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              flex: 1,
+            }}
+          >
             <View
               style={{
                 height: 46,
@@ -277,7 +394,14 @@ export default function OrderDetailScreen() {
               <Ionicons name="person" size={22} color={colors.primarySoft} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark }} numberOfLines={1}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "700",
+                  color: colors.primaryDark,
+                }}
+                numberOfLines={1}
+              >
                 {order.customer_name || "Unknown Customer"}
               </Text>
               <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>
@@ -289,7 +413,11 @@ export default function OrderDetailScreen() {
           {/* Call button */}
           {(order.customer_phone || order.phone) && (
             <Pressable
-              onPress={() => Linking.openURL(`tel:${(order.customer_phone || order.phone).replace(/\s/g, "")}`)}
+              onPress={() =>
+                Linking.openURL(
+                  `tel:${(order.customer_phone || order.phone).replace(/\s/g, "")}`,
+                )
+              }
               style={{
                 height: 42,
                 width: 42,
@@ -297,7 +425,7 @@ export default function OrderDetailScreen() {
                 backgroundColor: "#E8F5E9",
                 alignItems: "center",
                 justifyContent: "center",
-                marginLeft: 10
+                marginLeft: 10,
               }}
             >
               <Ionicons name="call" size={20} color={colors.primary} />
@@ -320,15 +448,24 @@ export default function OrderDetailScreen() {
           }}
         >
           <SectionTitle title="Delivery Address" />
-          <Text style={{ fontSize: 14, color: colors.primaryDark, lineHeight: 22 }}>
+          <Text
+            style={{ fontSize: 14, color: colors.primaryDark, lineHeight: 22 }}
+          >
             {addressString}
           </Text>
           <Pressable
             onPress={() => Linking.openURL("https://maps.google.com")}
-            style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 4 }}
+            style={{
+              marginTop: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+            }}
           >
             <Ionicons name="map-outline" size={16} color={colors.primary} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}>
+            <Text
+              style={{ fontSize: 13, fontWeight: "700", color: colors.primary }}
+            >
               View on Map
             </Text>
           </Pressable>
@@ -350,37 +487,64 @@ export default function OrderDetailScreen() {
         >
           <SectionTitle title="Order Items" />
           {parsedItems.length === 0 ? (
-             <Text style={{ fontSize: 14, color: colors.muted }}>No items found.</Text>
-          ) : parsedItems.map((item: any, idx: number) => (
-            <View key={idx}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingVertical: 10,
-                }}
-              >
-                <Image
-                  source={{ uri: getProductImage(item) }}
-                  style={{ width: 40, height: 40, borderRadius: 8, marginRight: 12 }}
-                  contentFit="cover"
-                />
-                <Text style={{ fontSize: 14, color: colors.primaryDark, flex: 1 }}>
-                  {item.name}
-                </Text>
-                <Text style={{ fontSize: 13, color: colors.muted, marginRight: 24, fontWeight: "500" }}>
-                  x {item.quantity || 1}
-                </Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.primaryDark }}>
-                  ₹{Number(item.price || item.total_price || 0).toFixed(2).replace(/\.00$/, "")}
-                </Text>
+            <Text style={{ fontSize: 14, color: colors.muted }}>
+              No items found.
+            </Text>
+          ) : (
+            parsedItems.map((item: any, idx: number) => (
+              <View key={idx}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingVertical: 10,
+                  }}
+                >
+                  <Image
+                    source={{ uri: getProductImage(item) }}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 8,
+                      marginRight: 12,
+                    }}
+                    contentFit="cover"
+                  />
+                  <Text
+                    style={{ fontSize: 14, color: colors.primaryDark, flex: 1 }}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: colors.muted,
+                      marginRight: 24,
+                      fontWeight: "500",
+                    }}
+                  >
+                    x {item.quantity || 1}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: colors.primaryDark,
+                    }}
+                  >
+                    ₹
+                    {Number(item.price || item.total_price || 0)
+                      .toFixed(2)
+                      .replace(/\.00$/, "")}
+                  </Text>
+                </View>
+                {idx < parsedItems.length - 1 && (
+                  <View style={{ height: 1, backgroundColor: colors.border }} />
+                )}
               </View>
-              {idx < parsedItems.length - 1 && (
-                <View style={{ height: 1, backgroundColor: colors.border }} />
-              )}
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* ── Order summary card ── */}
@@ -399,18 +563,46 @@ export default function OrderDetailScreen() {
           <SectionTitle title="Order Summary" />
 
           {/* Item Total */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-            <Text style={{ fontSize: 14, color: colors.muted }}>Item Total</Text>
-            <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+          >
+            <Text style={{ fontSize: 14, color: colors.muted }}>
+              Item Total
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: colors.primaryDark,
+                fontWeight: "500",
+              }}
+            >
               ₹{itemTotal.toFixed(2).replace(/\.00$/, "")}
             </Text>
           </View>
 
           {/* Delivery charge */}
           {deliveryCharge > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-              <Text style={{ fontSize: 14, color: colors.muted }}>Delivery Charge</Text>
-              <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: colors.muted }}>
+                Delivery Charge
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: colors.primaryDark,
+                  fontWeight: "500",
+                }}
+              >
                 ₹{deliveryCharge.toFixed(2).replace(/\.00$/, "")}
               </Text>
             </View>
@@ -418,9 +610,23 @@ export default function OrderDetailScreen() {
 
           {/* Platform fee */}
           {platformFee > 0 && (
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 14 }}>
-              <Text style={{ fontSize: 14, color: colors.muted }}>Platform Fee</Text>
-              <Text style={{ fontSize: 14, color: colors.primaryDark, fontWeight: "500" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: colors.muted }}>
+                Platform Fee
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: colors.primaryDark,
+                  fontWeight: "500",
+                }}
+              >
                 ₹{platformFee.toFixed(2).replace(/\.00$/, "")}
               </Text>
             </View>
@@ -429,11 +635,25 @@ export default function OrderDetailScreen() {
           <Divider />
 
           {/* Grand total */}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.primaryDark }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "800",
+                color: colors.primaryDark,
+              }}
+            >
               Total
             </Text>
-            <Text style={{ fontSize: 20, fontWeight: "800", color: colors.primary }}>
+            <Text
+              style={{ fontSize: 20, fontWeight: "800", color: colors.primary }}
+            >
               ₹{grandTotal.toFixed(2).replace(/\.00$/, "")}
             </Text>
           </View>
@@ -442,7 +662,16 @@ export default function OrderDetailScreen() {
 
       {/* ── Action buttons (fixed at bottom) ── */}
       {isNew && (
-        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.pageBackground, position: "absolute", bottom: 0, left: 0, right: 0 }}>
+        <SafeAreaView
+          edges={["bottom"]}
+          style={{
+            backgroundColor: colors.pageBackground,
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }}
+        >
           <View
             style={{
               flexDirection: "row",
@@ -461,6 +690,7 @@ export default function OrderDetailScreen() {
             {/* Reject */}
             <Pressable
               onPress={handleReject}
+              disabled={actionLoading}
               style={{
                 flex: 1,
                 borderWidth: 2,
@@ -471,7 +701,9 @@ export default function OrderDetailScreen() {
                 backgroundColor: "#fff",
               }}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#C62828" }}>
+              <Text
+                style={{ fontSize: 15, fontWeight: "700", color: "#C62828" }}
+              >
                 Reject
               </Text>
             </Pressable>
@@ -479,6 +711,7 @@ export default function OrderDetailScreen() {
             {/* Accept */}
             <Pressable
               onPress={handleAccept}
+              disabled={actionLoading}
               style={{
                 flex: 2,
                 backgroundColor: colors.primary,
@@ -488,7 +721,7 @@ export default function OrderDetailScreen() {
               }}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
-                Accept Order
+                {actionLoading ? "Updating..." : "Accept Order"}
               </Text>
             </Pressable>
           </View>

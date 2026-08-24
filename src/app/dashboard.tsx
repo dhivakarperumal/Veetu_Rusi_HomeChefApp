@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,7 +13,11 @@ import {
   Text,
   View,
 } from "react-native";
-import api, { API_BASE_URL } from "../api";
+import api, {
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
+} from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -137,16 +143,42 @@ export default function DashboardScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [popupOrder, setPopupOrder] = useState<any | null>(null);
+  const [popupActionLoading, setPopupActionLoading] = useState(false);
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
+  const isFetchingRef = useRef(false);
+  const hasLoadedOrdersRef = useRef(false);
 
   const fetchData = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       const res = await api.get("/user-food-orders/chef");
       const raw = res.data;
       const list = Array.isArray(raw) ? raw : raw?.orders || raw?.data || [];
       setOrders(list);
+
+      const newOrder = list.find((order: any) => {
+        const id = String(order.id || order._id || order.order_id || "");
+        return (
+          id &&
+          isNewOrderStatus(order.status) &&
+          !knownOrderIdsRef.current.has(id)
+        );
+      });
+      list.forEach((order: any) => {
+        const id = String(order.id || order._id || order.order_id || "");
+        if (id) knownOrderIdsRef.current.add(id);
+      });
+
+      if (newOrder && hasLoadedOrdersRef.current) {
+        setPopupOrder(newOrder);
+      }
+      hasLoadedOrdersRef.current = true;
     } catch (e) {
       console.error("Dashboard fetch error:", e);
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
@@ -154,10 +186,32 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
+  };
+
+  const updatePopupOrder = async (status: "Accepted" | "Cancelled") => {
+    if (!popupOrder || popupActionLoading) return;
+    setPopupActionLoading(true);
+    try {
+      const id = popupOrder.id || popupOrder._id;
+      await api.patch(`/user-food-orders/status/${id}`, { status });
+      setPopupOrder(null);
+      await fetchData();
+    } catch (error) {
+      Alert.alert(
+        status === "Accepted"
+          ? "Could not accept order"
+          : "Could not reject order",
+        getApiErrorMessage(error),
+      );
+    } finally {
+      setPopupActionLoading(false);
+    }
   };
 
   // ── Computed stats ──────────────────────────────────────────────────────────
@@ -166,7 +220,7 @@ export default function DashboardScreen() {
     (o) =>
       new Date(o.ordered_at || o.created_at || "").toDateString() === today,
   );
-  const newCount = orders.filter((o) => o.status === "New Order").length;
+  const newCount = orders.filter((o) => isNewOrderStatus(o.status)).length;
   const preparingCount = orders.filter((o) =>
     ["Accepted", "Preparing"].includes(o.status),
   ).length;
@@ -210,7 +264,6 @@ export default function DashboardScreen() {
       value: preparingCount,
       icon: "flame-outline",
       tint: "#FFEBEE",
-      color: "#E53E3E",
     },
     {
       label: "Ready",
@@ -248,6 +301,95 @@ export default function DashboardScreen() {
       {/* TopHeader already has the greeting hero — no duplicate here */}
       <TopHeader />
 
+      <Modal
+        visible={Boolean(popupOrder)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPopupOrder(null)}
+      >
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupCard}>
+            <View style={styles.popupAccent} />
+            <View style={styles.popupHeader}>
+              <View style={styles.popupHeadingRow}>
+                <View style={styles.popupOrderIcon}>
+                  <Ionicons name="receipt" size={20} color="#E65100" />
+                </View>
+                <View>
+                <Text style={styles.popupEyebrow}>NEW ORDER</Text>
+                <Text style={styles.popupTitle}>
+                  Order #{popupOrder?.order_id || popupOrder?.id || "Unknown"}
+                </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setPopupOrder(null)}
+                disabled={popupActionLoading}
+                style={styles.popupCloseButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close new order popup"
+              >
+                <Ionicons name="close" size={20} color="#52645B" />
+              </Pressable>
+            </View>
+            <View style={styles.popupWaitingRow}>
+              <View style={styles.popupLiveDot} />
+              <Text style={styles.popupWaitingText}>Ready for your kitchen</Text>
+            </View>
+            <Text style={styles.popupCustomer}>
+              {popupOrder?.customer_name || "Customer"}
+            </Text>
+            <Text style={styles.popupAddress}>
+              {popupOrder?.street_address ||
+                popupOrder?.customer_address ||
+                popupOrder?.delivery_address ||
+                "Delivery address unavailable"}
+            </Text>
+            <View style={styles.popupSummary}>
+              <Text style={styles.popupSummaryText}>
+                {popupOrder?.chef_total_quantity ||
+                  (Array.isArray(popupOrder?.items)
+                    ? popupOrder.items.reduce(
+                        (total: number, item: any) =>
+                          total + (Number(item.quantity) || 1),
+                        0,
+                      )
+                    : 0)}{" "}
+                items
+              </Text>
+              <Text style={styles.popupAmount}>
+                ₹
+                {Number(
+                  popupOrder?.chef_total_amount ??
+                    popupOrder?.total_amount ??
+                    0,
+                ).toLocaleString("en-IN")}
+              </Text>
+            </View>
+            <View style={styles.popupActions}>
+              <Pressable
+                onPress={() => updatePopupOrder("Cancelled")}
+                disabled={popupActionLoading}
+                style={styles.popupRejectButton}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#C62828" />
+                <Text style={styles.popupRejectText}>Reject</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => updatePopupOrder("Accepted")}
+                disabled={popupActionLoading}
+                style={styles.popupAcceptButton}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+                <Text style={styles.popupAcceptText}>
+                  {popupActionLoading ? "Updating..." : "Accept Order"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
@@ -260,7 +402,6 @@ export default function DashboardScreen() {
           />
         }
       >
-       
         {/* ── Earnings Today Card ── */}
         <Pressable
           style={styles.earningsCard}
@@ -321,7 +462,7 @@ export default function DashboardScreen() {
           </View>
         </Pressable>
 
-         <Pressable
+        <Pressable
           style={styles.featureBanner}
           onPress={() => router.push("/add-dish" as any)}
           accessibilityRole="button"
@@ -351,13 +492,12 @@ export default function DashboardScreen() {
           </View>
         </Pressable>
 
-
         {/* ── Today's Overview Card ── */}
         <Pressable
           style={styles.overviewCard}
           onPress={() => router.push("/orders" as any)}
         >
-          <Text style={styles.overviewTitle}>Today's Overview</Text>
+          <Text style={styles.overviewTitle}>Today&apos;s Overview</Text>
           <View style={styles.overviewRow}>
             {STATS.map((s) => (
               <View key={s.label} style={styles.statBox}>
@@ -495,6 +635,143 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.pageBackground },
   content: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 18,
+    backgroundColor: "rgba(10, 25, 18, 0.64)",
+  },
+  popupCard: {
+    width: "100%",
+    maxWidth: 430,
+    padding: 22,
+    borderRadius: 28,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.9)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  popupAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 5,
+    backgroundColor: "#F2A23A",
+  },
+  popupHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingTop: 4,
+  },
+  popupHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+  popupOrderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF1DF",
+  },
+  popupCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F5F2",
+  },
+  popupEyebrow: {
+    color: "#E65100",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  popupTitle: {
+    marginTop: 4,
+    color: colors.primaryDark,
+    fontSize: 21,
+    fontWeight: "900",
+  },
+  popupWaitingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 18,
+    paddingVertical: 9,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    backgroundColor: "#F3F8F4",
+  },
+  popupLiveDot: {
+    width: 8,
+    height: 8,
+    marginRight: 8,
+    borderRadius: 4,
+    backgroundColor: "#2E9B63",
+  },
+  popupWaitingText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  popupCustomer: {
+    marginTop: 18,
+    color: colors.primaryDark,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  popupAddress: {
+    marginTop: 5,
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  popupSummary: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  popupSummaryText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  popupAmount: { color: colors.primaryDark, fontSize: 18, fontWeight: "900" },
+  popupActions: { flexDirection: "row", gap: 10, marginTop: 20 },
+  popupRejectButton: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    alignItems: "center",
+    paddingVertical: 15,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#C62828",
+  },
+  popupRejectText: { color: "#C62828", fontSize: 14, fontWeight: "800" },
+  popupAcceptButton: {
+    flex: 1.5,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 7,
+    alignItems: "center",
+    paddingVertical: 15,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+  },
+  popupAcceptText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
 
   featureBanner: {
     height: 186,

@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Text,
@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getStoredUser, logoutUser } from "../../api";
+import { getStoredUser, isNewOrderStatus, logoutUser } from "../../api";
 
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
@@ -49,7 +49,7 @@ function getGreeting() {
 export default function TopHeader({
   showHero = true,
   title = "V2Home Chef",
-  rightContent,
+  rightContent = null,
 }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
@@ -57,6 +57,7 @@ export default function TopHeader({
   const [showNotifDrop, setShowNotifDrop] = useState(false);
   const [user, setUser] = useState(null);
   const [todayNewOrders, setTodayNewOrders] = useState([]);
+  const isFetchingNotifications = useRef(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -70,19 +71,15 @@ export default function TopHeader({
   useEffect(() => {
     // Fetch today's new orders for notifications
     const fetchNotifications = async () => {
+      if (isFetchingNotifications.current) return;
+      isFetchingNotifications.current = true;
       try {
         const { default: api } = await import("../../api");
         const res = await api.get("/user-food-orders/chef");
         const today = new Date().toDateString();
         const orders = res.data || [];
         const newToday = orders.filter((o) => {
-          const s = (o.status || "").toLowerCase();
-          const isNew = [
-            "pending",
-            "new",
-            "new order",
-            "order placed",
-          ].includes(s);
+          const isNew = isNewOrderStatus(o.status);
           const orderDate = new Date(
             o.ordered_at || o.created_at || Date.now(),
           ).toDateString();
@@ -91,6 +88,8 @@ export default function TopHeader({
         setTodayNewOrders(newToday);
       } catch (err) {
         console.log("Error fetching notifications", err);
+      } finally {
+        isFetchingNotifications.current = false;
       }
     };
     fetchNotifications();
