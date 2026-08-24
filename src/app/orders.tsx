@@ -231,19 +231,41 @@ function OrderCard({
               backgroundColor: "#FFF7F7",
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons name="information-circle-outline" size={16} color="#C62828" />
-              <Text style={{ color: "#A52A2A", fontSize: 12, fontWeight: "800" }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color="#C62828"
+              />
+              <Text
+                style={{ color: "#A52A2A", fontSize: 12, fontWeight: "800" }}
+              >
                 Cancellation reason
               </Text>
             </View>
             {order.cancellationReason && (
-              <Text style={{ marginTop: 5, color: "#4A3535", fontSize: 13, fontWeight: "700" }}>
+              <Text
+                style={{
+                  marginTop: 5,
+                  color: "#4A3535",
+                  fontSize: 13,
+                  fontWeight: "700",
+                }}
+              >
                 {order.cancellationReason}
               </Text>
             )}
             {order.cancellationNotes && (
-              <Text style={{ marginTop: 3, color: "#765F5F", fontSize: 12, lineHeight: 18 }}>
+              <Text
+                style={{
+                  marginTop: 3,
+                  color: "#765F5F",
+                  fontSize: 12,
+                  lineHeight: 18,
+                }}
+              >
                 {order.cancellationNotes}
               </Text>
             )}
@@ -437,7 +459,10 @@ export default function OrdersScreen() {
           ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
           : o.customer_address || o.delivery_address || "Unknown Location",
         cancellationReason:
-          o.cancellation_reason || o.cancel_reason || o.cancellationReason || "",
+          o.cancellation_reason ||
+          o.cancel_reason ||
+          o.cancellationReason ||
+          "",
         cancellationNotes:
           o.cancellation_notes || o.cancel_notes || o.cancellationNotes || "",
         deliveryPartnerName:
@@ -1044,7 +1069,11 @@ const styles = {
     borderBottomWidth: 1,
     borderBottomColor: "#F3E5E5",
   },
-  cancelTitleRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
+  cancelTitleRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
   cancelIcon: {
     width: 52,
     height: 52,
@@ -1079,9 +1108,25 @@ const styles = {
     borderRadius: 15,
     backgroundColor: "#FFF9E8",
   },
-  cancelWarningTitle: { color: "#A76100", fontSize: 15, fontWeight: "800" as const, lineHeight: 21 },
-  cancelWarningText: { marginTop: 5, color: "#A84F1C", fontSize: 13, lineHeight: 20 },
-  cancelLabel: { marginHorizontal: 20, marginBottom: 8, color: "#37434C", fontSize: 15, fontWeight: "800" as const },
+  cancelWarningTitle: {
+    color: "#A76100",
+    fontSize: 15,
+    fontWeight: "800" as const,
+    lineHeight: 21,
+  },
+  cancelWarningText: {
+    marginTop: 5,
+    color: "#A84F1C",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  cancelLabel: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    color: "#37434C",
+    fontSize: 15,
+    fontWeight: "800" as const,
+  },
   required: { color: "#E53935" },
   optional: { color: "#9AA29E", fontWeight: "500" as const },
   reasonSelect: {
@@ -1098,14 +1143,69 @@ const styles = {
   },
   reasonText: { color: "#283A33", fontSize: 15 },
   reasonPlaceholder: { color: "#697570" },
-  reasonMenu: { marginHorizontal: 20, marginTop: 5, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 12, backgroundColor: "#FFFFFF" },
-  reasonOption: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#EEF2EF" },
+  reasonMenu: {
+    marginHorizontal: 20,
+    marginTop: 5,
+    borderWidth: 1,
+    borderColor: "#DDE3E0",
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  reasonOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2EF",
+  },
   reasonOptionText: { color: "#283A33", fontSize: 14 },
-  notesInput: { marginHorizontal: 20, minHeight: 88, padding: 14, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 13, color: "#283A33", fontSize: 14, backgroundColor: "#FBFCFB" },
-  cancelActions: { flexDirection: "row" as const, gap: 12, marginTop: 24, padding: 20, borderTopWidth: 1, borderTopColor: "#EEF1EF" },
-  keepButton: { flex: 1, alignItems: "center" as const, justifyContent: "center" as const, minHeight: 56, paddingHorizontal: 10, borderWidth: 1, borderColor: "#DDE3E0", borderRadius: 14 },
-  keepButtonText: { color: "#1D3D30", fontSize: 14, fontWeight: "800" as const },
-  confirmCancelButton: { flex: 1.35, flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const, gap: 6, minHeight: 56, borderRadius: 14, backgroundColor: "#F2767B" },
+  notesInput: {
+    marginHorizontal: 20,
+    minHeight: 88,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#DDE3E0",
+    borderRadius: 13,
+    color: "#283A33",
+    fontSize: 14,
+    backgroundColor: "#FBFCFB",
+  },
+  cancelActions: {
+    flexDirection: "row" as const,
+    gap: 12,
+    marginTop: 24,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#EEF1EF",
+  },
+  keepButton: {
+    flex: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    minHeight: 56,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#DDE3E0",
+    borderRadius: 14,
+  },
+  keepButtonText: {
+    color: "#1D3D30",
+    fontSize: 14,
+    fontWeight: "800" as const,
+  },
+  confirmCancelButton: {
+    flex: 1.35,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    minHeight: 56,
+    borderRadius: 14,
+    backgroundColor: "#F2767B",
+  },
   confirmCancelDisabled: { opacity: 0.5 },
-  confirmCancelText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" as const },
+  confirmCancelText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800" as const,
+  },
 };
