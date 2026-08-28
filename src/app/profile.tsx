@@ -11,7 +11,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
@@ -271,6 +271,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [myOrders, setMyOrders] = useState<any[]>([]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -286,6 +287,14 @@ export default function ProfileScreen() {
       setError(null);
       const stored = await getStoredUser();
       setAuthUser(stored);
+
+      try {
+        const ordersRes = await api.get("/orders/myorders");
+        setMyOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
+      } catch (ordersError) {
+        console.warn("Could not load my orders:", ordersError);
+        setMyOrders([]);
+      }
 
       const res = await api.get("/auth/profile");
       const d = res.data;
@@ -951,6 +960,11 @@ export default function ProfileScreen() {
         >
           {[
             {
+              label: "My Orders",
+              icon: "receipt-outline" as const,
+              route: "/material-orders",
+            },
+            {
               label: "My Dishes",
               icon: "restaurant-outline" as const,
               route: "/dishes",
@@ -1005,6 +1019,101 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* ════════════════════════════════════ MY ORDERS */}
+        <View
+          style={{
+            backgroundColor: colors.cardBackground,
+            marginHorizontal: 20,
+            marginTop: 12,
+            borderRadius: 20,
+            padding: 16,
+            shadowColor: "#000",
+            shadowOpacity: 0.05,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            elevation: 2,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 10,
+            }}
+          >
+            <Ionicons name="receipt-outline" size={20} color={colors.primary} />
+            <Text
+              style={{
+                marginLeft: 8,
+                fontSize: 17,
+                fontWeight: "800",
+                color: colors.primaryDark,
+              }}
+            >
+              My Orders
+            </Text>
+          </View>
+          {myOrders.length === 0 ? (
+            <Text style={{ color: colors.muted, paddingVertical: 8 }}>
+              No orders yet
+            </Text>
+          ) : (
+            myOrders.slice(0, 5).map((order: any, index: number) => (
+              <View
+                key={order.id || order.order_id || index}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: colors.primaryDark,
+                    }}
+                  >
+                    Order #{order.order_id || order.id || "-"}
+                  </Text>
+                  <Text
+                    style={{ marginTop: 3, fontSize: 12, color: colors.muted }}
+                  >
+                    {order.created_at
+                      ? new Date(order.created_at).toLocaleDateString()
+                      : "Recent order"}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "800",
+                      color: colors.primary,
+                    }}
+                  >
+                    Rs. {Number(order.total_amount || 0).toFixed(2)}
+                  </Text>
+                  <Text
+                    style={{
+                      marginTop: 3,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: colors.muted,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {order.status || "pending"}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* ════════════════════════════════════ LOGOUT */}

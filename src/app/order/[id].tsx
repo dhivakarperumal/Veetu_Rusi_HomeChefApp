@@ -3,19 +3,19 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Linking,
+    Pressable,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-  API_BASE_URL,
-  getApiErrorMessage,
-  isNewOrderStatus,
+    API_BASE_URL,
+    getApiErrorMessage,
+    isNewOrderStatus,
 } from "../../api";
 import { colors } from "../../theme/colors";
 
@@ -143,6 +143,19 @@ export default function OrderDetailScreen() {
         foundOrder = res.data.find(
           (o: any) =>
             String(o.id) === String(id) || String(o._id) === String(id),
+        );
+      }
+
+      if (!foundOrder) {
+        const res = await api.get("/orders/myorders");
+        const orders = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || [];
+        foundOrder = orders.find(
+          (o: any) =>
+            String(o.id) === String(id) ||
+            String(o._id) === String(id) ||
+            String(o.order_id) === String(id),
         );
       }
 

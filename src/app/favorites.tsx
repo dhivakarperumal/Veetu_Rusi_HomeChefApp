@@ -58,9 +58,14 @@ export default function FavoritesScreen() {
         rightActions={
           [
             {
+              icon: "heart",
+              onPress: () => {},
+              badge: items.length,
+            },
+            {
               icon: "cart-outline",
               onPress: () => router.push("/cart"),
-              badge: cartIds.size > 0,
+              badge: cartIds.size,
             },
           ] as any
         }

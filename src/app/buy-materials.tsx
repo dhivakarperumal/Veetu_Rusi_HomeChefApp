@@ -203,12 +203,12 @@ export default function BuyMaterialsScreen() {
             {
               icon: "heart-outline",
               onPress: () => router.push("/favorites"),
-              badge: favoriteIds.size > 0,
+              badge: favoriteIds.size,
             },
             {
               icon: "bag-outline",
               onPress: () => router.push("/cart"),
-              badge: cartIds.size > 0,
+              badge: cartIds.size,
             },
           ] as any
         }
@@ -299,7 +299,6 @@ export default function BuyMaterialsScreen() {
                 >
                   Rs. {product.offer_price || product.price || product.mrp || 0}
                 </Text>
-                
               </View>
               <View style={{ marginLeft: 8, gap: 12 }}>
                 <Pressable onPress={() => toggleFavorite(product)} hitSlop={8}>

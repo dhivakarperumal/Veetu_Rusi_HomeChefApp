@@ -44,7 +44,10 @@ export default function PageHeader({
               height: 40,
               width: 40,
               borderRadius: 20,
-              backgroundColor: leftIcon === "arrow-back" ? colors.cardBackground : "transparent",
+              backgroundColor:
+                leftIcon === "arrow-back"
+                  ? colors.cardBackground
+                  : "transparent",
               alignItems: "center",
               justifyContent: "center",
               marginRight: leftIcon === "arrow-back" ? 10 : 6,
@@ -97,21 +100,41 @@ export default function PageHeader({
                   elevation: 2,
                 }}
               >
-                <Ionicons name={action.icon} size={20} color={colors.primaryDark} />
+                <Ionicons
+                  name={action.icon}
+                  size={20}
+                  color={colors.primaryDark}
+                />
                 {action.badge ? (
                   <View
                     style={{
                       position: "absolute",
                       top: 7,
                       right: 7,
-                      height: 8,
-                      width: 8,
-                      borderRadius: 4,
+                      minHeight: typeof action.badge === "number" ? 16 : 8,
+                      minWidth: typeof action.badge === "number" ? 16 : 8,
+                      paddingHorizontal:
+                        typeof action.badge === "number" ? 4 : 0,
+                      borderRadius: 8,
                       backgroundColor: "#FF5252",
                       borderWidth: 1.5,
                       borderColor: colors.pageBackground,
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                  />
+                  >
+                    {typeof action.badge === "number" && (
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 9,
+                          fontWeight: "800",
+                        }}
+                      >
+                        {action.badge}
+                      </Text>
+                    )}
+                  </View>
                 ) : null}
               </Pressable>
             );
