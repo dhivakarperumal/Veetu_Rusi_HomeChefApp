@@ -35,6 +35,13 @@ const TABS = [
     route: "/earnings",
   },
   {
+    key: "buy-materials",
+    label: "Materials",
+    icon: "bag-outline",
+    activeIcon: "bag",
+    route: "/buy-materials",
+  },
+  {
     key: "profile",
     label: "Profile",
     icon: "person-outline",
