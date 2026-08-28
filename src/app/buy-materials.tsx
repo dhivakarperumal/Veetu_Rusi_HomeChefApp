@@ -198,18 +198,20 @@ export default function BuyMaterialsScreen() {
       <PageHeader
         title="Buy Materials"
         onLeftPress={() => router.back()}
-        rightActions={[
-          {
-            icon: "heart-outline",
-            onPress: () => router.push("/favorites"),
-            badge: favoriteIds.size > 0,
-          },
-          {
-            icon: "bag-outline",
-            onPress: () => router.push("/cart"),
-            badge: cartIds.size > 0,
-          },
-        ]}
+        rightActions={
+          [
+            {
+              icon: "heart-outline",
+              onPress: () => router.push("/favorites"),
+              badge: favoriteIds.size > 0,
+            },
+            {
+              icon: "bag-outline",
+              onPress: () => router.push("/cart"),
+              badge: cartIds.size > 0,
+            },
+          ] as any
+        }
       />
 
       <FlatList
@@ -297,34 +299,7 @@ export default function BuyMaterialsScreen() {
                 >
                   Rs. {product.offer_price || product.price || product.mrp || 0}
                 </Text>
-                <Pressable
-                  onPress={() => toggleCart(product)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    marginTop: 9,
-                    borderRadius: 9,
-                    paddingVertical: 8,
-                    backgroundColor: inCart ? "#E2EDE7" : "#2E7A4F",
-                  }}
-                >
-                  <Ionicons
-                    name={inCart ? "checkmark-circle-outline" : "cart-outline"}
-                    size={16}
-                    color={inCart ? "#2E7A4F" : "#fff"}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "800",
-                      color: inCart ? "#2E7A4F" : "#fff",
-                    }}
-                  >
-                    {inCart ? "Added to Cart" : "Add to Cart"}
-                  </Text>
-                </Pressable>
+                
               </View>
               <View style={{ marginLeft: 8, gap: 12 }}>
                 <Pressable onPress={() => toggleFavorite(product)} hitSlop={8}>

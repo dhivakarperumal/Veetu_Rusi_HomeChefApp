@@ -55,40 +55,20 @@ export default function FavoritesScreen() {
       <PageHeader
         title="Favorites"
         onLeftPress={() => router.back()}
-        rightActions={[
-          {
-            icon: "cart-outline",
-            onPress: () => router.push("/cart"),
-            badge: cartIds.size > 0,
-          },
-        ]}
+        rightActions={
+          [
+            {
+              icon: "cart-outline",
+              onPress: () => router.push("/cart"),
+              badge: cartIds.size > 0,
+            },
+          ] as any
+        }
       />
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-        ListHeaderComponent={
-          items.length > 0 ? (
-            <Pressable
-              onPress={addAllToCart}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                borderRadius: 12,
-                padding: 13,
-                marginBottom: 16,
-                backgroundColor: "#2E7A4F",
-              }}
-            >
-              <Ionicons name="cart-outline" size={20} color="#fff" />
-              <Text style={{ color: "#fff", fontWeight: "800" }}>
-                Add all to cart
-              </Text>
-            </Pressable>
-          ) : null
-        }
         ListEmptyComponent={
           <Text
             style={{ marginTop: 80, textAlign: "center", color: "#5A7A6E" }}
@@ -152,6 +132,33 @@ export default function FavoritesScreen() {
           </View>
         )}
       />
+      {items.length > 0 && (
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: "#F8F6F1",
+          }}
+        >
+          <Pressable
+            onPress={addAllToCart}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              borderRadius: 12,
+              padding: 13,
+              backgroundColor: "#2E7A4F",
+            }}
+          >
+            <Ionicons name="cart-outline" size={20} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "800" }}>
+              Add all to cart
+            </Text>
+          </Pressable>
+        </View>
+      )}
       <BottomBar />
     </View>
   );
