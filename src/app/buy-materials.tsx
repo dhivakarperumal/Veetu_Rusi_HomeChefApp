@@ -236,7 +236,12 @@ export default function BuyMaterialsScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(category) => category}
-            contentContainerStyle={{ paddingBottom: 16, gap: 8 }}
+            contentContainerStyle={{
+              paddingLeft: 16,
+              paddingRight: 16,
+              paddingBottom: 16,
+              gap: 8,
+            }}
             renderItem={({ item: category }) => (
               <Pressable
                 onPress={() => setSelectedCategory(category)}
