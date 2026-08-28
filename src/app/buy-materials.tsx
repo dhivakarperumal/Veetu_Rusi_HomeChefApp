@@ -216,8 +216,14 @@ export default function BuyMaterialsScreen() {
 
       <FlatList
         data={visibleProducts}
+        numColumns={2}
+        columnWrapperStyle={{
+          gap: 12,
+          paddingHorizontal: 16,
+          alignItems: "stretch",
+        }}
         keyExtractor={(product) => String(product.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -261,28 +267,34 @@ export default function BuyMaterialsScreen() {
           return (
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "center",
+                flex: 1,
                 backgroundColor: "#fff",
                 borderRadius: 14,
-                padding: 12,
+                padding: 10,
                 marginBottom: 12,
+                minWidth: 0,
+                minHeight: 338,
               }}
             >
               <Image
                 source={{ uri: getImage(product) }}
-                style={{ width: 76, height: 76, borderRadius: 10 }}
+                style={{ width: "100%", aspectRatio: 1, borderRadius: 10 }}
                 contentFit="cover"
               />
-              <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ marginTop: 10, flex: 1 }}>
                 <Text
-                  style={{ fontSize: 16, fontWeight: "800", color: "#214D38" }}
+                  style={{
+                    height: 22,
+                    fontSize: 16,
+                    fontWeight: "800",
+                    color: "#214D38",
+                  }}
                   numberOfLines={1}
                 >
                   {product.name}
                 </Text>
                 <Text
-                  style={{ marginTop: 4, color: "#5A7A6E" }}
+                  style={{ height: 40, marginTop: 4, color: "#5A7A6E" }}
                   numberOfLines={2}
                 >
                   {product.description ||
@@ -299,20 +311,75 @@ export default function BuyMaterialsScreen() {
                 >
                   Rs. {product.offer_price || product.price || product.mrp || 0}
                 </Text>
+                <Pressable
+                  onPress={() => toggleCart(product)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 5,
+                    marginTop: 10,
+                    borderRadius: 9,
+                    paddingVertical: 9,
+                    backgroundColor: inCart ? "#D7EBDD" : "#1F6B45",
+                  }}
+                >
+                  <Ionicons
+                    name={inCart ? "checkmark-circle-outline" : "cart-outline"}
+                    size={15}
+                    color={inCart ? "#1F6B45" : "#FFFFFF"}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "800",
+                      color: inCart ? "#1F6B45" : "#FFFFFF",
+                    }}
+                  >
+                    {inCart ? "Added to Cart" : "Add to Cart"}
+                  </Text>
+                </Pressable>
               </View>
-              <View style={{ marginLeft: 8, gap: 12 }}>
-                <Pressable onPress={() => toggleFavorite(product)} hitSlop={8}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginTop: 10,
+                }}
+              >
+                <Pressable
+                  onPress={() => toggleFavorite(product)}
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9,
+                    paddingVertical: 8,
+                    backgroundColor: isFavorite ? "#FFDDE2" : "#FFF1F2",
+                  }}
+                >
                   <Ionicons
                     name={isFavorite ? "heart" : "heart-outline"}
                     size={23}
-                    color={isFavorite ? "#E65100" : "#5A7A6E"}
+                    color={isFavorite ? "#C2415D" : "#A75D6C"}
                   />
                 </Pressable>
-                <Pressable onPress={() => toggleCart(product)} hitSlop={8}>
+                <Pressable
+                  onPress={() => toggleCart(product)}
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 9,
+                    paddingVertical: 8,
+                    backgroundColor: inCart ? "#CDEDDD" : "#EAF7F0",
+                  }}
+                >
                   <Ionicons
                     name={inCart ? "bag" : "bag-outline"}
                     size={23}
-                    color={inCart ? "#2E7A4F" : "#5A7A6E"}
+                    color={inCart ? "#237A4B" : "#5F9274"}
                   />
                 </Pressable>
               </View>
