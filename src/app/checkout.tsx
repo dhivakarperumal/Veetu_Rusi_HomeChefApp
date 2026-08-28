@@ -248,7 +248,18 @@ export default function CheckoutScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
-      <PageHeader title="Checkout" onLeftPress={() => router.back()} />
+      <PageHeader
+        title="Checkout"
+        onLeftPress={() => router.back()}
+        rightActions={
+          [
+            {
+              icon: locationLoading ? "locate" : "location-outline",
+              onPress: getCurrentLocation,
+            },
+          ] as any
+        }
+      />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
@@ -310,22 +321,6 @@ export default function CheckoutScreen() {
             )}
           </>
         )}
-        <Pressable
-          onPress={getCurrentLocation}
-          disabled={locationLoading}
-          style={{
-            alignItems: "center",
-            marginTop: 16,
-            padding: 12,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: GREEN,
-          }}
-        >
-          <Text style={{ color: GREEN, fontWeight: "800" }}>
-            {locationLoading ? "Detecting location..." : "Use current location"}
-          </Text>
-        </Pressable>
         <Text
           style={{
             marginTop: 22,
