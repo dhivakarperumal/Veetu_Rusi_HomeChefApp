@@ -165,7 +165,9 @@ export default function CheckoutScreen() {
       );
     const total = items.reduce(
       (sum, item) =>
-        sum + Number(item.offer_price || item.price || item.mrp || 0),
+        sum +
+        Number(item.offer_price || item.price || item.mrp || 0) *
+          (Number(item.quantity) || 1),
       0,
     );
     setSubmitting(true);
@@ -179,7 +181,7 @@ export default function CheckoutScreen() {
         payment_status: "pending",
         items: items.map((item) => ({
           product_id: item.product_id || item.id,
-          quantity: 1,
+          quantity: Number(item.quantity) || 1,
           price: item.offer_price || item.price || item.mrp || 0,
           image: item.images,
         })),
@@ -207,7 +209,9 @@ export default function CheckoutScreen() {
   );
   const total = items.reduce(
     (sum, item) =>
-      sum + Number(item.offer_price || item.price || item.mrp || 0),
+      sum +
+      Number(item.offer_price || item.price || item.mrp || 0) *
+        (Number(item.quantity) || 1),
     0,
   );
 
@@ -403,9 +407,13 @@ export default function CheckoutScreen() {
                 marginTop: 12,
               }}
             >
-              <Text style={{ flex: 1, color: DARK }}>{item.name}</Text>
+              <Text style={{ flex: 1, color: DARK }}>
+                {item.name} x{Number(item.quantity) || 1}
+              </Text>
               <Text style={{ fontWeight: "700", color: GREEN }}>
-                Rs. {item.offer_price || item.price || item.mrp || 0}
+                Rs.{" "}
+                {Number(item.offer_price || item.price || item.mrp || 0) *
+                  (Number(item.quantity) || 1)}
               </Text>
             </View>
           ))}

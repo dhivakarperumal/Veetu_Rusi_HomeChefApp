@@ -9,6 +9,7 @@ import {
     CART_KEY,
     getMaterialImage,
     loadMaterialCollection,
+    saveMaterialCollection,
     setMaterialInCollection,
 } from "./materials-store";
 
@@ -16,13 +17,33 @@ export default function CartScreen() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   useEffect(() => {
-    loadMaterialCollection(CART_KEY).then(setItems);
+    loadMaterialCollection(CART_KEY).then((savedItems) =>
+      setItems(
+        savedItems.map((item: any) => ({
+          ...item,
+          quantity: Number(item.quantity) || 1,
+        })),
+      ),
+    );
   }, []);
   const total = items.reduce(
     (sum, item) =>
-      sum + Number(item.offer_price || item.price || item.mrp || 0),
+      sum +
+      Number(item.offer_price || item.price || item.mrp || 0) *
+        (Number(item.quantity) || 1),
     0,
   );
+
+  const updateQuantity = async (item: any, change: number) => {
+    const nextQuantity = Math.max(1, (Number(item.quantity) || 1) + change);
+    const updatedItems = items.map((saved) =>
+      String(saved.id) === String(item.id)
+        ? { ...saved, quantity: nextQuantity }
+        : saved,
+    );
+    setItems(updatedItems);
+    await saveMaterialCollection(CART_KEY, updatedItems);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
@@ -63,8 +84,58 @@ export default function CartScreen() {
               <Text
                 style={{ marginTop: 5, fontWeight: "700", color: "#2E7A4F" }}
               >
-                Rs. {item.offer_price || item.price || item.mrp || 0}
+                Rs.{" "}
+                {Number(item.offer_price || item.price || item.mrp || 0) *
+                  (Number(item.quantity) || 1)}
               </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginTop: 10,
+                  gap: 12,
+                }}
+              >
+                <Pressable
+                  onPress={() => updateQuantity(item, -1)}
+                  disabled={(Number(item.quantity) || 1) <= 1}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                    backgroundColor:
+                      (Number(item.quantity) || 1) <= 1 ? "#EEF2EF" : "#E2EDE7",
+                  }}
+                >
+                  <Ionicons name="remove" size={17} color="#2E7A4F" />
+                </Pressable>
+                <Text
+                  style={{
+                    minWidth: 18,
+                    textAlign: "center",
+                    fontSize: 15,
+                    fontWeight: "800",
+                    color: "#214D38",
+                  }}
+                >
+                  {item.quantity || 1}
+                </Text>
+                <Pressable
+                  onPress={() => updateQuantity(item, 1)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                    backgroundColor: "#E2EDE7",
+                  }}
+                >
+                  <Ionicons name="add" size={17} color="#2E7A4F" />
+                </Pressable>
+              </View>
             </View>
             <Pressable
               onPress={async () => {

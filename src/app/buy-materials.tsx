@@ -264,6 +264,11 @@ export default function BuyMaterialsScreen() {
           const productId = String(product.id);
           const isFavorite = favoriteIds.has(productId);
           const inCart = cartIds.has(productId);
+          const openProductDetails = () =>
+            router.push({
+              pathname: "/material-product",
+              params: { product: JSON.stringify(product) },
+            } as any);
           return (
             <View
               style={{
@@ -276,70 +281,45 @@ export default function BuyMaterialsScreen() {
                 minHeight: 338,
               }}
             >
-              <Image
-                source={{ uri: getImage(product) }}
-                style={{ width: "100%", aspectRatio: 1, borderRadius: 10 }}
-                contentFit="cover"
-              />
-              <View style={{ marginTop: 10, flex: 1 }}>
-                <Text
-                  style={{
-                    height: 22,
-                    fontSize: 16,
-                    fontWeight: "800",
-                    color: "#214D38",
-                  }}
-                  numberOfLines={1}
-                >
-                  {product.name}
-                </Text>
-                <Text
-                  style={{ height: 40, marginTop: 4, color: "#5A7A6E" }}
-                  numberOfLines={2}
-                >
-                  {product.description ||
-                    product.category ||
-                    "Quality cooking material"}
-                </Text>
-                <Text
-                  style={{
-                    marginTop: 6,
-                    fontSize: 15,
-                    fontWeight: "800",
-                    color: "#2E7A4F",
-                  }}
-                >
-                  Rs. {product.offer_price || product.price || product.mrp || 0}
-                </Text>
-                <Pressable
-                  onPress={() => toggleCart(product)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 5,
-                    marginTop: 10,
-                    borderRadius: 9,
-                    paddingVertical: 9,
-                    backgroundColor: inCart ? "#D7EBDD" : "#1F6B45",
-                  }}
-                >
-                  <Ionicons
-                    name={inCart ? "checkmark-circle-outline" : "cart-outline"}
-                    size={15}
-                    color={inCart ? "#1F6B45" : "#FFFFFF"}
-                  />
+              <Pressable onPress={openProductDetails} style={{ flex: 1 }}>
+                <Image
+                  source={{ uri: getImage(product) }}
+                  style={{ width: "100%", aspectRatio: 1, borderRadius: 10 }}
+                  contentFit="cover"
+                />
+                <View style={{ marginTop: 10 }}>
                   <Text
                     style={{
-                      fontSize: 11,
+                      height: 22,
+                      fontSize: 16,
                       fontWeight: "800",
-                      color: inCart ? "#1F6B45" : "#FFFFFF",
+                      color: "#214D38",
+                    }}
+                    numberOfLines={1}
+                  >
+                    {product.name}
+                  </Text>
+                  <Text
+                    style={{ height: 40, marginTop: 4, color: "#5A7A6E" }}
+                    numberOfLines={2}
+                  >
+                    {product.description ||
+                      product.category ||
+                      "Quality cooking material"}
+                  </Text>
+                  <Text
+                    style={{
+                      marginTop: 6,
+                      fontSize: 15,
+                      fontWeight: "800",
+                      color: "#2E7A4F",
                     }}
                   >
-                    {inCart ? "Added to Cart" : "Add to Cart"}
+                    Rs.{" "}
+                    {product.offer_price || product.price || product.mrp || 0}
                   </Text>
-                </Pressable>
-              </View>
+                </View>
+              </Pressable>
               <View
                 style={{
                   flexDirection: "row",
