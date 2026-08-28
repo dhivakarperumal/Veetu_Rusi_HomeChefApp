@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -36,6 +36,17 @@ const FIELD_NAMES = [
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const { product: productParam } = useLocalSearchParams<{
+    product?: string;
+  }>();
+  let buyNowProduct: any = null;
+  if (productParam) {
+    try {
+      buyNowProduct = JSON.parse(productParam);
+    } catch {
+      buyNowProduct = null;
+    }
+  }
   const [items, setItems] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -77,7 +88,11 @@ export default function CheckoutScreen() {
           storedUser?.mobile_number ||
           "",
       }));
-      setItems(await loadMaterialCollection(CART_KEY));
+      setItems(
+        buyNowProduct
+          ? [buyNowProduct]
+          : await loadMaterialCollection(CART_KEY),
+      );
       try {
         const response = await api.get("/orders/myorders");
         const seen = new Set<string>();
@@ -91,12 +106,14 @@ export default function CheckoutScreen() {
           }),
         );
       } catch {
-        console.warn("Could not load saved addresses", error);
+        console.warn("Could not load saved addresses");
       } finally {
         setLoading(false);
       }
     };
     loadCheckout();
+    // The checkout payload is fixed when this route opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateField = (key: string, value: string) => {
@@ -188,7 +205,7 @@ export default function CheckoutScreen() {
         total_amount: total,
         created_at: new Date().toISOString(),
       });
-      await saveMaterialCollection(CART_KEY, []);
+      if (!buyNowProduct) await saveMaterialCollection(CART_KEY, []);
       Alert.alert("Order placed", "Your materials order has been submitted.", [
         { text: "Done", onPress: () => router.replace("/buy-materials") },
       ]);
