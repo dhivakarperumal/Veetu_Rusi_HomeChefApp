@@ -267,7 +267,14 @@ export default function MaterialProductScreen() {
               <Ionicons name="add" size={20} color="#2E7A4F" />
             </Pressable>
           </View>
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 24, marginBottom: 24 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              marginTop: 24,
+              marginBottom: 24,
+            }}
+          >
             <Pressable
               onPress={toggleCart}
               style={{

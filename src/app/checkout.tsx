@@ -273,29 +273,41 @@ export default function CheckoutScreen() {
                 color: DARK,
               }}
             />
-            {filteredAddresses.slice(0, 3).map((address) => (
-              <Pressable
-                key={String(address.id)}
-                onPress={() => selectAddress(address)}
-                style={{
-                  marginTop: 8,
-                  padding: 12,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor:
-                    selectedAddress === address.id ? GREEN : "#E2EDE7",
-                  backgroundColor: "#fff",
-                }}
-              >
-                <Text style={{ fontWeight: "700", color: DARK }}>
-                  {address.customer_name || "Saved address"}
+            {searchAddress.trim() ? (
+              filteredAddresses.length > 0 ? (
+                filteredAddresses.slice(0, 3).map((address) => (
+                  <Pressable
+                    key={String(address.id)}
+                    onPress={() => selectAddress(address)}
+                    style={{
+                      marginTop: 8,
+                      padding: 12,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor:
+                        selectedAddress === address.id ? GREEN : "#E2EDE7",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    <Text style={{ fontWeight: "700", color: DARK }}>
+                      {address.customer_name || "Saved address"}
+                    </Text>
+                    <Text style={{ marginTop: 3, color: MUTED }}>
+                      {address.street_address}, {address.city}, {address.state}{" "}
+                      {address.zip_code}
+                    </Text>
+                  </Pressable>
+                ))
+              ) : (
+                <Text style={{ marginTop: 12, color: MUTED }}>
+                  No saved address found
                 </Text>
-                <Text style={{ marginTop: 3, color: MUTED }}>
-                  {address.street_address}, {address.city}, {address.state}{" "}
-                  {address.zip_code}
-                </Text>
-              </Pressable>
-            ))}
+              )
+            ) : (
+              <Text style={{ marginTop: 12, color: MUTED }}>
+                Search to show saved addresses
+              </Text>
+            )}
           </>
         )}
         <Pressable
