@@ -322,7 +322,9 @@ export default function DishesScreen() {
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilter, setShowFilter] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<"All" | "Active" | "Inactive">("All");
+  const [filterStatus, setFilterStatus] = useState<
+    "All" | "Active" | "Inactive"
+  >("All");
 
   useEffect(() => {
     fetchFoods();
@@ -454,7 +456,14 @@ export default function DishesScreen() {
             </Pressable>
           )}
 
-          <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 4 }} />
+          <View
+            style={{
+              width: 1,
+              height: 24,
+              backgroundColor: colors.border,
+              marginHorizontal: 4,
+            }}
+          />
 
           <Pressable onPress={() => setShowFilter(true)} style={{ padding: 4 }}>
             <Ionicons name="options-outline" size={20} color={colors.primary} />
@@ -564,7 +573,7 @@ export default function DishesScreen() {
         style={{
           position: "absolute",
           right: 20,
-          bottom: 130,
+          bottom: 120,
           width: 58,
           height: 58,
           borderRadius: 29,
@@ -591,7 +600,11 @@ export default function DishesScreen() {
         onRequestClose={() => setShowFilter(false)}
       >
         <TouchableOpacity
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "flex-end",
+          }}
           activeOpacity={1}
           onPress={() => setShowFilter(false)}
         >
@@ -605,8 +618,21 @@ export default function DishesScreen() {
               paddingBottom: 40,
             }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "800",
+                  color: colors.primaryDark,
+                }}
+              >
                 Filter Dishes
               </Text>
               <Pressable onPress={() => setShowFilter(false)}>
@@ -614,7 +640,14 @@ export default function DishesScreen() {
               </Pressable>
             </View>
 
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark, marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: colors.primaryDark,
+                marginBottom: 12,
+              }}
+            >
               Status
             </Text>
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
@@ -628,13 +661,21 @@ export default function DishesScreen() {
                       flex: 1,
                       paddingVertical: 10,
                       borderRadius: 12,
-                      backgroundColor: isActive ? colors.primary : colors.softCard,
+                      backgroundColor: isActive
+                        ? colors.primary
+                        : colors.softCard,
                       alignItems: "center",
                       borderWidth: 1,
                       borderColor: isActive ? colors.primary : colors.border,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: isActive ? "#fff" : colors.primaryDark }}>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: isActive ? "#fff" : colors.primaryDark,
+                      }}
+                    >
                       {status}
                     </Text>
                   </Pressable>
@@ -651,7 +692,9 @@ export default function DishesScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>Apply Filters</Text>
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+                Apply Filters
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

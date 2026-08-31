@@ -8,6 +8,7 @@ import {
   Pressable,
   RefreshControl,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
@@ -45,6 +46,7 @@ export default function BuyMaterialsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -188,9 +190,17 @@ export default function BuyMaterialsScreen() {
   };
 
   const visibleProducts = products.filter((product) => {
+    const search = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !search ||
+      [product.name, product.description, product.category].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(search),
+      );
     const matchesCategory =
       selectedCategory === "All" || product.category === selectedCategory;
-    return matchesCategory;
+    return matchesSearch && matchesCategory;
   });
 
   return (
@@ -292,39 +302,74 @@ export default function BuyMaterialsScreen() {
           />
         }
         ListHeaderComponent={
-          <FlatList
-            data={categories}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(category) => category}
-            contentContainerStyle={{
-              paddingLeft: 16,
-              paddingRight: 16,
-              paddingBottom: 16,
-              gap: 8,
-            }}
-            renderItem={({ item: category }) => (
-              <Pressable
-                onPress={() => setSelectedCategory(category)}
+          <View style={{ marginTop: 12 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginHorizontal: 16,
+                marginBottom: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 24,
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#DDE6E1",
+              }}
+            >
+              <Ionicons name="search-outline" size={19} color="#698077" />
+              <TextInput
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                placeholder="Search materials..."
+                placeholderTextColor="#698077"
                 style={{
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  backgroundColor:
-                    selectedCategory === category ? "#2E7A4F" : "#E2EDE7",
+                  flex: 1,
+                  marginLeft: 8,
+                  padding: 0,
+                  color: "#1D3D30",
+                  fontSize: 14,
                 }}
-              >
-                <Text
+              />
+              {searchTerm.length > 0 && (
+                <Pressable onPress={() => setSearchTerm("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="#698077" />
+                </Pressable>
+              )}
+            </View>
+            <FlatList
+              data={categories}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(category) => category}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingBottom: 16,
+                gap: 8,
+              }}
+              renderItem={({ item: category }) => (
+                <Pressable
+                  onPress={() => setSelectedCategory(category)}
                   style={{
-                    color: selectedCategory === category ? "#fff" : "#2E7A4F",
-                    fontWeight: "700",
+                    borderRadius: 20,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    backgroundColor:
+                      selectedCategory === category ? "#2E7A4F" : "#E2EDE7",
                   }}
                 >
-                  {category}
-                </Text>
-              </Pressable>
-            )}
-          />
+                  <Text
+                    style={{
+                      color: selectedCategory === category ? "#fff" : "#2E7A4F",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {category}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
         }
         renderItem={({ item: product }) => {
           const productId = String(product.id);

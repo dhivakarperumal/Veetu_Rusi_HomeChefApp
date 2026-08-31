@@ -3,58 +3,77 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    Pressable,
-    ScrollView,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-    API_BASE_URL,
-    getApiErrorMessage,
-    isNewOrderStatus,
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
 } from "../../api";
 import { colors } from "../../theme/colors";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
 const resolveImageUrl = (path: string) => {
-  if (!path) return path;
-  let resolvedPath = path;
-  if (path.includes("localhost:5000")) {
-    resolvedPath = path.replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL);
-  } else if (path.includes("127.0.0.1:5000")) {
-    resolvedPath = path.replace(/https?:\/\/127.0.0.1:5000/g, IMAGE_BASE_URL);
+  const trimmedPath = String(path || "").trim();
+  if (!trimmedPath) return trimmedPath;
+  if (trimmedPath.startsWith("data:")) return trimmedPath;
+
+  let imagePath = trimmedPath;
+  if (/^https?:\/\//i.test(trimmedPath)) {
+    try {
+      const parsedUrl = new URL(trimmedPath);
+      imagePath = `${parsedUrl.pathname}${parsedUrl.search}`;
+    } catch {
+      imagePath = trimmedPath.replace(/^https?:\/\/[^/]+/i, "");
+    }
   }
-  if (resolvedPath.startsWith("http")) return resolvedPath;
-  return resolvedPath.startsWith("/")
-    ? `${IMAGE_BASE_URL}${resolvedPath}`
-    : `${IMAGE_BASE_URL}/${resolvedPath}`;
+
+  return `${IMAGE_BASE_URL}/${imagePath.replace(/^\/+/, "")}`;
 };
 
 const getProductImage = (item: any) => {
   try {
-    if (item.image) {
-      let imgs = item.image;
-      if (typeof imgs === "string") {
+    const imageValues = [
+      item.image,
+      item.images,
+      item.packaging_image,
+      item.product?.image,
+      item.product?.images,
+      item.food?.image,
+      item.food?.images,
+    ];
+
+    for (const value of imageValues) {
+      let parsedValue = value;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        if (Array.isArray(parsedValue)) {
+          parsedValue = parsedValue.find(
+            (image) => typeof image === "string" && image.trim(),
+          );
+          break;
+        }
+        if (typeof parsedValue !== "string") break;
+
+        const trimmedValue = parsedValue.trim();
+        if (!trimmedValue) break;
         try {
-          const parsed = JSON.parse(imgs);
-          if (typeof parsed === "string") {
-            imgs = JSON.parse(parsed); // Handle double stringified
-          } else {
-            imgs = parsed;
-          }
+          parsedValue = JSON.parse(trimmedValue);
         } catch {
-          if (imgs.includes("/") || imgs.includes(".")) {
-            return resolveImageUrl(imgs);
-          }
+          parsedValue = trimmedValue;
+          break;
         }
       }
-      if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
-        return resolveImageUrl(imgs[0]);
+
+      if (typeof parsedValue === "string" && parsedValue.trim()) {
+        return resolveImageUrl(parsedValue.trim());
       }
     }
   } catch (e) {
