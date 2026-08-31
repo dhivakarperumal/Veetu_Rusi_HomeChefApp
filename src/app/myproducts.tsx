@@ -346,7 +346,7 @@ export default function MyProductsScreen() {
       <PageHeader
         title="My Products"
         onLeftPress={() => router.back()}
-        headerBackgroundColor={colors.primary}
+        headerBackgroundColor="#2E7A4F"
         headerForegroundColor="#FFFFFF"
         titleFontSize={18}
       />
