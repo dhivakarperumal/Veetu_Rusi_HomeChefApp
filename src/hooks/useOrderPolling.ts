@@ -78,7 +78,9 @@ export function useOrderPolling(intervalMs = 15000) {
 
         isInitialLoad.current = false;
       } catch (error) {
-        console.log("Polling error:", error);
+        if ((error as { status?: number })?.status !== 401) {
+          console.log("Polling error:", error);
+        }
       } finally {
         isCheckingRef.current = false;
       }

@@ -3,23 +3,23 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    RefreshControl,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import TopHeader from "./componets/topheader";
 import {
-    CART_KEY,
-    FAVORITES_KEY,
-    getMaterialImage,
-    loadMaterialCollection,
-    setMaterialInCollection,
-    showMaterialToast,
+  CART_KEY,
+  FAVORITES_KEY,
+  getMaterialImage,
+  loadMaterialCollection,
+  setMaterialInCollection,
+  showMaterialToast,
 } from "./materials-store";
 
 type Product = {
@@ -195,22 +195,83 @@ export default function BuyMaterialsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
-      <PageHeader
+      <TopHeader
+        showHero={false}
+        showNotifications={false}
         title="Buy Materials"
-        onLeftPress={() => router.back()}
-        rightActions={
-          [
-            {
-              icon: "heart-outline",
-              onPress: () => router.push("/favorites"),
-              badge: favoriteIds.size,
-            },
-            {
-              icon: "bag-outline",
-              onPress: () => router.push("/cart"),
-              badge: cartIds.size,
-            },
-          ] as any
+        rightContent={
+          <>
+            <Pressable
+              onPress={() => router.push("/favorites")}
+              style={{
+                height: 38,
+                width: 38,
+                borderRadius: 19,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.15)",
+              }}
+            >
+              <Ionicons name="heart-outline" size={21} color="#fff" />
+              {favoriteIds.size > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -2,
+                    minWidth: 16,
+                    height: 16,
+                    paddingHorizontal: 4,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#E65100",
+                  }}
+                >
+                  <Text
+                    style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}
+                  >
+                    {favoriteIds.size}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/cart")}
+              style={{
+                height: 38,
+                width: 38,
+                borderRadius: 19,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.15)",
+              }}
+            >
+              <Ionicons name="bag-outline" size={21} color="#fff" />
+              {cartIds.size > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -2,
+                    minWidth: 16,
+                    height: 16,
+                    paddingHorizontal: 4,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#E65100",
+                  }}
+                >
+                  <Text
+                    style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}
+                  >
+                    {cartIds.size}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </>
         }
       />
 

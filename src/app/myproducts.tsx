@@ -4,12 +4,12 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
-  Alert
 } from "react-native";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
@@ -17,6 +17,14 @@ import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+const PRODUCT_FILTERS = [
+  "All",
+  "Active",
+  "Low Stock",
+  "Out of Stock",
+  "Inactive",
+] as const;
+type ProductFilter = (typeof PRODUCT_FILTERS)[number];
 
 const resolveImageUrl = (path: string) => {
   if (!path) return path;
@@ -36,18 +44,18 @@ const getProductImage = (product: any) => {
   try {
     if (product.images) {
       let imgs = product.images;
-      if (typeof imgs === 'string') {
+      if (typeof imgs === "string") {
         try {
           const parsed = JSON.parse(imgs);
-          if (typeof parsed === 'string') {
+          if (typeof parsed === "string") {
             imgs = JSON.parse(parsed); // Handle double stringified
           } else {
             imgs = parsed;
           }
         } catch {
           // If it fails to parse, it might just be a plain URL string
-          if (imgs.includes('/') || imgs.includes('.')) {
-             return resolveImageUrl(imgs);
+          if (imgs.includes("/") || imgs.includes(".")) {
+            return resolveImageUrl(imgs);
           }
         }
       }
@@ -60,19 +68,23 @@ const getProductImage = (product: any) => {
     }
     if (product.variants?.length > 0 && product.variants[0]?.images) {
       let imgs = product.variants[0].images;
-      if (typeof imgs === 'string') {
-        try { imgs = JSON.parse(imgs); } catch { /* ignore */ }
+      if (typeof imgs === "string") {
+        try {
+          imgs = JSON.parse(imgs);
+        } catch {
+          /* ignore */
+        }
       }
       if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
         return resolveImageUrl(imgs[0]);
-      } else if (typeof imgs === 'string' && imgs.length > 0) {
+      } else if (typeof imgs === "string" && imgs.length > 0) {
         return resolveImageUrl(imgs);
       }
     }
   } catch (e) {
-    console.error('Error parsing images:', e);
+    console.error("Error parsing images:", e);
   }
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || 'P')}&background=10b981&color=fff&size=400`;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=10b981&color=fff&size=400`;
 };
 
 function ProductCard({
@@ -86,7 +98,7 @@ function ProductCard({
 }) {
   const stock = Number(product.total_stock || 0);
   const isOutOfStock = stock <= 0;
-  
+
   // Use DB status, but override to Out of Stock if stock is 0
   const rawStatus = (product.status || "").toLowerCase();
   let displayStatus = product.status || "Inactive";
@@ -96,7 +108,7 @@ function ProductCard({
 
   const isActive = displayStatus.toLowerCase() === "active";
   const isLowStock = displayStatus.toLowerCase() === "low stock";
-  
+
   const imageUri = getProductImage(product);
 
   return (
@@ -121,13 +133,29 @@ function ProductCard({
         contentFit="cover"
       />
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 4,
+          }}
+        >
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primaryDark }} numberOfLines={1}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: colors.primaryDark,
+              }}
+              numberOfLines={1}
+            >
               {product.name}
             </Text>
             {product.product_code && (
-              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}>#{product.product_code}</Text>
+              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}>
+                #{product.product_code}
+              </Text>
             )}
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
@@ -140,38 +168,89 @@ function ProductCard({
           </View>
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, gap: 8 }}>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primaryDark }}>
-              ₹{Number(product.offer_price || product.price || product.mrp || 0).toFixed(2).replace(/\.00$/, "")}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 6,
+            gap: 8,
+          }}
+        >
+          <View
+            style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
+          >
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: colors.primaryDark,
+              }}
+            >
+              ₹
+              {Number(product.offer_price || product.price || product.mrp || 0)
+                .toFixed(2)
+                .replace(/\.00$/, "")}
             </Text>
-            {product.mrp && Number(product.mrp) > Number(product.offer_price || product.price || 0) && (
-              <Text style={{ fontSize: 12, fontWeight: "500", color: colors.muted, textDecorationLine: "line-through" }}>
-                ₹{Number(product.mrp).toFixed(2).replace(/\.00$/, "")}
-              </Text>
-            )}
+            {product.mrp &&
+              Number(product.mrp) >
+                Number(product.offer_price || product.price || 0) && (
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "500",
+                    color: colors.muted,
+                    textDecorationLine: "line-through",
+                  }}
+                >
+                  ₹{Number(product.mrp).toFixed(2).replace(/\.00$/, "")}
+                </Text>
+              )}
           </View>
-          <View style={{
-            backgroundColor: isActive ? "#E8F5E9" : (isLowStock ? '#FFF8E1' : "#FFEBEE"),
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 3,
-          }}>
-            <Text style={{
-              fontSize: 12,
-              fontWeight: "700",
-              color: isActive ? "#2E7D32" : (isLowStock ? '#F57F17' : "#C62828"),
-              textTransform: "capitalize",
-            }}>
+          <View
+            style={{
+              backgroundColor: isActive
+                ? "#E8F5E9"
+                : isLowStock
+                  ? "#FFF8E1"
+                  : "#FFEBEE",
+              borderRadius: 8,
+              paddingHorizontal: 10,
+              paddingVertical: 3,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700",
+                color: isActive
+                  ? "#2E7D32"
+                  : isLowStock
+                    ? "#F57F17"
+                    : "#C62828",
+                textTransform: "capitalize",
+              }}
+            >
               {displayStatus}
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Text style={{ fontSize: 12, color: colors.muted }}>
-             {product.category || "Uncategorized"}
+            {product.category || "Uncategorized"}
           </Text>
-          <Text style={{ fontSize: 12, color: isOutOfStock ? '#C62828' : colors.muted, fontWeight: '500' }}>
+          <Text
+            style={{
+              fontSize: 12,
+              color: isOutOfStock ? "#C62828" : colors.muted,
+              fontWeight: "500",
+            }}
+          >
             Stock: {stock}
           </Text>
         </View>
@@ -183,6 +262,7 @@ function ProductCard({
 export default function MyProductsScreen() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<ProductFilter>("All");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -195,12 +275,12 @@ export default function MyProductsScreen() {
       const user = await getStoredUser();
       const chefUserId = user?.user_id || user?.id;
       if (!chefUserId) return setProducts([]);
-      
+
       const res = await api.get(`/products/user/${chefUserId}`);
-      let allItems = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      let allItems = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setProducts(allItems);
     } catch (err) {
-      console.error('Failed to fetch products:', err);
+      console.error("Failed to fetch products:", err);
       setProducts([]);
     } finally {
       setLoading(false);
@@ -223,35 +303,79 @@ export default function MyProductsScreen() {
           onPress: async () => {
             try {
               await api.delete(`/products/${id}`);
-              setProducts(prev => prev.filter(p => p.id !== id));
+              setProducts((prev) => prev.filter((p) => p.id !== id));
             } catch (err) {
               console.error(err);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.product_code?.includes(searchTerm) ||
-    p.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products.filter((p) => {
+    const search = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !search ||
+      String(p.name || "")
+        .toLowerCase()
+        .includes(search) ||
+      String(p.product_code || "")
+        .toLowerCase()
+        .includes(search) ||
+      String(p.category || "")
+        .toLowerCase()
+        .includes(search);
+
+    const stock = Number(p.total_stock || 0);
+    const status = String(p.status || "Inactive").toLowerCase();
+    const productStatus =
+      stock <= 0 && status === "active"
+        ? "Out of Stock"
+        : p.status || "Inactive";
+    const matchesFilter =
+      selectedFilter === "All" ||
+      productStatus.toLowerCase() === selectedFilter.toLowerCase();
+
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <TopHeader showHero={false} title="My Products" />
 
-      <View style={{ backgroundColor: colors.pageBackground, paddingTop: 4 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 20, marginBottom: 14, backgroundColor: colors.cardBackground, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 10, gap: 8, shadowColor: "#000", shadowOpacity: 0.04, shadowOffset: { width: 0, height: 1 }, shadowRadius: 4, elevation: 1 }}>
+      <View style={{ backgroundColor: colors.pageBackground }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginHorizontal: 20,
+            marginTop: 6,
+            marginBottom: 0,
+            backgroundColor: colors.cardBackground,
+            borderRadius: 50,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            gap: 8,
+            shadowColor: "#000",
+            shadowOpacity: 0.04,
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 4,
+            elevation: 1,
+          }}
+        >
           <Ionicons name="search-outline" size={18} color={colors.muted} />
           <TextInput
             value={searchTerm}
             onChangeText={setSearchTerm}
             placeholder="Search products..."
             placeholderTextColor={colors.muted}
-            style={{ flex: 1, fontSize: 14, color: colors.primaryDark, padding: 0 }}
+            style={{
+              flex: 1,
+              fontSize: 14,
+              color: colors.primaryDark,
+              padding: 0,
+            }}
           />
           {searchTerm.length > 0 && (
             <Pressable onPress={() => setSearchTerm("")}>
@@ -261,26 +385,133 @@ export default function MyProductsScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 100 }}>
+      <ScrollView
+        horizontal
+        style={{ height: 44, flexGrow: 0 }}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {PRODUCT_FILTERS.map((filter) => {
+          const isSelected = selectedFilter === filter;
+          return (
+            <Pressable
+              key={filter}
+              onPress={() => setSelectedFilter(filter)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 20,
+                backgroundColor: isSelected
+                  ? colors.primary
+                  : colors.cardBackground,
+                borderWidth: 1,
+                borderColor: isSelected ? colors.primary : colors.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "600",
+                  color: isSelected ? "#FFFFFF" : colors.primaryDark,
+                }}
+              >
+                {filter}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 4,
+          paddingBottom: 100,
+        }}
+      >
         {loading ? (
           <View style={{ paddingVertical: 60, alignItems: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ marginTop: 12, color: colors.muted }}>Loading products...</Text>
+            <Text style={{ marginTop: 12, color: colors.muted }}>
+              Loading products...
+            </Text>
           </View>
         ) : filteredProducts.length === 0 ? (
-          <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
-            <Ionicons name="cube-outline" size={48} color={colors.muted} style={{ marginBottom: 14 }} />
-            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primaryDark }}>No products found</Text>
-            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4, textAlign: "center" }}>Try a different search term.</Text>
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              paddingVertical: 60,
+            }}
+          >
+            <Ionicons
+              name="cube-outline"
+              size={48}
+              color={colors.muted}
+              style={{ marginBottom: 14 }}
+            />
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: colors.primaryDark,
+              }}
+            >
+              No products found
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                color: colors.muted,
+                marginTop: 4,
+                textAlign: "center",
+              }}
+            >
+              Try a different search term.
+            </Text>
           </View>
         ) : (
           filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} onDelete={handleDelete} onEdit={handleEdit} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))
         )}
       </ScrollView>
 
-      <Pressable onPress={() => router.push({ pathname: "/add-product", params: { id: "new" } } as any)} style={{ position: "absolute", right: 20, bottom: 130, width: 58, height: 58, borderRadius: 29, backgroundColor: "#E65100", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.18, shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, elevation: 6 }}>
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/add-product",
+            params: { id: "new" },
+          } as any)
+        }
+        style={{
+          position: "absolute",
+          right: 20,
+          bottom: 130,
+          width: 58,
+          height: 58,
+          borderRadius: 29,
+          backgroundColor: "#E65100",
+          alignItems: "center",
+          justifyContent: "center",
+          shadowColor: "#000",
+          shadowOpacity: 0.18,
+          shadowOffset: { width: 0, height: 6 },
+          shadowRadius: 10,
+          elevation: 6,
+        }}
+      >
         <Ionicons name="add" size={30} color="#fff" />
       </Pressable>
 

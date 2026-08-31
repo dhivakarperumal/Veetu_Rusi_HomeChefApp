@@ -3,20 +3,20 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import api, {
-  API_BASE_URL,
-  getApiErrorMessage,
-  isNewOrderStatus,
+    API_BASE_URL,
+    getApiErrorMessage,
+    isNewOrderStatus,
 } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
@@ -176,6 +176,10 @@ export default function DashboardScreen() {
       }
       hasLoadedOrdersRef.current = true;
     } catch (e) {
+      if ((e as { status?: number })?.status === 401) {
+        router.replace("/login");
+        return;
+      }
       console.error("Dashboard fetch error:", e);
     } finally {
       isFetchingRef.current = false;
@@ -316,10 +320,10 @@ export default function DashboardScreen() {
                   <Ionicons name="receipt" size={20} color="#E65100" />
                 </View>
                 <View>
-                <Text style={styles.popupEyebrow}>NEW ORDER</Text>
-                <Text style={styles.popupTitle}>
-                  Order #{popupOrder?.order_id || popupOrder?.id || "Unknown"}
-                </Text>
+                  <Text style={styles.popupEyebrow}>NEW ORDER</Text>
+                  <Text style={styles.popupTitle}>
+                    Order #{popupOrder?.order_id || popupOrder?.id || "Unknown"}
+                  </Text>
                 </View>
               </View>
               <Pressable
@@ -334,7 +338,9 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.popupWaitingRow}>
               <View style={styles.popupLiveDot} />
-              <Text style={styles.popupWaitingText}>Ready for your kitchen</Text>
+              <Text style={styles.popupWaitingText}>
+                Ready for your kitchen
+              </Text>
             </View>
             <Text style={styles.popupCustomer}>
               {popupOrder?.customer_name || "Customer"}
@@ -372,7 +378,11 @@ export default function DashboardScreen() {
                 disabled={popupActionLoading}
                 style={styles.popupRejectButton}
               >
-                <Ionicons name="close-circle-outline" size={18} color="#C62828" />
+                <Ionicons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#C62828"
+                />
                 <Text style={styles.popupRejectText}>Reject</Text>
               </Pressable>
               <Pressable

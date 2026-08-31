@@ -48,6 +48,7 @@ function getGreeting() {
 
 export default function TopHeader({
   showHero = true,
+  showNotifications = true,
   title = "V2Home Chef",
   rightContent = null,
 }) {
@@ -69,6 +70,8 @@ export default function TopHeader({
   }, []);
 
   useEffect(() => {
+    if (!showNotifications) return;
+
     // Fetch today's new orders for notifications
     const fetchNotifications = async () => {
       if (isFetchingNotifications.current) return;
@@ -96,7 +99,7 @@ export default function TopHeader({
     // Poll every 20 seconds while header is mounted
     const interval = setInterval(fetchNotifications, 20000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showNotifications]);
 
   const profileName =
     user?.fullName ||
@@ -330,37 +333,39 @@ export default function TopHeader({
               </View>
             )}
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              className="h-[38px] w-[38px] items-center justify-center rounded-full bg-black/15"
-              onPress={() => setShowNotifDrop(true)}
-            >
-              <Ionicons name="notifications-outline" size={22} color="#fff" />
-              {todayNewOrders.length > 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: -2,
-                    right: -2,
-                    backgroundColor: "#E65100",
-                    height: 16,
-                    minWidth: 16,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingHorizontal: 4,
-                    borderWidth: 1.5,
-                    borderColor: GREEN,
-                  }}
-                >
-                  <Text
-                    style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}
+            {showNotifications && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                className="h-[38px] w-[38px] items-center justify-center rounded-full bg-black/15"
+                onPress={() => setShowNotifDrop(true)}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#fff" />
+                {todayNewOrders.length > 0 && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -2,
+                      right: -2,
+                      backgroundColor: "#E65100",
+                      height: 16,
+                      minWidth: 16,
+                      borderRadius: 8,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 4,
+                      borderWidth: 1.5,
+                      borderColor: GREEN,
+                    }}
                   >
-                    {todayNewOrders.length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+                    <Text
+                      style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}
+                    >
+                      {todayNewOrders.length}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               activeOpacity={0.7}
