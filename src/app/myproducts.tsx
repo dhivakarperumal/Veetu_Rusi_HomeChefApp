@@ -13,8 +13,7 @@ import {
 } from "react-native";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
-import BottomBar from "./componets/buttombar";
-import TopHeader from "./componets/topheader";
+import PageHeader from "./componets/pageheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 const PRODUCT_FILTERS = [
@@ -342,7 +341,13 @@ export default function MyProductsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      <TopHeader showHero={false} title="My Products" />
+      <PageHeader
+        title="My Products"
+        onLeftPress={() => router.back()}
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        titleFontSize={18}
+      />
 
       <View style={{ backgroundColor: colors.pageBackground }}>
         <View
@@ -350,8 +355,8 @@ export default function MyProductsScreen() {
             flexDirection: "row",
             alignItems: "center",
             marginHorizontal: 20,
-            marginTop: 6,
-            marginBottom: 0,
+            marginTop: 10,
+            marginBottom: 8,
             backgroundColor: colors.cardBackground,
             borderRadius: 50,
             paddingHorizontal: 14,
@@ -374,7 +379,7 @@ export default function MyProductsScreen() {
               flex: 1,
               fontSize: 14,
               color: colors.primaryDark,
-              padding: 0,
+              padding: 7,
             }}
           />
           {searchTerm.length > 0 && (
@@ -498,7 +503,7 @@ export default function MyProductsScreen() {
         style={{
           position: "absolute",
           right: 20,
-          bottom: 130,
+          bottom: 20,
           width: 58,
           height: 58,
           borderRadius: 29,
@@ -514,8 +519,6 @@ export default function MyProductsScreen() {
       >
         <Ionicons name="add" size={30} color="#fff" />
       </Pressable>
-
-      <BottomBar />
     </View>
   );
 }
