@@ -503,7 +503,7 @@ export default function MyProductsScreen() {
         style={{
           position: "absolute",
           right: 20,
-          bottom: 40,
+          bottom: 50,
           width: 58,
           height: 58,
           borderRadius: 29,
