@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
@@ -259,7 +260,7 @@ function DishCard({
           <Pressable
             onPress={() => onToggle(dish.id)}
             style={{
-              backgroundColor: isActive ? "#E8F5E9" : "#FFEBEE",
+              backgroundColor: isActive ? colors.softCard : "#FFEBEE",
               borderRadius: 8,
               paddingHorizontal: 10,
               paddingVertical: 3,
@@ -269,7 +270,7 @@ function DishCard({
               style={{
                 fontSize: 12,
                 fontWeight: "700",
-                color: isActive ? "#2E7D32" : "#C62828",
+                color: isActive ? colors.primary : "#C62828",
                 textTransform: "capitalize",
               }}
             >
@@ -317,6 +318,7 @@ function DishCard({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function DishesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -572,22 +574,25 @@ export default function DishesScreen() {
         onPress={() => router.push("/add-dish")}
         style={{
           position: "absolute",
-          right: 20,
-          bottom: 140,
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          backgroundColor: "#E65100",
+          right: 22,
+          bottom: 140 + (insets.bottom || 0),
+          width: 62,
+          height: 62,
+          borderRadius: 31,
+          backgroundColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
           shadowColor: "#000",
           shadowOpacity: 0.18,
           shadowOffset: { width: 0, height: 6 },
-          shadowRadius: 10,
-          elevation: 6,
+          shadowRadius: 12,
+          elevation: 8,
+          borderWidth: 2,
+          borderColor: colors.white,
+          zIndex: 10,
         }}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={32} color={colors.white} />
       </Pressable>
 
       <BottomBar />

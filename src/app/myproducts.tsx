@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
@@ -208,7 +209,7 @@ function ProductCard({
           <View
             style={{
               backgroundColor: isActive
-                ? "#E8F5E9"
+                ? colors.softCard
                 : isLowStock
                   ? "#FFF8E1"
                   : "#FFEBEE",
@@ -222,7 +223,7 @@ function ProductCard({
                 fontSize: 12,
                 fontWeight: "700",
                 color: isActive
-                  ? "#2E7D32"
+                  ? colors.primary
                   : isLowStock
                     ? "#F57F17"
                     : "#C62828",
@@ -260,6 +261,7 @@ function ProductCard({
 
 export default function MyProductsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<ProductFilter>("All");
   const [products, setProducts] = useState<any[]>([]);
@@ -344,7 +346,7 @@ export default function MyProductsScreen() {
       <PageHeader
         title="My Products"
         onLeftPress={() => router.back()}
-        headerBackgroundColor="#2E7A4F"
+        headerBackgroundColor={colors.primary}
         headerForegroundColor="#FFFFFF"
         titleFontSize={18}
       />
@@ -502,22 +504,25 @@ export default function MyProductsScreen() {
         }
         style={{
           position: "absolute",
-          right: 20,
-          bottom: 50,
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          backgroundColor: "#E65100",
+          right: 22,
+          bottom: 54 + (insets.bottom || 0),
+          width: 62,
+          height: 62,
+          borderRadius: 31,
+          backgroundColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
           shadowColor: "#000",
           shadowOpacity: 0.18,
           shadowOffset: { width: 0, height: 6 },
-          shadowRadius: 10,
-          elevation: 6,
+          shadowRadius: 12,
+          elevation: 8,
+          borderWidth: 2,
+          borderColor: colors.white,
+          zIndex: 10,
         }}
       >
-        <Ionicons name="add" size={30} color="#fff" />
+        <Ionicons name="add" size={32} color={colors.white} />
       </Pressable>
     </View>
   );
