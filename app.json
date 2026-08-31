@@ -7,11 +7,14 @@
     "icon": "./assets/images/logo.png",
     "scheme": "homechefapp",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F4F1EA",
     "newArchEnabled": true,
     "ios": {
-      "icon": "./assets/images/logo.png"
+      "icon": "./assets/images/logo.png",
+      "backgroundColor": "#F4F1EA"
     },
     "android": {
+      "backgroundColor": "#F4F1EA",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/logo.png"
@@ -22,6 +25,7 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/logo.png",
+      "backgroundColor": "#F4F1EA",
       "bundler": "metro"
     },
     "plugins": [
@@ -29,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF",
+          "backgroundColor": "#F4F1EA",
           "image": "./assets/images/logo.png",
           "imageWidth": 76
         }
