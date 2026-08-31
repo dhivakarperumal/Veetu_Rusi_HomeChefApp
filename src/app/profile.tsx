@@ -1,17 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
@@ -30,7 +33,28 @@ const resolveUrl = (path: string | null | undefined): string | null => {
       .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
   }
   if (t.startsWith("http")) return t;
+  if (t.startsWith("//")) return `https:${t}`;
   return t.startsWith("/") ? `${IMAGE_BASE_URL}${t}` : `${IMAGE_BASE_URL}/${t}`;
+};
+
+const openDocumentUrl = async (docUrl: string | null | undefined) => {
+  const normalizedUrl = resolveUrl(docUrl);
+  if (!normalizedUrl) {
+    Alert.alert("Document unavailable", "This document is not available to view yet.");
+    return;
+  }
+
+  try {
+    const supported = await Linking.canOpenURL(normalizedUrl);
+    if (!supported) {
+      Alert.alert("Unable to open", "This document cannot be opened on this device.");
+      return;
+    }
+    await Linking.openURL(normalizedUrl);
+  } catch (error) {
+    console.warn("Open document failed:", error);
+    Alert.alert("Could not open document", "The file link is invalid or unavailable.");
+  }
 };
 
 // ── Detail Row ────────────────────────────────────────────────────────────────
@@ -271,7 +295,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -287,14 +311,6 @@ export default function ProfileScreen() {
       setError(null);
       const stored = await getStoredUser();
       setAuthUser(stored);
-
-      try {
-        const ordersRes = await api.get("/orders/myorders");
-        setMyOrders(Array.isArray(ordersRes.data) ? ordersRes.data : []);
-      } catch (ordersError) {
-        console.warn("Could not load my orders:", ordersError);
-        setMyOrders([]);
-      }
 
       const res = await api.get("/auth/profile");
       const d = res.data;
@@ -340,11 +356,82 @@ export default function ProfileScreen() {
   const displayCity = chefData?.city || null;
   const displayKitchenType = chefData?.kitchen_type || null;
   const profilePhotoUrl = resolveUrl(chefData?.profile_photo);
+  const documentRows = [
+    {
+      field: "aadhaar_front",
+      label: "Aadhaar (Front)",
+      url: resolveUrl(chefData?.aadhaar_front_url),
+    },
+    {
+      field: "aadhaar_back",
+      label: "Aadhaar (Back)",
+      url: resolveUrl(chefData?.aadhaar_back_url),
+    },
+    {
+      field: "pan_card",
+      label: "PAN Card",
+      url: resolveUrl(chefData?.pan_card_url),
+    },
+    {
+      field: "fssai_certificate",
+      label: "FSSAI Certificate",
+      url: resolveUrl(chefData?.fssai_certificate_url),
+    },
+    {
+      field: "gst_certificate",
+      label: "GST Certificate",
+      url: resolveUrl(chefData?.gst_certificate_url),
+    },
+    {
+      field: "selfie_verification",
+      label: "Selfie Verification",
+      url: resolveUrl(chefData?.selfie_verification_url),
+    },
+    {
+      field: "signature",
+      label: "Signature",
+      url: resolveUrl(chefData?.signature_url),
+    },
+  ];
 
   const experienceLabel = chefData?.experience_years
     ? `${chefData.experience_years}y`
     : "—";
   const vegLabel = chefData?.veg_nonveg || "—";
+
+  const getProfileIdentity = () => {
+    const profileName =
+      authUser?.fullName ||
+      chefData?.name ||
+      form.fullName ||
+      displayName ||
+      "Chef";
+    const profileEmail =
+      authUser?.email ||
+      chefData?.email ||
+      authUser?.identifier ||
+      form.email ||
+      "";
+    const profilePhone =
+      authUser?.phone ||
+      chefData?.mobile ||
+      authUser?.mobile ||
+      form.phone ||
+      "";
+    const username =
+      authUser?.username ||
+      chefData?.username ||
+      (profileName || "").trim() ||
+      (profileEmail ? profileEmail.split("@")[0] : "") ||
+      "chef";
+
+    return {
+      fullName: String(profileName || "Chef").trim(),
+      email: String(profileEmail || "").trim(),
+      phone: String(profilePhone || "").trim(),
+      username: String(username || "chef").trim(),
+    };
+  };
 
   // ── Edit handlers ──────────────────────────────────────────────────────────
   const openEdit = () => {
@@ -359,11 +446,26 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const identity = getProfileIdentity();
+      const cleanFullName = identity.fullName;
+      const cleanEmail = identity.email;
+      const cleanPhone = identity.phone;
+
+      if (!cleanFullName || !cleanEmail) {
+        Alert.alert(
+          "Profile incomplete",
+          "Your account needs a valid username and email before uploading documents.",
+        );
+        return;
+      }
+
       const payload = {
-        fullName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        mobile: form.phone.trim(),
+        username: identity.username,
+        fullName: cleanFullName,
+        name: cleanFullName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        mobile: cleanPhone,
       };
       await api.put("/auth/profile", payload);
       const updated = { ...(authUser || {}), ...payload };
@@ -374,6 +476,89 @@ export default function ProfileScreen() {
       console.warn("Save failed:", e);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUploadDocument = async (field: string, label: string) => {
+    try {
+      if (!authUser && !chefData) {
+        await fetchProfile();
+      }
+
+      const identity = getProfileIdentity();
+      const cleanFullName = identity.fullName;
+      const cleanEmail = identity.email;
+      const cleanPhone = identity.phone;
+
+      if (!identity.username || !cleanEmail) {
+        Alert.alert(
+          "Profile incomplete",
+          "Your account needs a valid username and email before uploading documents.",
+        );
+        return;
+      }
+
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Please allow access to your photo library to upload this document.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const formData = new FormData();
+
+      formData.append("username", String(identity.username));
+      formData.append("fullName", String(cleanFullName));
+      formData.append("name", String(cleanFullName));
+      formData.append("email", String(cleanEmail));
+      formData.append("phone", String(cleanPhone));
+      formData.append("mobile", String(cleanPhone));
+      formData.append(field, {
+        uri: asset.uri,
+        name: asset.fileName || `${field}-${Date.now()}.jpg`,
+        type: asset.mimeType || "image/jpeg",
+      } as any);
+
+      setUploadingDoc(field);
+      const response = await api.put("/auth/profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const responseData = response.data?.data || response.data || {};
+      const uploadedUrl =
+        responseData[`${field}_url`] ||
+        responseData[field] ||
+        responseData.url ||
+        responseData?.profile?.[`${field}_url`];
+
+      if (uploadedUrl) {
+        setChefData((prev: any) => ({
+          ...prev,
+          [`${field}_url`]: uploadedUrl,
+        }));
+      }
+
+      Alert.alert("Success", `${label} uploaded successfully.`);
+    } catch (e: any) {
+      console.warn("Document upload failed:", e);
+      Alert.alert(
+        "Upload failed",
+        e?.message || "Could not upload this document. Please try again.",
+      );
+    } finally {
+      setUploadingDoc(null);
     }
   };
 
@@ -863,43 +1048,93 @@ export default function ProfileScreen() {
             expanded={expanded === "docs"}
             onPress={() => toggle("docs")}
           >
-            <DetailRow
-              label="Aadhaar (Front)"
-              value={
-                chefData?.aadhaar_front_url ? "✓ Uploaded" : "Not uploaded"
-              }
-              icon="checkmark-circle-outline"
-            />
-            <DetailRow
-              label="Aadhaar (Back)"
-              value={chefData?.aadhaar_back_url ? "✓ Uploaded" : "Not uploaded"}
-            />
-            <DetailRow
-              label="PAN Card"
-              value={chefData?.pan_card_url ? "✓ Uploaded" : "Not uploaded"}
-            />
-            <DetailRow
-              label="FSSAI Certificate"
-              value={
-                chefData?.fssai_certificate_url ? "✓ Uploaded" : "Not uploaded"
-              }
-            />
-            <DetailRow
-              label="GST Certificate"
-              value={
-                chefData?.gst_certificate_url ? "✓ Uploaded" : "Not uploaded"
-              }
-            />
-            <DetailRow
-              label="Selfie Verification"
-              value={
-                chefData?.selfie_verification_url ? "✓ Verified" : "Pending"
-              }
-            />
-            <DetailRow
-              label="Signature"
-              value={chefData?.signature_url ? "✓ Uploaded" : "Not uploaded"}
-            />
+            {documentRows.map((doc) => (
+              <View
+                key={doc.label}
+                style={{
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: colors.muted,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                    }}
+                  >
+                    {doc.label}
+                  </Text>
+                  {doc.url ? (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => openDocumentUrl(doc.url)}
+                      style={{
+                        backgroundColor: colors.primary,
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: "#fff",
+                        }}
+                      >
+                        View
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => handleUploadDocument(doc.field, doc.label)}
+                      disabled={!!uploadingDoc}
+                      style={{
+                        backgroundColor: "#FFF3E0",
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        opacity: uploadingDoc ? 0.6 : 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: "#E65100",
+                        }}
+                      >
+                        {uploadingDoc === doc.field ? "Uploading..." : "Upload"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: doc.url ? colors.primaryDark : colors.muted,
+                    marginTop: 6,
+                  }}
+                >
+                  {doc.url ? "✓ Uploaded" : "Not uploaded"}
+                </Text>
+              </View>
+            ))}
           </SectionCard>
 
           {/* Delivery Settings */}
@@ -1020,8 +1255,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-      
 
         {/* ════════════════════════════════════ LOGOUT */}
         <TouchableOpacity

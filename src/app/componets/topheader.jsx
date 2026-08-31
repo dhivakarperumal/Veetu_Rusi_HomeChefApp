@@ -394,7 +394,7 @@ export default function TopHeader({
                     height: 165,
                   }}
                   contentFit="cover"
-                  contentPosition="center center"
+                  contentPosition="center"
                 />
                 <View className="absolute bottom-0 left-0 right-0 top-0 bg-black/10" />
                 <View className="max-w-[62%] p-5">
