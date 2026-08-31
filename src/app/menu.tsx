@@ -666,7 +666,7 @@ export default function MenuScreen() {
         style={{
           position: "absolute",
           right: 20,
-          bottom: 28 + (insets.bottom || 0),
+          bottom: 60 + (insets.bottom || 0),
           alignItems: "flex-end",
           zIndex: 20,
         }}
