@@ -2,17 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import api from "../api";
-import BottomBar from "./componets/buttombar";
 import PageHeader from "./componets/pageheader";
 
 const GREEN = "#2E7A4F";
@@ -53,6 +52,9 @@ export default function MaterialOrdersScreen() {
       <PageHeader
         title="My Material Orders"
         onLeftPress={() => router.back()}
+        headerBackgroundColor={GREEN}
+        headerForegroundColor="#FFFFFF"
+        titleFontSize={18}
       />
       {loading ? (
         <View
@@ -300,7 +302,6 @@ export default function MaterialOrdersScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-      <BottomBar />
     </View>
   );
 }

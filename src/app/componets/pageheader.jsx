@@ -19,11 +19,14 @@ export default function PageHeader({
   leftIcon = "arrow-back",
   centerTitle = false,
   rightActions = [],
+  headerBackgroundColor = colors.pageBackground,
+  headerForegroundColor = colors.primaryDark,
+  titleFontSize = 24,
 }) {
   return (
     <SafeAreaView
       edges={["top"]}
-      style={{ backgroundColor: colors.pageBackground }}
+      style={{ backgroundColor: headerBackgroundColor }}
     >
       <View
         style={{
@@ -32,7 +35,7 @@ export default function PageHeader({
           paddingHorizontal: 20,
           paddingTop: 10,
           paddingBottom: 14,
-          backgroundColor: colors.pageBackground,
+          backgroundColor: headerBackgroundColor,
         }}
       >
         {/* Left button (optional) */}
@@ -58,7 +61,15 @@ export default function PageHeader({
               elevation: leftIcon === "arrow-back" ? 2 : 0,
             }}
           >
-            <Ionicons name={leftIcon} size={22} color={colors.primaryDark} />
+            <Ionicons
+              name={leftIcon}
+              size={22}
+              color={
+                leftIcon === "arrow-back"
+                  ? colors.primaryDark
+                  : headerForegroundColor
+              }
+            />
           </Pressable>
         ) : null}
 
@@ -66,9 +77,9 @@ export default function PageHeader({
         <Text
           style={{
             flex: 1,
-            fontSize: 24,
+            fontSize: titleFontSize,
             fontWeight: "800",
-            color: colors.primaryDark,
+            color: headerForegroundColor,
             textAlign: centerTitle ? "center" : "left",
             marginLeft: centerTitle && !onLeftPress ? 0 : 0,
           }}

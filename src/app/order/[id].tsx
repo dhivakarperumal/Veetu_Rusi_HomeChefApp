@@ -90,6 +90,15 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   Completed: { color: "#4A675F", bg: "#ECEFF1" },
 };
 
+const STATUS_OPTIONS = [
+  { label: "Accept Order", value: "Accepted" },
+  { label: "Preparing", value: "Preparing" },
+  { label: "Food Ready", value: "Food Ready" },
+  { label: "Delivered", value: "Delivered" },
+  { label: "Completed", value: "Completed" },
+  { label: "Cancel Order", value: "Cancelled", destructive: true },
+];
+
 const mapStatus = (status: string) => {
   const s = (status || "").toLowerCase();
   if (isNewOrderStatus(s)) return "New";
@@ -293,6 +302,35 @@ export default function OrderDetailScreen() {
     ]);
   };
 
+  const updateOrderStatus = () => {
+    if (actionLoading) return;
+
+    const saveStatus = async (status: string) => {
+      setActionLoading(true);
+      try {
+        await api.patch(`/user-food-orders/status/${id}`, { status });
+        setOrder((previous: any) => ({ ...previous, status }));
+      } catch (error) {
+        Alert.alert("Could not update order", getApiErrorMessage(error));
+      } finally {
+        setActionLoading(false);
+      }
+    };
+
+    Alert.alert("Update Order Status", "Choose the new status", [
+      ...STATUS_OPTIONS.filter((option) => option.value !== order.status).map(
+        (option) => ({
+          text: option.label,
+          style: option.destructive
+            ? ("destructive" as const)
+            : ("default" as const),
+          onPress: () => void saveStatus(option.value),
+        }),
+      ),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
@@ -357,7 +395,8 @@ export default function OrderDetailScreen() {
             >
               #{order.order_id || order.id}
             </Text>
-            <View
+            <Pressable
+              onPress={updateOrderStatus}
               style={{
                 backgroundColor: cfg.bg,
                 borderRadius: 8,
@@ -370,7 +409,7 @@ export default function OrderDetailScreen() {
               >
                 {uiStatus}
               </Text>
-            </View>
+            </Pressable>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text
