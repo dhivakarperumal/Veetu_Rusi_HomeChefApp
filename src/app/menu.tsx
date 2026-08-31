@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
@@ -124,9 +125,11 @@ function SectionHeader({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function MenuScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCatId, setActiveCatId] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [fabOpen, setFabOpen] = useState(false);
 
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -295,7 +298,7 @@ export default function MenuScreen() {
   const uniqueItemCats = Array.from(
     new Set(items.map((i) => i.category)),
   ).filter(Boolean);
-  const displayCats =
+  const displayCats: Category[] =
     categories.length > 0
       ? categories
       : uniqueItemCats.map((name) => ({
@@ -304,8 +307,12 @@ export default function MenuScreen() {
           icon: "restaurant-outline",
         }));
 
-  const allCategoryOption = { id: "All", name: "All Items", emoji: "🍽️" };
-  const scrollCats = [allCategoryOption, ...displayCats];
+  const allCategoryOption: Category = {
+    id: "All",
+    name: "All Items",
+    emoji: "🍽️",
+  };
+  const scrollCats: Category[] = [allCategoryOption, ...displayCats];
 
   // Group items by category for rendering
   const search = searchTerm.trim().toLowerCase();
@@ -333,6 +340,25 @@ export default function MenuScreen() {
     },
     {} as Record<string, MenuItem[]>,
   );
+
+  const fabActions = [
+    {
+      label: "Food",
+      icon: "restaurant-outline",
+      onPress: () => {
+        setFabOpen(false);
+        router.push("/add-dish");
+      },
+    },
+    {
+      label: "Product",
+      icon: "bag-outline",
+      onPress: () => {
+        setFabOpen(false);
+        router.push({ pathname: "/add-product", params: { id: "new" } } as any);
+      },
+    },
+  ];
 
   if (loading) {
     return (
@@ -624,6 +650,113 @@ export default function MenuScreen() {
           ))
         )}
       </ScrollView>
+
+      {fabOpen && (
+        <Pressable
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.08)",
+          }}
+          onPress={() => setFabOpen(false)}
+        />
+      )}
+
+      <View
+        style={{
+          position: "absolute",
+          right: 20,
+          bottom: 28 + (insets.bottom || 0),
+          alignItems: "flex-end",
+          zIndex: 20,
+        }}
+      >
+        {fabOpen &&
+          fabActions.map((action) => (
+            <Pressable
+              key={action.label}
+              onPress={action.onPress}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 12,
+                marginRight: 6,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: colors.cardBackground,
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  marginRight: 10,
+                  shadowColor: "#000",
+                  shadowOpacity: 0.1,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowRadius: 6,
+                  elevation: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: colors.primaryDark,
+                  }}
+                >
+                  {action.label}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: colors.primary,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOpacity: 0.18,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowRadius: 10,
+                  elevation: 6,
+                }}
+              >
+                <Ionicons
+                  name={action.icon as any}
+                  size={22}
+                  color={colors.white}
+                />
+              </View>
+            </Pressable>
+          ))}
+
+        <Pressable
+          onPress={() => setFabOpen((prev) => !prev)}
+          style={{
+            width: 62,
+            height: 62,
+            borderRadius: 31,
+            backgroundColor: colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#000",
+            shadowOpacity: 0.18,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 12,
+            elevation: 8,
+            borderWidth: 2,
+            borderColor: colors.white,
+          }}
+        >
+          <Ionicons
+            name={fabOpen ? "close" : "add"}
+            size={32}
+            color={colors.white}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
