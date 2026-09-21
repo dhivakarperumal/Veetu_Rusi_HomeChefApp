@@ -6,15 +6,15 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Linking,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
@@ -586,7 +586,7 @@ export default function ProfileScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      <StatusBar style="light" backgroundColor="#2E7A4F" />
+      <StatusBar style="light" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={

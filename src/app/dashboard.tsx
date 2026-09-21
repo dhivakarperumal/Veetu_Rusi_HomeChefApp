@@ -792,11 +792,11 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   featureBannerImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: "100%",
   },
   featureBannerShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(13, 38, 27, 0.62)",
   },
   featureBannerContent: {
