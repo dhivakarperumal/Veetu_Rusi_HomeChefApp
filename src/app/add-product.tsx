@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View, ActivityIndicator } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import api, { getStoredUser } from "../api";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
@@ -169,6 +168,8 @@ const initialForm = {
   product_type: "Food Product",
   name: "",
   description: "",
+  ingredients: "",
+  instructions: "",
   subcategory: "",
   cuisine: "",
   product_code: "",

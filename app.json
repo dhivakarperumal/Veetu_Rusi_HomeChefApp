@@ -8,7 +8,6 @@
     "scheme": "homechefapp",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#F4F1EA",
-    "newArchEnabled": true,
     "ios": {
       "icon": "./assets/images/logo.png",
       "backgroundColor": "#F4F1EA"

@@ -12,7 +12,8 @@ import { useOrderPolling } from "../hooks/useOrderPolling";
 // Configure global notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -69,8 +70,8 @@ async function registerForPushNotificationsAsync() {
 
 export default function RootLayout() {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>("");
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   // Start polling for new orders (checks every 15 seconds)
   useOrderPolling(15000);
@@ -101,10 +102,10 @@ export default function RootLayout() {
       });
 
     return () => {
-        notificationListener.current?.remove();
-        responseListener.current?.remove();
-        notificationListener.current = undefined;
-        responseListener.current = undefined;
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
+      notificationListener.current = null;
+      responseListener.current = null;
     };
   }, []);
 

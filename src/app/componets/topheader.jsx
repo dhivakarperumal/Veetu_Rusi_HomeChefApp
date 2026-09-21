@@ -4,11 +4,11 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
-  Modal,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Modal,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, isNewOrderStatus, logoutUser } from "../../api";
@@ -50,7 +50,7 @@ export default function TopHeader({
   showHero = true,
   showNotifications = true,
   title = "V2Home Chef",
-  rightContent = null,
+  rightContent = /** @type {any} */ (null),
 }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
