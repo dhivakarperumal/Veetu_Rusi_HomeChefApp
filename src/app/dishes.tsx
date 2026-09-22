@@ -3,14 +3,15 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
@@ -34,7 +35,6 @@ const resolveImageUrl = (path: string): string => {
     const fixed = trimmed
       .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
       .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
-    console.log("[dishes] resolved:", fixed);
     return fixed;
   }
 
@@ -75,15 +75,11 @@ const getFoodImage = (item: any): string => {
   try {
     let imgs: any = item.images;
 
-    // Debug: log the raw value coming from API
-    console.log("[dishes] raw images field:", JSON.stringify(imgs));
-
     // Case 1: already parsed into an array by axios
     if (Array.isArray(imgs)) {
       const first = imgs.find((u: any) => typeof u === "string" && u.trim());
       if (first) {
         const url = resolveImageUrl(first.trim());
-        console.log("[dishes] Case1 url:", url);
         return url;
       }
     }
@@ -105,7 +101,6 @@ const getFoodImage = (item: any): string => {
           );
           if (first) {
             const url = resolveImageUrl(first.trim());
-            console.log("[dishes] Case2-array url:", url);
             return url;
           }
         }
@@ -114,7 +109,6 @@ const getFoodImage = (item: any): string => {
           (parsed.startsWith("http") || parsed.startsWith("/"))
         ) {
           const url = resolveImageUrl(parsed.trim());
-          console.log("[dishes] Case2-str url:", url);
           return url;
         }
       }
@@ -123,7 +117,6 @@ const getFoodImage = (item: any): string => {
       const raw = imgs.trim();
       if (raw.startsWith("http") || raw.startsWith("/")) {
         const url = resolveImageUrl(raw);
-        console.log("[dishes] Case2-raw url:", url);
         return url;
       }
     }
@@ -131,16 +124,13 @@ const getFoodImage = (item: any): string => {
     // Case 3: packaging_image fallback
     if (item.packaging_image) {
       const url = resolveImageUrl(String(item.packaging_image));
-      console.log("[dishes] Case3 packaging url:", url);
       return url;
     }
   } catch (e) {
-    console.warn("[dishes] getFoodImage error:", e);
+    return FALLBACK_AVATAR(item.name);
   }
 
-  const avatar = FALLBACK_AVATAR(item.name);
-  console.log("[dishes] fallback avatar for:", item.name);
-  return avatar;
+  return FALLBACK_AVATAR(item.name);
 };
 
 // ── Dish Card ─────────────────────────────────────────────────────────────────
@@ -188,9 +178,8 @@ function DishCard({
           contentFit="cover"
           transition={200}
           onError={(e) => {
-            console.warn("[dishes] Image load error:", imgSrc, e);
-            // Swap to avatar fallback so the box is never blank
-            setImgSrc(FALLBACK_AVATAR(dish.fallbackName));
+            const fallback = FALLBACK_AVATAR(dish.fallbackName);
+            if (imgSrc !== fallback) setImgSrc(fallback);
           }}
         />
       </View>
@@ -328,11 +317,7 @@ export default function DishesScreen() {
     "All" | "Active" | "Inactive"
   >("All");
 
-  useEffect(() => {
-    fetchFoods();
-  }, []);
-
-  const fetchFoods = async () => {
+  async function fetchFoods() {
     setLoading(true);
     try {
       const profile = await getStoredUser();
@@ -371,7 +356,11 @@ export default function DishesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchFoods();
+  }, []);
 
   const filteredDishes = dishes.filter((d) => {
     // 1. Search term
@@ -518,22 +507,27 @@ export default function DishesScreen() {
       </View>
 
       {/* ── Dish list ── */}
-      <ScrollView
+      <FlatList
+        data={loading ? [] : filteredDishes}
+        keyExtractor={(dish) => dish.id}
+        renderItem={({ item }) => (
+          <DishCard dish={item} onToggle={handleToggleStatus} />
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 4,
           paddingBottom: 120,
         }}
-      >
-        {loading ? (
+        ListEmptyComponent={
+          loading ? (
           <View style={{ paddingVertical: 60, alignItems: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ marginTop: 12, color: colors.muted }}>
               Loading dishes...
             </Text>
           </View>
-        ) : filteredDishes.length === 0 ? (
+          ) : (
           <View
             style={{
               alignItems: "center",
@@ -562,12 +556,9 @@ export default function DishesScreen() {
               Try a different category or search term.
             </Text>
           </View>
-        ) : (
-          filteredDishes.map((dish) => (
-            <DishCard key={dish.id} dish={dish} onToggle={handleToggleStatus} />
-          ))
-        )}
-      </ScrollView>
+          )
+        }
+      />
 
       {/* Floating Add Dish Button */}
       <Pressable
