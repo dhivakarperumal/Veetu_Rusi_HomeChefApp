@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Image as ExpoImage } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +14,24 @@ const DIETARY_OPTIONS = ["veg", "non-veg"];
 const PACKAGING_OPTIONS = ["Pouch", "Box", "Foil", "Bottle", "Packet"];
 const CUISINE_OPTIONS = ["Multi Cuisine", "North Indian", "South Indian", "Continental", "Chinese", "Italian", "Thai", "Mexican"];
 const PRODUCT_TYPE_OPTIONS = ["Food", "Food Product"];
+
+function parseImageCollection(value: unknown): string[] {
+  let parsed = value;
+  for (let pass = 0; pass < 2 && typeof parsed === "string"; pass += 1) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      break;
+    }
+  }
+  if (Array.isArray(parsed)) {
+    return parsed.filter(
+      (image): image is string =>
+        typeof image === "string" && image.trim().length > 0,
+    );
+  }
+  return typeof parsed === "string" && parsed.trim() ? [parsed.trim()] : [];
+}
 
 function DatePickerField({
   label,
@@ -291,7 +310,7 @@ export default function AddProductScreen() {
           packaging_image: item.packaging_image || "",
           total_stock: item.total_stock?.toString() || "0",
           status: item.status || "Active",
-          images: Array.isArray(item.images) ? item.images : (item.images ? JSON.parse(item.images) : [])
+          images: parseImageCollection(item.images)
         });
       } catch (err) {
         console.error(err);
@@ -323,17 +342,25 @@ export default function AddProductScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: field !== "images",
+        allowsMultipleSelection: field === "images",
+        selectionLimit: field === "images" ? 8 : 1,
         quality: 0.6,
         base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const base64Img = `data:image/jpeg;base64,${asset.base64}`;
         if (field === 'images') {
-          setForm(prev => ({ ...prev, images: [base64Img] }));
+          const selectedImages = result.assets
+            .filter((asset) => asset.base64)
+            .map((asset) => `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`);
+          setForm((prev) => ({
+            ...prev,
+            images: [...prev.images, ...selectedImages].slice(0, 8),
+          }));
         } else {
+          const asset = result.assets[0];
+          const base64Img = `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`;
           setForm(prev => ({ ...prev, packaging_image: base64Img }));
         }
       }
@@ -341,6 +368,13 @@ export default function AddProductScreen() {
       console.error("Image pick error:", e);
       showAppDialog("Could not select image", "Please try choosing the image again.");
     }
+  };
+
+  const removeProductImage = (index: number) => {
+    setForm((previous) => ({
+      ...previous,
+      images: previous.images.filter((_, imageIndex) => imageIndex !== index),
+    }));
   };
 
   const handleSubmit = async () => {
@@ -358,7 +392,7 @@ export default function AddProductScreen() {
       offer: Number(form.offer) || 0,
       final_price: Number(computedFinalPrice) || 0,
       stock: Number(form.total_stock) || 0,
-      images: []
+      images: form.images
     };
 
     const payload = {
@@ -886,9 +920,49 @@ export default function AddProductScreen() {
                 <Text style={{ fontSize: 14, fontWeight: "600", color: colors.primary, marginTop: 8 }}>
                   Upload Product Image
                 </Text>
-                {form.images.length > 0 && <Text style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}>Image Selected</Text>}
+                <Text style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}>
+                  {form.images.length > 0
+                    ? `${form.images.length} image${form.images.length === 1 ? "" : "s"} selected`
+                    : "Select up to 8 images"}
+                </Text>
               </Pressable>
             </FormGroup>
+            {form.images.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+              >
+                {form.images.map((image, index) => (
+                  <View
+                    key={`${image.slice(0, 24)}-${index}`}
+                    style={{ position: "relative" }}
+                  >
+                    <ExpoImage
+                      source={{ uri: image }}
+                      style={{ width: 58, height: 58, borderRadius: 10 }}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      onPress={() => removeProductImage(index)}
+                      style={{
+                        position: "absolute",
+                        top: -6,
+                        right: -6,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#C62828",
+                      }}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           <View style={{ flex: 1 }}>
@@ -910,9 +984,16 @@ export default function AddProductScreen() {
                 <Text style={{ fontSize: 14, fontWeight: "600", color: '#8E24AA', marginTop: 8 }}>
                   Upload Packaging Image
                 </Text>
-                {form.packaging_image ? <Text style={{ fontSize: 11, color: '#8E24AA', marginTop: 4 }}>Image Selected</Text> : null}
+                {form.packaging_image ? <Text style={{ fontSize: 11, color: '#8E24AA', marginTop: 4 }}>Image selected</Text> : null}
               </Pressable>
             </FormGroup>
+            {form.packaging_image ? (
+              <ExpoImage
+                source={{ uri: form.packaging_image }}
+                style={{ width: "100%", height: 58, borderRadius: 10, marginTop: -8 }}
+                contentFit="cover"
+              />
+            ) : null}
           </View>
         </View>
 

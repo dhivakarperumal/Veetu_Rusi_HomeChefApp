@@ -28,6 +28,7 @@ type ProductFilter = (typeof PRODUCT_FILTERS)[number];
 
 const resolveImageUrl = (path: string) => {
   if (!path) return path;
+  if (path.startsWith("data:image/")) return path;
   let resolvedPath = path;
   if (path.includes("localhost:5000")) {
     resolvedPath = path.replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL);
@@ -42,26 +43,25 @@ const resolveImageUrl = (path: string) => {
 
 const getProductImage = (product: any) => {
   try {
-    if (product.images) {
-      let imgs = product.images;
-      if (typeof imgs === "string") {
-        try {
-          const parsed = JSON.parse(imgs);
-          if (typeof parsed === "string") {
-            imgs = JSON.parse(parsed); // Handle double stringified
-          } else {
-            imgs = parsed;
-          }
-        } catch {
-          // If it fails to parse, it might just be a plain URL string
-          if (imgs.includes("/") || imgs.includes(".")) {
-            return resolveImageUrl(imgs);
-          }
-        }
+    let imgs: unknown = product.images;
+    for (let pass = 0; pass < 2 && typeof imgs === "string"; pass += 1) {
+      try {
+        imgs = JSON.parse(imgs);
+      } catch {
+        break;
       }
-      if (Array.isArray(imgs) && imgs.length > 0 && imgs[0]) {
-        return resolveImageUrl(imgs[0]);
-      }
+    }
+    if (Array.isArray(imgs)) {
+      const firstImage = imgs.find(
+        (image): image is string => typeof image === "string" && image.trim().length > 0,
+      );
+      if (firstImage) return resolveImageUrl(firstImage.trim());
+    }
+    if (
+      typeof imgs === "string" &&
+      (imgs.startsWith("http") || imgs.startsWith("/") || imgs.startsWith("data:image/"))
+    ) {
+      return resolveImageUrl(imgs);
     }
     if (product.packaging_image) {
       return resolveImageUrl(product.packaging_image);
