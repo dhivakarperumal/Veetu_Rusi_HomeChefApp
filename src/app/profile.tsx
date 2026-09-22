@@ -1296,28 +1296,19 @@ export default function ProfileScreen() {
                       </Text>
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => handleUploadDocument(doc.field, doc.label)}
-                      disabled={!!uploadingDoc}
+                    <Text
                       style={{
-                        backgroundColor: "#FFF3E0",
-                        borderRadius: 8,
                         paddingHorizontal: 10,
                         paddingVertical: 6,
-                        opacity: uploadingDoc ? 0.6 : 1,
+                        borderRadius: 8,
+                        backgroundColor: "#F1F3F2",
+                        fontSize: 11,
+                        fontWeight: "700",
+                        color: colors.muted,
                       }}
                     >
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "700",
-                          color: "#E65100",
-                        }}
-                      >
-                        {uploadingDoc === doc.field ? "Uploading..." : "Upload"}
-                      </Text>
-                    </TouchableOpacity>
+                      Not uploaded
+                    </Text>
                   )}
                 </View>
                 <Text
