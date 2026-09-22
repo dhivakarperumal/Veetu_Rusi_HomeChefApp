@@ -26,28 +26,34 @@ const resolveImageUrl = (path: string) => {
   if (!trimmedPath) return trimmedPath;
   if (trimmedPath.startsWith("data:")) return trimmedPath;
 
-  let imagePath = trimmedPath;
-  if (/^https?:\/\//i.test(trimmedPath)) {
-    try {
-      const parsedUrl = new URL(trimmedPath);
-      imagePath = `${parsedUrl.pathname}${parsedUrl.search}`;
-    } catch {
-      imagePath = trimmedPath.replace(/^https?:\/\/[^/]+/i, "");
-    }
+  if (trimmedPath.includes("localhost:5000") || trimmedPath.includes("127.0.0.1:5000")) {
+    return trimmedPath
+      .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
+      .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
   }
 
-  return `${IMAGE_BASE_URL}/${imagePath.replace(/^\/+/, "")}`;
+  if (/^https?:\/\//i.test(trimmedPath)) return trimmedPath;
+
+  return trimmedPath.startsWith("/")
+    ? `${IMAGE_BASE_URL}${trimmedPath}`
+    : `${IMAGE_BASE_URL}/${trimmedPath}`;
 };
 
 const getProductImage = (item: any) => {
   try {
     const imageValues = [
       item.image,
+      item.image_url,
+      item.product_image,
+      item.food_image,
       item.images,
       item.packaging_image,
       item.product?.image,
+      item.product?.image_url,
+      item.product?.product_image,
       item.product?.images,
       item.food?.image,
+      item.food?.image_url,
       item.food?.images,
     ];
 
@@ -59,6 +65,15 @@ const getProductImage = (item: any) => {
             (image) => typeof image === "string" && image.trim(),
           );
           break;
+        }
+        if (parsedValue && typeof parsedValue === "object") {
+          parsedValue =
+            parsedValue.url ||
+            parsedValue.uri ||
+            parsedValue.path ||
+            parsedValue.image ||
+            parsedValue.src;
+          continue;
         }
         if (typeof parsedValue !== "string") break;
 
