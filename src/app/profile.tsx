@@ -23,18 +23,34 @@ import BottomBar from "./componets/buttombar";
 
 // ── Image resolver ────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+const HOME_CHEF_UPLOADS_PATH = "/uploads/homechefs";
 const resolveUrl = (path: string | null | undefined): string | null => {
   if (!path || typeof path !== "string") return null;
-  const t = path.trim();
+  const t = path.trim().replace(/\\/g, "/");
   if (!t) return null;
   if (t.includes("localhost:5000") || t.includes("127.0.0.1:5000")) {
-    return t
+    return resolveUrl(
+      t
       .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
-      .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
+      .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL),
+    );
   }
-  if (t.startsWith("http")) return t;
+  if (t.startsWith("http")) {
+    try {
+      const parsed = new URL(t);
+      const pathname = parsed.pathname.replace(/^\/+/, "");
+      if (pathname && !pathname.startsWith("uploads/")) {
+        parsed.pathname = `${HOME_CHEF_UPLOADS_PATH}/${pathname}`;
+      }
+      return parsed.toString();
+    } catch {
+      return t;
+    }
+  }
   if (t.startsWith("//")) return `https:${t}`;
-  return t.startsWith("/") ? `${IMAGE_BASE_URL}${t}` : `${IMAGE_BASE_URL}/${t}`;
+  if (t.startsWith("/uploads/")) return `${IMAGE_BASE_URL}${t}`;
+  if (t.startsWith("/")) return `${IMAGE_BASE_URL}${HOME_CHEF_UPLOADS_PATH}${t}`;
+  return `${IMAGE_BASE_URL}${HOME_CHEF_UPLOADS_PATH}/${t.replace(/^\/+/, "")}`;
 };
 
 type ProfileDialogTone = "default" | "danger" | "success" | "error";
