@@ -26,6 +26,7 @@ const resolveImageUrl = (path: string): string => {
   if (!path || typeof path !== "string") return "";
   const trimmed = path.trim();
   if (!trimmed) return "";
+  if (trimmed.startsWith("data:image/")) return trimmed;
 
   // Replace any localhost / 127.0.0.1 origin with the real server IP
   if (
@@ -75,9 +76,27 @@ const getFoodImage = (item: any): string => {
   try {
     let imgs: any = item.images;
 
+    if (typeof imgs === "string" && imgs.trim()) {
+      try {
+        imgs = JSON.parse(imgs);
+      } catch {
+        // Keep a direct image URL or data URI as-is.
+      }
+    }
+
+    if (typeof imgs === "string" && imgs.trim()) {
+      try {
+        imgs = JSON.parse(imgs);
+      } catch {
+        // The value is already a direct image path.
+      }
+    }
+
     // Case 1: already parsed into an array by axios
     if (Array.isArray(imgs)) {
-      const first = imgs.find((u: any) => typeof u === "string" && u.trim());
+      const first = imgs.find(
+        (u: any) => typeof u === "string" && u.trim(),
+      );
       if (first) {
         const url = resolveImageUrl(first.trim());
         return url;
@@ -85,40 +104,13 @@ const getFoodImage = (item: any): string => {
     }
 
     // Case 2: string – JSON array, JSON string, or bare URL
-    if (typeof imgs === "string" && imgs.trim()) {
-      let parsed: any = imgs.trim();
-
-      // Up to 2 parse passes (handles double-stringified JSON)
-      for (let i = 0; i < 2; i++) {
-        try {
-          parsed = JSON.parse(parsed);
-        } catch {
-          break;
-        }
-        if (Array.isArray(parsed)) {
-          const first = parsed.find(
-            (u: any) => typeof u === "string" && u.trim(),
-          );
-          if (first) {
-            const url = resolveImageUrl(first.trim());
-            return url;
-          }
-        }
-        if (
-          typeof parsed === "string" &&
-          (parsed.startsWith("http") || parsed.startsWith("/"))
-        ) {
-          const url = resolveImageUrl(parsed.trim());
-          return url;
-        }
-      }
-
-      // Raw URL string — not JSON at all
-      const raw = imgs.trim();
-      if (raw.startsWith("http") || raw.startsWith("/")) {
-        const url = resolveImageUrl(raw);
-        return url;
-      }
+    if (
+      typeof imgs === "string" &&
+      (imgs.trim().startsWith("http") ||
+        imgs.trim().startsWith("/") ||
+        imgs.trim().startsWith("data:image/"))
+    ) {
+      return resolveImageUrl(imgs);
     }
 
     // Case 3: packaging_image fallback
