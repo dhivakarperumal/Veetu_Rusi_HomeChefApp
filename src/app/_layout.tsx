@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import * as Device from "expo-device";
+import * as NavigationBar from "expo-navigation-bar";
 import { Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -85,6 +86,12 @@ export default function RootLayout() {
   useOrderPolling(15000);
 
   useEffect(() => subscribeToAppDialog(setDialog), []);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    NavigationBar.setStyle("dark");
+  }, []);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then((token) => {
