@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, isNewOrderStatus, logoutUser } from "../../api";
+import { showAppDialog } from "../../lib/app-dialog";
 
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
@@ -113,10 +114,21 @@ export default function TopHeader({
   const greetingName =
     user?.firstName || user?.name || profileName.split(" ")[0] || "Chef";
 
-  const handleLogout = async () => {
+  const confirmLogout = async () => {
     setShowProfileDrop(false);
     await logoutUser();
     router.replace("/");
+  };
+
+  const handleLogout = () => {
+    showAppDialog(
+      "Log out of Veetu Rusi?",
+      "You will need to sign in again to manage your kitchen.",
+      [
+        { text: "Stay signed in", style: "cancel" },
+        { text: "Log out", style: "destructive", onPress: confirmLogout },
+      ],
+    );
   };
 
   return (
