@@ -2,19 +2,19 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import {
-    CART_KEY,
-    loadMaterialCollection,
-    saveMaterialCollection,
+  CART_KEY,
+  loadMaterialCollection,
+  saveMaterialCollection,
 } from "../lib/materials-store";
 import BottomBar from "./componets/buttombar";
 import PageHeader from "./componets/pageheader";
@@ -33,6 +33,7 @@ const FIELD_NAMES = [
   ["country", "Country"],
   ["zip_code", "ZIP code"],
 ] as const;
+const RAZORPAY_KEY_ID = "rzp_test_SGj8n5SyKSE10b";
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -168,6 +169,27 @@ export default function CheckoutScreen() {
     }
   };
 
+  const saveOrder = async (paymentId?: string) => {
+    const paymentCompleted = paymentMethod === "razorpay";
+    await api.post("/orders", {
+      ...form,
+      user_id: user?.user_id || user?.id || form.user_id,
+      email: form.customer_email,
+      payment_method: paymentCompleted ? "Online Payment" : "Cash on Delivery",
+      payment_status: paymentCompleted ? "paid" : "pending",
+      payment_id: paymentId || null,
+      items: items.map((item) => ({
+        product_id: item.product_id || item.id,
+        quantity: Number(item.quantity) || 1,
+        price: item.offer_price || item.price || item.mrp || 0,
+        image: item.images,
+      })),
+      total_amount: total,
+      created_at: new Date().toISOString(),
+    });
+    if (!buyNowProduct) await saveMaterialCollection(CART_KEY, []);
+  };
+
   const placeOrder = async () => {
     const missing = FIELD_NAMES.find(([key]) => !form[key]?.trim());
     if (missing)
@@ -189,27 +211,48 @@ export default function CheckoutScreen() {
     );
     setSubmitting(true);
     try {
-      await api.post("/orders", {
-        ...form,
-        user_id: user?.user_id || user?.id || form.user_id,
-        email: form.customer_email,
-        payment_method:
-          paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment",
-        payment_status: "pending",
-        items: items.map((item) => ({
-          product_id: item.product_id || item.id,
-          quantity: Number(item.quantity) || 1,
-          price: item.offer_price || item.price || item.mrp || 0,
-          image: item.images,
-        })),
-        total_amount: total,
-        created_at: new Date().toISOString(),
-      });
-      if (!buyNowProduct) await saveMaterialCollection(CART_KEY, []);
+      if (paymentMethod === "razorpay") {
+        let RazorpayCheckout: any;
+        try {
+          RazorpayCheckout = require("react-native-razorpay").default;
+        } catch {
+          Alert.alert(
+            "Payment unavailable",
+            "Razorpay requires an Android development build. It is not available in Expo Go.",
+          );
+          return;
+        }
+
+        const payment = await RazorpayCheckout.open({
+          key: RAZORPAY_KEY_ID,
+          amount: Math.round(total * 100),
+          currency: "INR",
+          name: "Veetu Rusi",
+          description: "Materials order payment",
+          prefill: {
+            name: form.customer_name,
+            email: form.customer_email,
+            contact: form.customer_phone,
+          },
+          theme: { color: GREEN },
+        });
+        await saveOrder(payment?.razorpay_payment_id);
+      } else {
+        await saveOrder();
+      }
+
       Alert.alert("Order placed", "Your materials order has been submitted.", [
         { text: "Done", onPress: () => router.replace("/buy-materials") },
       ]);
-    } catch {
+    } catch (error: any) {
+      if (paymentMethod === "razorpay") {
+        console.warn("Razorpay payment was cancelled or failed", error);
+        Alert.alert(
+          "Payment not completed",
+          error?.description || "The payment was not completed. Your order was not placed.",
+        );
+        return;
+      }
       Alert.alert(
         "Order failed",
         "Could not place your order. Please try again.",
