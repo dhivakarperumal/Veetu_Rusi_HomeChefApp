@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import api, { getStoredUser } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -235,7 +235,7 @@ export default function AddDishScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to upload images.');
+        showAppDialog("Permission denied", "Please allow camera roll access to upload images.");
         return;
       }
 
@@ -257,13 +257,13 @@ export default function AddDishScreen() {
       }
     } catch (e) {
       console.error("Image pick error:", e);
-      Alert.alert("Error", "Could not select image.");
+      showAppDialog("Could not select image", "Please try choosing the image again.");
     }
   };
 
   const handleSubmit = async () => {
     if (!form.category || !form.name || !form.description || !form.mrp) {
-      Alert.alert("Missing Fields", "Please complete all required fields (Name, Category, Description, MRP).");
+      showAppDialog("Missing details", "Please complete the required name, category, description, and MRP fields.");
       return;
     }
     
@@ -282,15 +282,15 @@ export default function AddDishScreen() {
     try {
       if (id && id !== 'new') {
         await api.put(`/chef-foods/${id}`, payload);
-        Alert.alert("Success", "Food item updated successfully.");
+        showAppDialog("Dish updated", "Your food item was updated successfully.");
       } else {
         await api.post("/chef-foods", payload);
-        Alert.alert("Success", "Food item added successfully.");
+        showAppDialog("Dish added", "Your new food item is ready in your menu.");
       }
       router.back();
     } catch (err: any) {
       console.error(err);
-      Alert.alert("Error", err.response?.data?.message || "Failed to save food item.");
+      showAppDialog("Could not save dish", err.response?.data?.message || "Please try again.");
     } finally {
       setLoading(false);
     }

@@ -2,17 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -525,7 +525,7 @@ export default function OrdersScreen() {
       await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
       await fetchOrders();
     } catch (error) {
-      Alert.alert("Could not accept order", getApiErrorMessage(error));
+      showAppDialog("Could not accept order", getApiErrorMessage(error));
     } finally {
       setActionId(null);
     }
@@ -556,7 +556,7 @@ export default function OrdersScreen() {
       closeCancelModal();
       await fetchOrders();
     } catch (error) {
-      Alert.alert("Could not cancel order", getApiErrorMessage(error));
+      showAppDialog("Could not cancel order", getApiErrorMessage(error));
     } finally {
       setActionId(null);
     }
@@ -571,7 +571,7 @@ export default function OrdersScreen() {
       });
       await fetchOrders();
     } catch (error) {
-      Alert.alert("Could not update order", getApiErrorMessage(error));
+      showAppDialog("Could not update order", getApiErrorMessage(error));
     } finally {
       setActionId(null);
     }
@@ -584,7 +584,7 @@ export default function OrdersScreen() {
       await api.patch(`/user-food-orders/status/${id}`, { status });
       await fetchOrders();
     } catch (error) {
-      Alert.alert("Could not update order", getApiErrorMessage(error));
+      showAppDialog("Could not update order", getApiErrorMessage(error));
     } finally {
       setActionId(null);
     }

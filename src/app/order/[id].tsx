@@ -3,20 +3,20 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Linking,
+    Pressable,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-  API_BASE_URL,
-  getApiErrorMessage,
-  isNewOrderStatus,
+    API_BASE_URL,
+    getApiErrorMessage,
+    isNewOrderStatus,
 } from "../../api";
+import { showAppDialog } from "../../lib/app-dialog";
 import { colors } from "../../theme/colors";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -266,20 +266,20 @@ export default function OrderDetailScreen() {
     setActionLoading(true);
     try {
       await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
-      Alert.alert(
+      showAppDialog(
         "Order Accepted",
         `#${order.order_id || id} has been accepted!`,
       );
       router.back();
     } catch (err) {
-      Alert.alert("Could not accept order", getApiErrorMessage(err));
+      showAppDialog("Could not accept order", getApiErrorMessage(err));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReject = () => {
-    Alert.alert("Reject Order", "Are you sure you want to reject this order?", [
+    showAppDialog("Reject Order", "Are you sure you want to reject this order?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Reject",
@@ -293,7 +293,7 @@ export default function OrderDetailScreen() {
             });
             router.back();
           } catch (err) {
-            Alert.alert("Could not reject order", getApiErrorMessage(err));
+            showAppDialog("Could not reject order", getApiErrorMessage(err));
           } finally {
             setActionLoading(false);
           }
@@ -311,13 +311,13 @@ export default function OrderDetailScreen() {
         await api.patch(`/user-food-orders/status/${id}`, { status });
         setOrder((previous: any) => ({ ...previous, status }));
       } catch (error) {
-        Alert.alert("Could not update order", getApiErrorMessage(error));
+        showAppDialog("Could not update order", getApiErrorMessage(error));
       } finally {
         setActionLoading(false);
       }
     };
 
-    Alert.alert("Update Order Status", "Choose the new status", [
+    showAppDialog("Update Order Status", "Choose the new status", [
       ...STATUS_OPTIONS.filter((option) => option.value !== order.status).map(
         (option) => ({
           text: option.label,

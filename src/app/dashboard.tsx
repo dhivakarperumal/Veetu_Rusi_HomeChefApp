@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Modal,
     Pressable,
     RefreshControl,
@@ -18,6 +17,7 @@ import api, {
     getApiErrorMessage,
     isNewOrderStatus,
 } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
       setPopupOrder(null);
       await fetchData();
     } catch (error) {
-      Alert.alert(
+      showAppDialog(
         status === "Accepted"
           ? "Could not accept order"
           : "Could not reject order",

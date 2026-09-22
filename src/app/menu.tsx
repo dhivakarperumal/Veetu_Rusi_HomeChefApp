@@ -1,20 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Switch,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -282,7 +282,7 @@ export default function MenuScreen() {
       await api.put(endpoint, { status: newStatus });
     } catch (error) {
       console.error(`Failed to update ${item.type} status`, error);
-      Alert.alert("Error", `Failed to update status for ${item.name}`);
+      showAppDialog("Could not update status", `Failed to update status for ${item.name}.`);
       // Revert on failure
       setItems((prev) =>
         prev.map((i) =>

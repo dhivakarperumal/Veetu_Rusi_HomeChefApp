@@ -6,7 +6,12 @@ import { Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../../global.css";
 import api from "../api";
+import AppDialog from "../components/AppDialog";
 import { useOrderPolling } from "../hooks/useOrderPolling";
+import {
+    subscribeToAppDialog,
+    type AppDialogOptions,
+} from "../lib/app-dialog";
 import { getNotifications } from "../lib/notifications";
 
 const Notifications = getNotifications();
@@ -72,11 +77,14 @@ async function registerForPushNotificationsAsync() {
 
 export default function RootLayout() {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>("");
+  const [dialog, setDialog] = useState<AppDialogOptions | null>(null);
   const notificationListener = useRef<{ remove: () => void } | null>(null);
   const responseListener = useRef<{ remove: () => void } | null>(null);
 
   // Start polling for new orders (checks every 15 seconds)
   useOrderPolling(15000);
+
+  useEffect(() => subscribeToAppDialog(setDialog), []);
 
   useEffect(() => {
     registerForPushNotificationsAsync().then((token) => {
@@ -120,6 +128,7 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
     </SafeAreaProvider>
   );
 }

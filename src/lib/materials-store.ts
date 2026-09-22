@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert, Platform, ToastAndroid } from "react-native";
+import { Platform, ToastAndroid } from "react-native";
 import { API_BASE_URL } from "../api";
+import { showAppDialog } from "./app-dialog";
 
 export const FAVORITES_KEY = "buyMaterialsFavorites";
 export const CART_KEY = "buyMaterialsCart";
@@ -9,7 +10,7 @@ export function showMaterialToast(message: string) {
   if (Platform.OS === "android") {
     ToastAndroid.show(message, ToastAndroid.SHORT);
   } else {
-    Alert.alert("Materials", message);
+    showAppDialog("Materials", message);
   }
 }
 

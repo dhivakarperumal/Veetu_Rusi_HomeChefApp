@@ -3,16 +3,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -293,7 +293,7 @@ export default function MyProductsScreen() {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert(
+    showAppDialog(
       "Delete Product",
       "Are you sure you want to delete this product?",
       [
