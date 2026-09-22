@@ -1,6 +1,5 @@
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -8,9 +7,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../../global.css";
 import api from "../api";
 import { useOrderPolling } from "../hooks/useOrderPolling";
+import { getNotifications } from "../lib/notifications";
 
-// Configure global notification handler
-Notifications.setNotificationHandler({
+const Notifications = getNotifications();
+
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -21,6 +22,7 @@ Notifications.setNotificationHandler({
 
 async function registerForPushNotificationsAsync() {
   let token;
+  if (!Notifications) return token;
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -70,8 +72,8 @@ async function registerForPushNotificationsAsync() {
 
 export default function RootLayout() {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>("");
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const notificationListener = useRef<{ remove: () => void } | null>(null);
+  const responseListener = useRef<{ remove: () => void } | null>(null);
 
   // Start polling for new orders (checks every 15 seconds)
   useOrderPolling(15000);
@@ -91,15 +93,17 @@ export default function RootLayout() {
       }
     });
 
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
-        console.log("Notification received:", notification);
-      });
+    if (Notifications) {
+      notificationListener.current =
+        Notifications.addNotificationReceivedListener((notification) => {
+          console.log("Notification received:", notification);
+        });
 
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("Notification tapped:", response);
-      });
+      responseListener.current =
+        Notifications.addNotificationResponseReceivedListener((response) => {
+          console.log("Notification tapped:", response);
+        });
+    }
 
     return () => {
       notificationListener.current?.remove();

@@ -3,15 +3,15 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
-import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
 import {
     CART_KEY,
     getMaterialImage,
     loadMaterialCollection,
     saveMaterialCollection,
     setMaterialInCollection,
-} from "./materials-store";
+} from "../lib/materials-store";
+import BottomBar from "./componets/buttombar";
+import PageHeader from "./componets/pageheader";
 
 export default function CartScreen() {
   const router = useRouter();

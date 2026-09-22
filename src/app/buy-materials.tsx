@@ -3,25 +3,25 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    RefreshControl,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
+import {
+    CART_KEY,
+    FAVORITES_KEY,
+    getMaterialImage,
+    loadMaterialCollection,
+    setMaterialInCollection,
+    showMaterialToast,
+} from "../lib/materials-store";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
-import {
-  CART_KEY,
-  FAVORITES_KEY,
-  getMaterialImage,
-  loadMaterialCollection,
-  setMaterialInCollection,
-  showMaterialToast,
-} from "./materials-store";
 
 type Product = {
   id: string | number;

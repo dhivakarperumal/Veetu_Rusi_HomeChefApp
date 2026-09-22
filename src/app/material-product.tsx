@@ -3,7 +3,6 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import PageHeader from "./componets/pageheader";
 import {
     CART_KEY,
     FAVORITES_KEY,
@@ -11,7 +10,8 @@ import {
     loadMaterialCollection,
     setMaterialInCollection,
     showMaterialToast,
-} from "./materials-store";
+} from "../lib/materials-store";
+import PageHeader from "./componets/pageheader";
 
 export default function MaterialProductScreen() {
   const router = useRouter();

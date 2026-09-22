@@ -11,13 +11,13 @@ import {
     View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
-import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
 import {
     CART_KEY,
     loadMaterialCollection,
     saveMaterialCollection,
-} from "./materials-store";
+} from "../lib/materials-store";
+import BottomBar from "./componets/buttombar";
+import PageHeader from "./componets/pageheader";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";

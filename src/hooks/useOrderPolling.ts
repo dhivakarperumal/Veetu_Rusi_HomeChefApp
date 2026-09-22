@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 import { useEffect, useRef } from "react";
 import api, { isNewOrderStatus } from "../api";
+import { getNotifications } from "../lib/notifications";
 
 export function useOrderPolling(intervalMs = 15000) {
   const seenOrdersRef = useRef<Set<string>>(new Set());
@@ -9,6 +9,7 @@ export function useOrderPolling(intervalMs = 15000) {
   const isCheckingRef = useRef(false);
 
   useEffect(() => {
+    const notifications = getNotifications();
     // Load previously seen orders from storage so we don't notify on reload
     const loadSeenOrders = async () => {
       try {
@@ -64,7 +65,7 @@ export function useOrderPolling(intervalMs = 15000) {
             const displayId =
               latestNewOrder.order_id || latestNewOrder.id || "Unknown";
 
-            await Notifications.scheduleNotificationAsync({
+            await notifications?.scheduleNotificationAsync({
               content: {
                 title: "New Order Received! 👨‍🍳",
                 body: `Order #${displayId} is waiting for your acceptance.`,
