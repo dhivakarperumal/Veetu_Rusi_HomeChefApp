@@ -229,6 +229,14 @@ export default function CheckoutScreen() {
           currency: "INR",
           name: "Veetu Rusi",
           description: "Materials order payment",
+          method: {
+            card: true,
+            netbanking: true,
+            upi: true,
+            wallet: true,
+            emi: true,
+            paylater: true,
+          },
           prefill: {
             name: form.customer_name,
             email: form.customer_email,
