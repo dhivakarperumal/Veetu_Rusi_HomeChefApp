@@ -7,8 +7,8 @@ import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Linking,
+    Modal,
     RefreshControl,
     ScrollView,
     Text,
@@ -37,23 +37,179 @@ const resolveUrl = (path: string | null | undefined): string | null => {
   return t.startsWith("/") ? `${IMAGE_BASE_URL}${t}` : `${IMAGE_BASE_URL}/${t}`;
 };
 
-const openDocumentUrl = async (docUrl: string | null | undefined) => {
+type ProfileDialogTone = "default" | "danger" | "success" | "error";
+
+type ProfileDialogOptions = {
+  title: string;
+  message: string;
+  tone?: ProfileDialogTone;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm?: () => void | Promise<void>;
+};
+
+type ProfileDialogProps = ProfileDialogOptions & {
+  visible: boolean;
+  onClose: () => void;
+};
+
+function ProfileDialog({
+  visible,
+  title,
+  message,
+  tone = "default",
+  confirmLabel = "Okay",
+  cancelLabel,
+  onConfirm,
+  onClose,
+}: ProfileDialogProps) {
+  const isDanger = tone === "danger";
+  const accent = isDanger ? "#C62828" : colors.primary;
+  const icon =
+    tone === "success"
+      ? "checkmark-circle"
+      : tone === "error"
+        ? "alert-circle"
+        : isDanger
+          ? "log-out"
+          : "information-circle";
+
+  const handleConfirm = async () => {
+    onClose();
+    await onConfirm?.();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(17, 35, 27, 0.52)",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 380,
+            backgroundColor: colors.cardBackground,
+            borderRadius: 24,
+            padding: 24,
+            shadowColor: "#000",
+            shadowOpacity: 0.2,
+            shadowOffset: { width: 0, height: 10 },
+            shadowRadius: 24,
+            elevation: 12,
+          }}
+        >
+          <View
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 18,
+              backgroundColor: isDanger ? "#FFEBEE" : colors.softCard,
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 18,
+            }}
+          >
+            <Ionicons name={icon as any} size={27} color={accent} />
+          </View>
+          <Text
+            style={{
+              fontSize: 21,
+              fontWeight: "800",
+              color: colors.primaryDark,
+              marginBottom: 8,
+            }}
+          >
+            {title}
+          </Text>
+          <Text
+            style={{
+              fontSize: 14,
+              lineHeight: 21,
+              color: colors.muted,
+              marginBottom: 24,
+            }}
+          >
+            {message}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {cancelLabel && (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={onClose}
+                style={{
+                  flex: 1,
+                  borderRadius: 13,
+                  borderWidth: 1.5,
+                  borderColor: colors.border,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primaryDark }}>
+                  {cancelLabel}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleConfirm}
+              style={{
+                flex: 1,
+                borderRadius: 13,
+                backgroundColor: accent,
+                paddingVertical: 13,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff" }}>
+                {confirmLabel}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const openDocumentUrl = async (
+  docUrl: string | null | undefined,
+  showDialog: (options: ProfileDialogOptions) => void,
+) => {
   const normalizedUrl = resolveUrl(docUrl);
   if (!normalizedUrl) {
-    Alert.alert("Document unavailable", "This document is not available to view yet.");
+    showDialog({
+      title: "Document unavailable",
+      message: "This document is not available to view yet.",
+      tone: "error",
+    });
     return;
   }
 
   try {
     const supported = await Linking.canOpenURL(normalizedUrl);
     if (!supported) {
-      Alert.alert("Unable to open", "This document cannot be opened on this device.");
+      showDialog({
+        title: "Unable to open",
+        message: "This document cannot be opened on this device.",
+        tone: "error",
+      });
       return;
     }
     await Linking.openURL(normalizedUrl);
   } catch (error) {
     console.warn("Open document failed:", error);
-    Alert.alert("Could not open document", "The file link is invalid or unavailable.");
+    showDialog({
+      title: "Could not open document",
+      message: "The file link is invalid or unavailable.",
+      tone: "error",
+    });
   }
 };
 
@@ -300,6 +456,9 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", phone: "" });
+  const [dialog, setDialog] = useState<ProfileDialogOptions | null>(null);
+
+  const showDialog = (options: ProfileDialogOptions) => setDialog(options);
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (key: string) =>
@@ -452,10 +611,12 @@ export default function ProfileScreen() {
       const cleanPhone = identity.phone;
 
       if (!cleanFullName || !cleanEmail) {
-        Alert.alert(
-          "Profile incomplete",
-          "Your account needs a valid username and email before uploading documents.",
-        );
+        showDialog({
+          title: "Profile incomplete",
+          message:
+            "Your account needs a valid username and email before uploading documents.",
+          tone: "error",
+        });
         return;
       }
 
@@ -491,20 +652,24 @@ export default function ProfileScreen() {
       const cleanPhone = identity.phone;
 
       if (!identity.username || !cleanEmail) {
-        Alert.alert(
-          "Profile incomplete",
-          "Your account needs a valid username and email before uploading documents.",
-        );
+        showDialog({
+          title: "Profile incomplete",
+          message:
+            "Your account needs a valid username and email before uploading documents.",
+          tone: "error",
+        });
         return;
       }
 
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert(
-          "Permission needed",
-          "Please allow access to your photo library to upload this document.",
-        );
+        showDialog({
+          title: "Permission needed",
+          message:
+            "Please allow access to your photo library to upload this document.",
+          tone: "error",
+        });
         return;
       }
 
@@ -550,21 +715,37 @@ export default function ProfileScreen() {
         }));
       }
 
-      Alert.alert("Success", `${label} uploaded successfully.`);
+      showDialog({
+        title: "Upload complete",
+        message: `${label} uploaded successfully.`,
+        tone: "success",
+      });
     } catch (e: any) {
       console.warn("Document upload failed:", e);
-      Alert.alert(
-        "Upload failed",
-        e?.message || "Could not upload this document. Please try again.",
-      );
+      showDialog({
+        title: "Upload failed",
+        message: e?.message || "Could not upload this document. Please try again.",
+        tone: "error",
+      });
     } finally {
       setUploadingDoc(null);
     }
   };
 
-  const handleLogout = async () => {
+  const confirmLogout = async () => {
     await logoutUser();
     router.replace("/");
+  };
+
+  const handleLogout = () => {
+    showDialog({
+      title: "Log out of Veetu Rusi?",
+      message: "You will need to sign in again to manage your kitchen.",
+      tone: "danger",
+      cancelLabel: "Stay signed in",
+      confirmLabel: "Log out",
+      onConfirm: confirmLogout,
+    });
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -1080,7 +1261,7 @@ export default function ProfileScreen() {
                   {doc.url ? (
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => openDocumentUrl(doc.url)}
+                      onPress={() => openDocumentUrl(doc.url, showDialog)}
                       style={{
                         backgroundColor: colors.primary,
                         borderRadius: 8,
@@ -1314,6 +1495,17 @@ export default function ProfileScreen() {
           Veetu Rusi V2Home Chef · v1.0.0
         </Text>
       </ScrollView>
+
+      <ProfileDialog
+        visible={!!dialog}
+        title={dialog?.title || ""}
+        message={dialog?.message || ""}
+        tone={dialog?.tone}
+        confirmLabel={dialog?.confirmLabel}
+        cancelLabel={dialog?.cancelLabel}
+        onConfirm={dialog?.onConfirm}
+        onClose={() => setDialog(null)}
+      />
 
       <BottomBar />
     </View>
