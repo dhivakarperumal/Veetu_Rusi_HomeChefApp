@@ -1,9 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -35,6 +36,109 @@ const FIELD_NAMES = [
 ] as const;
 const RAZORPAY_KEY_ID = "rzp_test_SGj8n5SyKSE10b";
 
+type CheckoutDialogTone = "info" | "success" | "error";
+
+type CheckoutDialogState = {
+  title: string;
+  message: string;
+  tone: CheckoutDialogTone;
+  buttonLabel?: string;
+  onConfirm?: () => void;
+};
+
+function CheckoutDialog({
+  dialog,
+  onClose,
+}: {
+  dialog: CheckoutDialogState | null;
+  onClose: () => void;
+}) {
+  if (!dialog) return null;
+
+  const accent = dialog.tone === "error" ? "#C62828" : GREEN;
+  const icon =
+    dialog.tone === "success"
+      ? "checkmark-circle"
+      : dialog.tone === "error"
+        ? "alert-circle"
+        : "information-circle";
+
+  const confirm = () => {
+    onClose();
+    dialog.onConfirm?.();
+  };
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(17, 35, 27, 0.54)",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 380,
+            borderRadius: 24,
+            padding: 24,
+            backgroundColor: "#fff",
+            shadowColor: "#000",
+            shadowOpacity: 0.2,
+            shadowOffset: { width: 0, height: 10 },
+            shadowRadius: 24,
+            elevation: 12,
+          }}
+        >
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              backgroundColor: dialog.tone === "error" ? "#FFEBEE" : "#EAF4EE",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 18,
+            }}
+          >
+            <Ionicons name={icon as any} size={29} color={accent} />
+          </View>
+          <Text style={{ fontSize: 21, fontWeight: "800", color: DARK }}>
+            {dialog.title}
+          </Text>
+          <Text
+            style={{
+              marginTop: 8,
+              marginBottom: 24,
+              fontSize: 14,
+              lineHeight: 21,
+              color: MUTED,
+            }}
+          >
+            {dialog.message}
+          </Text>
+          <Pressable
+            onPress={confirm}
+            style={{
+              borderRadius: 13,
+              paddingVertical: 14,
+              alignItems: "center",
+              backgroundColor: accent,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "800" }}>
+              {dialog.buttonLabel || "Done"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const { product: productParam } = useLocalSearchParams<{
@@ -57,6 +161,7 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [dialog, setDialog] = useState<CheckoutDialogState | null>(null);
   const [form, setForm] = useState<Record<string, string>>({
     user_id: "",
     customer_name: "",
@@ -158,12 +263,17 @@ export default function CheckoutScreen() {
         zip_code: address.postalCode || "",
       }));
       setSelectedAddress(null);
-      Alert.alert("Location detected", "Your address has been filled in.");
+      setDialog({
+        title: "Location added",
+        message: "Your delivery address has been filled in from your current location.",
+        tone: "success",
+      });
     } catch {
-      Alert.alert(
-        "Location error",
-        "Could not detect your address. Please enter it manually.",
-      );
+      setDialog({
+        title: "Location unavailable",
+        message: "Could not detect your address. Please enter it manually.",
+        tone: "error",
+      });
     } finally {
       setLocationLoading(false);
     }
@@ -192,16 +302,22 @@ export default function CheckoutScreen() {
 
   const placeOrder = async () => {
     const missing = FIELD_NAMES.find(([key]) => !form[key]?.trim());
-    if (missing)
-      return Alert.alert(
-        "Missing details",
-        `Please enter ${missing[1].toLowerCase()}.`,
-      );
-    if (!items.length)
-      return Alert.alert(
-        "Cart is empty",
-        "Add materials to your cart before checkout.",
-      );
+    if (missing) {
+      setDialog({
+        title: "Almost ready",
+        message: `Please enter your ${missing[1].toLowerCase()} to continue.`,
+        tone: "info",
+      });
+      return;
+    }
+    if (!items.length) {
+      setDialog({
+        title: "Your cart is empty",
+        message: "Add materials to your cart before placing an order.",
+        tone: "info",
+      });
+      return;
+    }
     const total = items.reduce(
       (sum, item) =>
         sum +
@@ -216,10 +332,12 @@ export default function CheckoutScreen() {
         try {
           RazorpayCheckout = require("react-native-razorpay").default;
         } catch {
-          Alert.alert(
-            "Payment unavailable",
-            "Razorpay requires an Android development build. It is not available in Expo Go.",
-          );
+          setDialog({
+            title: "Payment unavailable",
+            message:
+              "Razorpay requires an Android development build. It is not available in Expo Go.",
+            tone: "error",
+          });
           return;
         }
 
@@ -249,22 +367,30 @@ export default function CheckoutScreen() {
         await saveOrder();
       }
 
-      Alert.alert("Order placed", "Your materials order has been submitted.", [
-        { text: "Done", onPress: () => router.replace("/buy-materials") },
-      ]);
+      setDialog({
+        title: "Order placed",
+        message: "Your materials order has been submitted successfully.",
+        tone: "success",
+        buttonLabel: "View materials",
+        onConfirm: () => router.replace("/buy-materials"),
+      });
     } catch (error: any) {
       if (paymentMethod === "razorpay") {
         console.warn("Razorpay payment was cancelled or failed", error);
-        Alert.alert(
-          "Payment not completed",
-          error?.description || "The payment was not completed. Your order was not placed.",
-        );
+        setDialog({
+          title: "Payment not completed",
+          message:
+            error?.description ||
+            "The payment was not completed. Your order was not placed.",
+          tone: "error",
+        });
         return;
       }
-      Alert.alert(
-        "Order failed",
-        "Could not place your order. Please try again.",
-      );
+      setDialog({
+        title: "Order could not be placed",
+        message: "Could not place your order. Please try again.",
+        tone: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -526,6 +652,7 @@ export default function CheckoutScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+      <CheckoutDialog dialog={dialog} onClose={() => setDialog(null)} />
       <BottomBar />
     </View>
   );
