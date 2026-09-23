@@ -118,7 +118,22 @@ export async function loginWithIdentifier(identifier, password) {
     password: String(password || ""),
   });
 
-  const { token, user, message } = response.data || {};
+  const resData = response.data || {};
+  const token =
+    resData.token ||
+    resData.accessToken ||
+    resData.data?.token ||
+    resData.data?.accessToken ||
+    resData.jwt ||
+    resData.authToken;
+
+  const user =
+    resData.user ||
+    resData.data?.user ||
+    resData.chef ||
+    resData.data?.chef;
+
+  const message = resData.message || "Login successful";
 
   if (token) {
     await setAuthToken(token);
@@ -128,7 +143,7 @@ export async function loginWithIdentifier(identifier, password) {
     await AsyncStorage.setItem("userProfile", JSON.stringify(user));
   }
 
-  return { ...response.data, message: message || "Login successful" };
+  return { ...resData, token, user, message };
 }
 
 export async function logoutUser() {

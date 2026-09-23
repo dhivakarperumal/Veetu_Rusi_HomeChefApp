@@ -16,8 +16,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStoredToken, loginWithIdentifier } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+
+const isValidIdentifier = (val: string) => {
+  const t = val.trim();
+  if (!t) return false;
+  if (t.includes("@")) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+  }
+  const digitsOnly = t.replace(/\D/g, "");
+  if (digitsOnly.length >= 8) return true;
+  return t.length >= 3;
+};
+
+const isValidPassword = (val: string) => {
+  return val.trim().length >= 4;
+};
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -33,6 +49,10 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const activeInputRef = useRef<"email" | "password" | null>(null);
+
+  const failedCredentialsRef = useRef<string>("");
+  const autoLoginTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightRef = useRef(false);
 
   const scrollToInput = (inputType: "email" | "password") => {
     activeInputRef.current = inputType;
@@ -84,47 +104,125 @@ export default function LoginScreen() {
           router.replace("/dashboard");
           return;
         }
+        const savedEmail = await AsyncStorage.getItem("lastLoginIdentifier");
+        if (savedEmail) {
+          setEmail(savedEmail);
+        }
       } catch (err) {
-        console.error("Error reading stored token", err);
+        console.error("Error reading stored session/identifier", err);
       } finally {
         setCheckingSession(false);
       }
     };
     restoreSession();
+
+    return () => {
+      if (autoLoginTimerRef.current) {
+        clearTimeout(autoLoginTimerRef.current);
+      }
+    };
   }, []);
 
-  const handleLogin = async () => {
-    Keyboard.dismiss();
-    const cleanEmail = email.trim();
-    const cleanPass = password.trim();
+  const attemptLogin = async (
+    emailToUse?: string,
+    passToUse?: string,
+    options: { isAuto?: boolean } = {},
+  ) => {
+    if (autoLoginTimerRef.current) {
+      clearTimeout(autoLoginTimerRef.current);
+      autoLoginTimerRef.current = null;
+    }
+
+    const cleanEmail = (emailToUse !== undefined ? emailToUse : email).trim();
+    const cleanPass = (passToUse !== undefined ? passToUse : password).trim();
+    const credentialKey = `${cleanEmail.toLowerCase()}:${cleanPass}`;
 
     if (!cleanEmail) {
-      setError("Please enter your email or phone number.");
+      if (!options.isAuto) setError("Please enter your email or phone number.");
       return;
     }
     if (!cleanPass) {
-      setError("Please enter your password.");
+      if (!options.isAuto) setError("Please enter your password.");
       return;
     }
 
+    if (options.isAuto && failedCredentialsRef.current === credentialKey) {
+      return;
+    }
+
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     setLoading(true);
-    setError("");
+    if (!options.isAuto) {
+      setError("");
+      Keyboard.dismiss();
+    }
 
     try {
       const response = await loginWithIdentifier(cleanEmail, cleanPass);
       if (response?.token) {
+        failedCredentialsRef.current = "";
+        Keyboard.dismiss();
+        AsyncStorage.setItem("lastLoginIdentifier", cleanEmail).catch(() => {});
         router.replace("/dashboard");
+        return;
       } else {
         throw new Error(response?.message || "Login failed. Please try again.");
       }
     } catch (err) {
-      const msg =
-        (err as { message?: string })?.message ||
-        (err instanceof Error ? err.message : "Invalid email or password.");
-      setError(msg);
+      failedCredentialsRef.current = credentialKey;
+      const currentKey = `${email.trim().toLowerCase()}:${password.trim()}`;
+      if (!options.isAuto || currentKey === credentialKey) {
+        const msg =
+          (err as { message?: string })?.message ||
+          (err instanceof Error ? err.message : "Invalid email or password.");
+        setError(msg);
+      }
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
+  };
+
+  const scheduleAutoLogin = (emailVal: string, passVal: string, delay = 700) => {
+    if (autoLoginTimerRef.current) {
+      clearTimeout(autoLoginTimerRef.current);
+      autoLoginTimerRef.current = null;
+    }
+
+    const cleanEmail = emailVal.trim();
+    const cleanPass = passVal.trim();
+
+    if (!isValidIdentifier(cleanEmail) || !isValidPassword(cleanPass)) {
+      return;
+    }
+
+    const credKey = `${cleanEmail.toLowerCase()}:${cleanPass}`;
+    if (failedCredentialsRef.current === credKey) {
+      return;
+    }
+
+    autoLoginTimerRef.current = setTimeout(() => {
+      attemptLogin(cleanEmail, cleanPass, { isAuto: true });
+    }, delay);
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (error) setError("");
+    scheduleAutoLogin(text, password, 700);
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (error) setError("");
+    scheduleAutoLogin(email, text, 700);
+  };
+
+  const handleLogin = () => {
+    failedCredentialsRef.current = "";
+    attemptLogin(email, password, { isAuto: false });
   };
 
   const handleForgotPassword = () => {
