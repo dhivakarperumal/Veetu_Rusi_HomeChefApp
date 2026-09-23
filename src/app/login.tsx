@@ -1,6 +1,6 @@
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,29 +11,21 @@ import {
   Pressable,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { getStoredToken, loginWithIdentifier } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
-import { colors } from "../theme/colors";
 
 export default function LoginScreen() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
-
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const passwordRef = useRef<TextInput>(null);
 
@@ -52,7 +44,7 @@ export default function LoginScreen() {
       }
     };
     restoreSession();
-  }, [router]);
+  }, []);
 
   const handleLogin = async () => {
     Keyboard.dismiss();
@@ -97,10 +89,12 @@ export default function LoginScreen() {
         {
           text: "Contact Support",
           onPress: () => {
-            Linking.openURL("https://wa.me/919876543210?text=Hi%2C%20I%20need%20to%20reset%20my%20Veetu%20Rusi%20Home%20Chef%20account%20password").catch(() => {});
+            Linking.openURL(
+              "https://wa.me/919876543210?text=Hi%2C%20I%20need%20to%20reset%20my%20Veetu%20Rusi%20Home%20Chef%20account%20password",
+            ).catch(() => {});
           },
         },
-      ]
+      ],
     );
   };
 
@@ -113,595 +107,278 @@ export default function LoginScreen() {
         {
           text: "WhatsApp Support",
           onPress: () => {
-            Linking.openURL("https://wa.me/919876543210?text=Hello%20Veetu%20Rusi%20Team%2C%20I%20need%20help%20with%20my%20Chef%20Portal").catch(() => {});
+            Linking.openURL(
+              "https://wa.me/919876543210?text=Hello%20Veetu%20Rusi%20Team%2C%20I%20need%20help%20with%20my%20Chef%20Portal",
+            ).catch(() => {});
           },
         },
-      ]
+      ],
     );
   };
 
   if (checkingSession) {
     return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View className="flex-1 bg-[#F4F1EA] items-center justify-center">
+        <ActivityIndicator size="large" color="#1E6A4B" />
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      className="flex-1 bg-[#F4F1EA]"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.pageBackground} />
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          {/* Top Brand Header */}
-          <View style={styles.brandHeader}>
-            <View style={styles.logoBadgeContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require("../../assets/images/ChatGPT Image Aug 14, 2026, 03_06_06 PM.png")}
-                  style={styles.logoImage}
-                  contentFit="contain"
-                />
-              </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F1EA" />
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: "center",
+          paddingHorizontal: 20,
+          paddingTop: Platform.OS === "android" ? 44 : 52,
+          paddingBottom: 36,
+        }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Top Brand Header */}
+        <View className="w-full items-center mb-5">
+          {/* Logo Emblem */}
+          <View className="mb-3">
+            <View className="w-[82px] h-[82px] rounded-full bg-white border-2 border-[#DDE6E1] items-center justify-center overflow-hidden shadow-sm">
+              <Image
+                source={require("../../assets/images/ChatGPT Image Aug 14, 2026, 03_06_06 PM.png")}
+                className="w-[74px] h-[74px]"
+                contentFit="contain"
+              />
             </View>
+          </View>
 
-            <View style={styles.portalPill}>
-              <Ionicons name="restaurant" size={13} color={colors.primary} />
-              <Text style={styles.portalPillText}>CHEF PARTNER PORTAL</Text>
-            </View>
-
-            <Text style={styles.brandTitle}>Veetu Rusi</Text>
-            <Text style={styles.brandTagline}>Cooked with Love • வீட்டு ருசி</Text>
-
-            <Text style={styles.welcomeTitle}>Welcome Back, Chef!</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Sign in to manage your dishes, track incoming orders, and view daily earnings.
+          {/* Portal Badge */}
+          <View className="flex-row items-center gap-1.5 bg-[#EAF4EE] px-3 py-1 rounded-full mb-2 border border-[#D0E5DA]">
+            <Ionicons name="restaurant" size={13} color="#1E6A4B" />
+            <Text className="text-[11px] font-extrabold text-[#1E6A4B] tracking-wider">
+              CHEF PARTNER PORTAL
             </Text>
           </View>
 
-          {/* Main Login Card */}
-          <View style={styles.card}>
-            {/* Card Header */}
-            <View style={styles.cardHeader}>
-              <View style={styles.cardIconWrap}>
-                <MaterialCommunityIcons name="chef-hat" size={24} color={colors.primary} />
-              </View>
-              <View style={styles.cardHeaderTextWrap}>
-                <Text style={styles.cardTitle}>Kitchen Sign In</Text>
-                <Text style={styles.cardSubtitle}>Enter your account credentials</Text>
-              </View>
-            </View>
+          {/* Brand Title */}
+          <Text className="text-3xl font-black text-[#1D3D30] tracking-tight">
+            Veetu Rusi
+          </Text>
+          <Text className="text-xs font-semibold text-[#698077] mt-0.5 mb-2.5">
+            Cooked with Love • வீட்டு ருசி
+          </Text>
 
-            {/* Error Message Banner */}
-            {!!error && (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={18} color="#C62828" />
-                <Text style={styles.errorText}>{error}</Text>
+          {/* Welcome Headings */}
+          <Text className="text-[22px] font-extrabold text-[#1D3D30] text-center mb-1">
+            Welcome Back, Chef!
+          </Text>
+          <Text className="text-[13px] text-[#698077] text-center leading-[18px] max-w-[320px]">
+            Sign in to manage your dishes, track incoming orders, and view daily earnings.
+          </Text>
+        </View>
+
+        {/* Main Login Card */}
+        <View className="w-full bg-white rounded-[24px] px-5 py-[22px] border border-[#DDE6E1] shadow-md mb-5">
+          {/* Card Header */}
+          <View className="flex-row items-center pb-3.5 mb-4 border-b border-[#F0F5F2]">
+            <View className="w-11 h-11 rounded-2xl bg-[#EAF4EE] border border-[#D6EBE0] items-center justify-center mr-3">
+              <MaterialCommunityIcons name="chef-hat" size={24} color="#1E6A4B" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[17px] font-extrabold text-[#1D3D30]">
+                Kitchen Sign In
+              </Text>
+              <Text className="text-xs text-[#698077] mt-0.5">
+                Enter your account credentials
+              </Text>
+            </View>
+          </View>
+
+          {/* Error Banner */}
+          {!!error && (
+            <View className="flex-row items-center bg-[#FDF2F2] border border-[#FCA5A5] rounded-xl px-3 py-2.5 mb-4 gap-2">
+              <Ionicons name="alert-circle" size={18} color="#C62828" />
+              <Text className="flex-1 text-[#B91C1C] text-[13px] font-semibold">
+                {error}
+              </Text>
+            </View>
+          )}
+
+          {/* Email / Username Input */}
+          <View className="mb-4">
+            <Text className="text-[13px] font-bold text-[#1D3D30] mb-1.5 ml-0.5">
+              Email Address or Phone
+            </Text>
+            <View
+              className={`flex-row items-center h-[52px] rounded-[14px] border-[1.5px] px-3 bg-[#FAFCFA] ${
+                error ? "border-[#EF4444] bg-[#FEF2F2]" : "border-[#DDE6E1]"
+              }`}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color="#1E6A4B"
+                style={{ marginRight: 10 }}
+              />
+              <TextInput
+                value={email}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  if (error) setError("");
+                }}
+                placeholder="e.g. chef@veeturusi.com"
+                placeholderTextColor="#8EA399"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                className="flex-1 h-full text-[15px] font-semibold text-[#1D3D30] py-0"
+                maxLength={100}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+              />
+            </View>
+          </View>
+
+          {/* Password Input */}
+          <View className="mb-4">
+            <View className="flex-row justify-between items-center mb-1.5 ml-0.5">
+              <Text className="text-[13px] font-bold text-[#1D3D30]">Password</Text>
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                hitSlop={8}
+                activeOpacity={0.7}
+              >
+                <Text className="text-[12.5px] font-bold text-[#1E6A4B]">
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View
+              className={`flex-row items-center h-[52px] rounded-[14px] border-[1.5px] px-3 bg-[#FAFCFA] ${
+                error ? "border-[#EF4444] bg-[#FEF2F2]" : "border-[#DDE6E1]"
+              }`}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#1E6A4B"
+                style={{ marginRight: 10 }}
+              />
+              <TextInput
+                ref={passwordRef}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  if (error) setError("");
+                }}
+                placeholder="Enter your kitchen password"
+                placeholderTextColor="#8EA399"
+                secureTextEntry={!showPass}
+                className="flex-1 h-full text-[15px] font-semibold text-[#1D3D30] py-0"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPass(!showPass)}
+                className="p-1.5 ml-1"
+                hitSlop={10}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={showPass ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#698077"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Primary Login Button */}
+          <Pressable
+            onPress={handleLogin}
+            disabled={loading}
+            className={`h-[52px] rounded-[14px] bg-[#1E6A4B] items-center justify-center mt-1.5 shadow-md active:bg-[#1D3D30] active:scale-[0.99] ${
+              loading ? "opacity-75" : ""
+            }`}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <View className="flex-row items-center">
+                <Ionicons
+                  name="log-in-outline"
+                  size={20}
+                  color="#FFFFFF"
+                  style={{ marginRight: 8 }}
+                />
+                <Text className="text-white text-base font-extrabold tracking-wide">
+                  Sign In to Kitchen
+                </Text>
               </View>
             )}
+          </Pressable>
 
-            {/* Email / Username Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address or Phone</Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  emailFocused && styles.inputWrapFocused,
-                  !!error && styles.inputWrapError,
-                ]}
-              >
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color={emailFocused ? colors.primary : colors.muted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={(t) => {
-                    setEmail(t);
-                    if (error) setError("");
-                  }}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                  placeholder="e.g. chef@veeturusi.com"
-                  placeholderTextColor="#8EA399"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={styles.textInput}
-                  maxLength={100}
-                  returnKeyType="next"
-                  onSubmitEditing={() => passwordRef.current?.focus()}
-                />
-              </View>
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <View style={styles.passwordLabelRow}>
-                <Text style={styles.inputLabel}>Password</Text>
-                <TouchableOpacity
-                  onPress={handleForgotPassword}
-                  hitSlop={8}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </View>
-              <View
-                style={[
-                  styles.inputWrap,
-                  passwordFocused && styles.inputWrapFocused,
-                  !!error && styles.inputWrapError,
-                ]}
-              >
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color={passwordFocused ? colors.primary : colors.muted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  ref={passwordRef}
-                  value={password}
-                  onChangeText={(t) => {
-                    setPassword(t);
-                    if (error) setError("");
-                  }}
-                  onFocus={() => setPasswordFocused(true)}
-                  onBlur={() => setPasswordFocused(false)}
-                  placeholder="Enter your kitchen password"
-                  placeholderTextColor="#8EA399"
-                  secureTextEntry={!showPass}
-                  style={styles.textInput}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPass(!showPass)}
-                  style={styles.eyeBtn}
-                  hitSlop={10}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={showPass ? "eye-outline" : "eye-off-outline"}
-                    size={20}
-                    color={colors.muted}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Primary Login Button */}
-            <Pressable
-              onPress={handleLogin}
-              disabled={loading}
-              style={({ pressed }) => [
-                styles.loginBtn,
-                pressed && styles.loginBtnPressed,
-                loading && styles.loginBtnDisabled,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <View style={styles.loginBtnContent}>
-                  <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={styles.loginBtnText}>Sign In to Kitchen</Text>
-                </View>
-              )}
-            </Pressable>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or kitchen support</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* WhatsApp / Admin Support Button */}
-            <TouchableOpacity
-              onPress={handleAdminSupport}
-              style={styles.supportBtn}
-              activeOpacity={0.8}
-            >
-              <FontAwesome5 name="whatsapp" size={18} color="#25D366" />
-              <Text style={styles.supportBtnText}>Connect with Kitchen Admin</Text>
-            </TouchableOpacity>
-
-            {/* Security Note */}
-            <View style={styles.securityNote}>
-              <Ionicons name="shield-checkmark" size={15} color={colors.primary} />
-              <Text style={styles.securityNoteText}>
-                Authorized Home Chef Access Only
-              </Text>
-            </View>
+          {/* Divider */}
+          <View className="flex-row items-center my-[18px]">
+            <View className="flex-1 h-px bg-[#E5ECE7]" />
+            <Text className="text-xs text-[#698077] font-semibold px-2.5">
+              or kitchen support
+            </Text>
+            <View className="flex-1 h-px bg-[#E5ECE7]" />
           </View>
 
-          {/* Three Feature Highlights Pill Row */}
-          <View style={styles.featuresRow}>
-            <View style={styles.featurePill}>
-              <Ionicons name="receipt-outline" size={14} color={colors.primary} />
-              <Text style={styles.featurePillText}>Live Orders</Text>
-            </View>
-            <View style={styles.featurePill}>
-              <Ionicons name="trending-up-outline" size={14} color={colors.primary} />
-              <Text style={styles.featurePillText}>Instant Payouts</Text>
-            </View>
-            <View style={styles.featurePill}>
-              <Ionicons name="heart-outline" size={14} color={colors.primary} />
-              <Text style={styles.featurePillText}>Cooked with Love</Text>
-            </View>
-          </View>
+          {/* WhatsApp / Admin Support Button */}
+          <TouchableOpacity
+            onPress={handleAdminSupport}
+            className="flex-row items-center justify-center h-[50px] rounded-[14px] border-[1.5px] border-[#D2E7DC] bg-[#EAF4EE] mb-4"
+            activeOpacity={0.8}
+          >
+            <FontAwesome5 name="whatsapp" size={18} color="#25D366" />
+            <Text className="text-sm font-bold text-[#1D3D30] ml-2">
+              Connect with Kitchen Admin
+            </Text>
+          </TouchableOpacity>
 
-          {/* Bottom Footer Note */}
-          <View style={styles.footerWrap}>
-            <Text style={styles.footerText}>
-              Need to register as a partner chef?{" "}
-              <Text onPress={handleAdminSupport} style={styles.footerLink}>
-                Contact Admin
-              </Text>
+          {/* Security Note */}
+          <View className="flex-row items-center justify-center gap-1.5 pt-0.5">
+            <Ionicons name="shield-checkmark" size={15} color="#1E6A4B" />
+            <Text className="text-[11.5px] font-semibold text-[#4A675F]">
+              Authorized Home Chef Access Only
             </Text>
           </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
+        </View>
+
+        {/* Three Feature Highlights Pill Row */}
+        <View className="flex-row items-center justify-center gap-2 w-full mb-[18px]">
+          <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
+            <Ionicons name="receipt-outline" size={14} color="#1E6A4B" />
+            <Text className="text-[11px] font-bold text-[#4A675F]">Live Orders</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
+            <Ionicons name="trending-up-outline" size={14} color="#1E6A4B" />
+            <Text className="text-[11px] font-bold text-[#4A675F]">Instant Payouts</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
+            <Ionicons name="heart-outline" size={14} color="#1E6A4B" />
+            <Text className="text-[11px] font-bold text-[#4A675F]">Cooked with Love</Text>
+          </View>
+        </View>
+
+        {/* Bottom Footer Note */}
+        <View className="items-center px-2.5">
+          <Text className="text-[13px] text-[#698077] text-center">
+            Need to register as a partner chef?{" "}
+            <Text onPress={handleAdminSupport} className="text-[#1E6A4B] font-extrabold">
+              Contact Admin
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.pageBackground,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.pageBackground,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "android" ? 44 : 52,
-    paddingBottom: 36,
-  },
-
-  /* Top Brand Header */
-  brandHeader: {
-    alignItems: "center",
-    marginBottom: 20,
-    width: "100%",
-  },
-  logoBadgeContainer: {
-    marginBottom: 12,
-  },
-  logoCircle: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: colors.cardBackground,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  logoImage: {
-    width: 74,
-    height: 74,
-  },
-  portalPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.softCard,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#D0E5DA",
-  },
-  portalPillText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: colors.primary,
-    letterSpacing: 0.6,
-  },
-  brandTitle: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: colors.primaryDark,
-    letterSpacing: -0.5,
-  },
-  brandTagline: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.muted,
-    marginTop: 2,
-    marginBottom: 10,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.primaryDark,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  welcomeSubtitle: {
-    fontSize: 13,
-    color: colors.muted,
-    textAlign: "center",
-    lineHeight: 18,
-    maxWidth: 320,
-  },
-
-  /* Main Card */
-  card: {
-    width: "100%",
-    backgroundColor: colors.cardBackground,
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-    marginBottom: 20,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F5F2",
-  },
-  cardIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.softCard,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: "#D6EBE0",
-  },
-  cardHeaderTextWrap: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: colors.primaryDark,
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: 1,
-  },
-
-  /* Error Box */
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FDF2F2",
-    borderWidth: 1,
-    borderColor: "#FCA5A5",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    gap: 8,
-  },
-  errorText: {
-    flex: 1,
-    color: "#B91C1C",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  /* Input Fields */
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primaryDark,
-    marginBottom: 6,
-  },
-  passwordLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  forgotPasswordText: {
-    fontSize: 12.5,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: "#FAFCFA",
-    paddingHorizontal: 12,
-  },
-  inputWrapFocused: {
-    borderColor: colors.primary,
-    backgroundColor: "#FFFFFF",
-    shadowColor: colors.primary,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  inputWrapError: {
-    borderColor: "#EF4444",
-    backgroundColor: "#FEF2F2",
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    height: "100%",
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.primaryDark,
-    paddingVertical: 0,
-  },
-  eyeBtn: {
-    padding: 6,
-    marginLeft: 4,
-  },
-
-  /* Login Button */
-  loginBtn: {
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 6,
-    shadowColor: colors.primaryDark,
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  loginBtnPressed: {
-    backgroundColor: colors.primaryDark,
-    transform: [{ scale: 0.99 }],
-  },
-  loginBtnDisabled: {
-    opacity: 0.75,
-  },
-  loginBtnContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  loginBtnText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-
-  /* Divider */
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5ECE7",
-  },
-  dividerText: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "600",
-    paddingHorizontal: 10,
-  },
-
-  /* Support Button */
-  supportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#D2E7DC",
-    backgroundColor: colors.softCard,
-    marginBottom: 16,
-  },
-  supportBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.primaryDark,
-    marginLeft: 8,
-  },
-
-  /* Security Note */
-  securityNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingTop: 2,
-  },
-  securityNoteText: {
-    fontSize: 11.5,
-    fontWeight: "600",
-    color: colors.label,
-  },
-
-  /* Features Pill Row */
-  featuresRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    width: "100%",
-    marginBottom: 18,
-  },
-  featurePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: colors.cardBackground,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  featurePillText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.label,
-  },
-
-  /* Footer */
-  footerWrap: {
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  footerText: {
-    fontSize: 13,
-    color: colors.muted,
-    textAlign: "center",
-  },
-  footerLink: {
-    color: colors.primary,
-    fontWeight: "800",
-  },
-});
