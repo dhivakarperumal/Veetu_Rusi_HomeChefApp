@@ -27,7 +27,54 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
 
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const passwordRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const activeInputRef = useRef<"email" | "password" | null>(null);
+
+  const scrollToInput = (inputType: "email" | "password") => {
+    activeInputRef.current = inputType;
+    const targetY = inputType === "password" ? 220 : 130;
+    scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+    // Also scroll with short delays to account for soft keyboard animation on Android
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+    }, 100);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+    }, 250);
+  };
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      const kh = e?.endCoordinates?.height || 280;
+      setKeyboardHeight(kh);
+      const targetY = activeInputRef.current === "password" ? 220 : 130;
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+      }, 50);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+      activeInputRef.current = null;
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -132,12 +179,13 @@ export default function LoginScreen() {
     >
       <StatusBar barStyle="dark-content" backgroundColor="#F4F1EA" />
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={{
           flexGrow: 1,
           alignItems: "center",
           paddingHorizontal: 20,
-          paddingTop: Platform.OS === "android" ? 44 : 52,
-          paddingBottom: 36,
+          paddingTop: Platform.OS === "android" ? 28 : 44,
+          paddingBottom: keyboardVisible ? (Platform.OS === "android" ? 280 : 120) : 36,
         }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -145,40 +193,40 @@ export default function LoginScreen() {
         bounces={false}
       >
         {/* Top Brand Header */}
-        <View className="w-full items-center mb-5">
+        <View className="w-full items-center mb-3.5">
           {/* Logo Emblem */}
-          <View className="mb-3">
-            <View className="w-[82px] h-[82px] rounded-full bg-white border-2 border-[#DDE6E1] items-center justify-center overflow-hidden shadow-sm">
+          <View className="mb-2.5">
+            <View className="w-[74px] h-[74px] rounded-full bg-white border-2 border-[#DDE6E1] items-center justify-center overflow-hidden shadow-sm">
               <Image
                 source={require("../../assets/images/ChatGPT Image Aug 14, 2026, 03_06_06 PM.png")}
-                className="w-[74px] h-[74px]"
+                className="w-[66px] h-[66px]"
                 contentFit="contain"
               />
             </View>
           </View>
 
           {/* Portal Badge */}
-          <View className="flex-row items-center gap-1.5 bg-[#EAF4EE] px-3 py-1 rounded-full mb-2 border border-[#D0E5DA]">
-            <Ionicons name="restaurant" size={13} color="#1E6A4B" />
-            <Text className="text-[11px] font-extrabold text-[#1E6A4B] tracking-wider">
+          <View className="flex-row items-center gap-1.5 bg-[#EAF4EE] px-3 py-0.5 rounded-full mb-1.5 border border-[#D0E5DA]">
+            <Ionicons name="restaurant" size={12} color="#1E6A4B" />
+            <Text className="text-[10.5px] font-extrabold text-[#1E6A4B] tracking-wider">
               CHEF PARTNER PORTAL
             </Text>
           </View>
 
           {/* Brand Title */}
-          <Text className="text-3xl font-black text-[#1D3D30] tracking-tight">
+          <Text className="text-[26px] font-black text-[#1D3D30] tracking-tight leading-8">
             Veetu Rusi
           </Text>
-          <Text className="text-xs font-semibold text-[#698077] mt-0.5 mb-2.5">
+          <Text className="text-[11.5px] font-semibold text-[#698077] mt-0.5 mb-2">
             Cooked with Love • வீட்டு ருசி
           </Text>
 
           {/* Welcome Headings */}
-          <Text className="text-[22px] font-extrabold text-[#1D3D30] text-center mb-1">
+          <Text className="text-xl font-extrabold text-[#1D3D30] text-center mb-0.5">
             Welcome Back, Chef!
           </Text>
-          <Text className="text-[13px] text-[#698077] text-center leading-[18px] max-w-[320px]">
-            Sign in to manage your dishes, track incoming orders, and view daily earnings.
+          <Text className="text-xs text-[#698077] text-center leading-[17px] max-w-[320px]">
+            Sign in to manage your dishes, orders, and daily earnings.
           </Text>
         </View>
 
@@ -231,6 +279,7 @@ export default function LoginScreen() {
                   setEmail(t);
                   if (error) setError("");
                 }}
+                onFocus={() => scrollToInput("email")}
                 placeholder="e.g. chef@veeturusi.com"
                 placeholderTextColor="#8EA399"
                 keyboardType="email-address"
@@ -239,7 +288,10 @@ export default function LoginScreen() {
                 className="flex-1 h-full text-[15px] font-semibold text-[#1D3D30] py-0"
                 maxLength={100}
                 returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
+                onSubmitEditing={() => {
+                  passwordRef.current?.focus();
+                  scrollToInput("password");
+                }}
               />
             </View>
           </View>
@@ -276,6 +328,7 @@ export default function LoginScreen() {
                   setPassword(t);
                   if (error) setError("");
                 }}
+                onFocus={() => scrollToInput("password")}
                 placeholder="Enter your kitchen password"
                 placeholderTextColor="#8EA399"
                 secureTextEntry={!showPass}
