@@ -196,10 +196,10 @@ export default function LoginScreen() {
         <View className="w-full items-center mb-3.5">
           {/* Logo Emblem */}
           <View className="mb-2.5">
-            <View className="w-[74px] h-[74px] rounded-full bg-white border-2 border-[#DDE6E1] items-center justify-center overflow-hidden shadow-sm">
+            <View className="w-[76px] h-[76px] rounded-full bg-white border-2 border-[#DDE6E1] items-center justify-center overflow-hidden shadow-sm">
               <Image
-                source={require("../../assets/images/ChatGPT Image Aug 14, 2026, 03_06_06 PM.png")}
-                className="w-[66px] h-[66px]"
+                source={require("../../assets/images/home_chef_logo.png")}
+                style={{ width: 68, height: 68 }}
                 contentFit="contain"
               />
             </View>
