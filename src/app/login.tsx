@@ -373,22 +373,26 @@ export default function LoginScreen() {
               />
               <TextInput
                 value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  if (error) setError("");
-                }}
+                onChangeText={handleEmailChange}
                 onFocus={() => scrollToInput("email")}
                 placeholder="e.g. chef@veeturusi.com"
                 placeholderTextColor="#8EA399"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                importantForAutofill="yes"
                 className="flex-1 h-full text-[15px] font-semibold text-[#1D3D30] py-0"
                 maxLength={100}
                 returnKeyType="next"
                 onSubmitEditing={() => {
-                  passwordRef.current?.focus();
-                  scrollToInput("password");
+                  if (isValidPassword(password)) {
+                    handleLogin();
+                  } else {
+                    passwordRef.current?.focus();
+                    scrollToInput("password");
+                  }
                 }}
               />
             </View>
@@ -422,14 +426,21 @@ export default function LoginScreen() {
               <TextInput
                 ref={passwordRef}
                 value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  if (error) setError("");
-                }}
+                onChangeText={handlePasswordChange}
                 onFocus={() => scrollToInput("password")}
+                onBlur={() => {
+                  if (isValidIdentifier(email) && isValidPassword(password)) {
+                    scheduleAutoLogin(email, password, 150);
+                  }
+                }}
                 placeholder="Enter your kitchen password"
                 placeholderTextColor="#8EA399"
                 secureTextEntry={!showPass}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="yes"
                 className="flex-1 h-full text-[15px] font-semibold text-[#1D3D30] py-0"
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
@@ -458,7 +469,12 @@ export default function LoginScreen() {
             }`}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <View className="flex-row items-center">
+                <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+                <Text className="text-white text-base font-extrabold tracking-wide">
+                  Signing In...
+                </Text>
+              </View>
             ) : (
               <View className="flex-row items-center">
                 <Ionicons
