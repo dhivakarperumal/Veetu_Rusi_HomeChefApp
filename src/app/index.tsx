@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { getStoredToken } from "../api";
 
+import { colors } from "../theme/colors";
+
 export default function Index() {
   const [checking, setChecking] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -29,10 +31,10 @@ export default function Index() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#FFF8F2",
+          backgroundColor: colors.pageBackground,
         }}
       >
-        <ActivityIndicator size="large" color="#ea580c" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
