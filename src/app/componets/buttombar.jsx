@@ -137,8 +137,8 @@ const styles = StyleSheet.create({
   },
   activeIconPill: {
     height: 48,
-    width: 52,
-    borderRadius: 999,
+    width: 48,
+    borderRadius: 24,
     backgroundColor: "#2E7A4F",
     shadowColor: "#000",
     shadowOpacity: 0.12,
