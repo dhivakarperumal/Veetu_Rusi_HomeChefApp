@@ -3,19 +3,19 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import {
-  CART_KEY,
-  loadMaterialCollection,
-  saveMaterialCollection,
+    CART_KEY,
+    loadMaterialCollection,
+    saveMaterialCollection,
 } from "../lib/materials-store";
 import BottomBar from "./componets/buttombar";
 import PageHeader from "./componets/pageheader";
@@ -33,6 +33,44 @@ const FIELD_NAMES = [
   ["state", "State"],
   ["country", "Country"],
   ["zip_code", "ZIP code"],
+] as const;
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
 ] as const;
 const RAZORPAY_KEY_ID = "rzp_test_SGj8n5SyKSE10b";
 
@@ -161,6 +199,7 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [statePickerVisible, setStatePickerVisible] = useState(false);
   const [dialog, setDialog] = useState<CheckoutDialogState | null>(null);
   const [form, setForm] = useState<Record<string, string>>({
     user_id: "",
@@ -508,31 +547,111 @@ export default function CheckoutScreen() {
         >
           Delivery details
         </Text>
-        {FIELD_NAMES.map(([key, label]) => (
-          <TextInput
-            key={key}
-            value={form[key] || ""}
-            onChangeText={(value) => updateField(key, value)}
-            placeholder={label}
-            placeholderTextColor={MUTED}
-            keyboardType={
-              key === "customer_phone" || key === "zip_code"
-                ? "phone-pad"
-                : key === "customer_email"
-                  ? "email-address"
-                  : "default"
-            }
+        {FIELD_NAMES.map(([key, label]) =>
+          key === "state" ? (
+            <Pressable
+              key={key}
+              onPress={() => setStatePickerVisible(true)}
+              style={{
+                marginTop: 10,
+                minHeight: 52,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#D5E3DA",
+                paddingHorizontal: 13,
+                backgroundColor: "#fff",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text style={{ color: form[key] ? DARK : MUTED, fontSize: 16 }}>
+                {form[key] || label}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={MUTED} />
+            </Pressable>
+          ) : (
+            <TextInput
+              key={key}
+              value={form[key] || ""}
+              onChangeText={(value) => updateField(key, value)}
+              placeholder={label}
+              placeholderTextColor={MUTED}
+              keyboardType={
+                key === "customer_phone" || key === "zip_code"
+                  ? "phone-pad"
+                  : key === "customer_email"
+                    ? "email-address"
+                    : "default"
+              }
+              style={{
+                marginTop: 10,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#D5E3DA",
+                padding: 13,
+                backgroundColor: "#fff",
+                color: DARK,
+              }}
+            />
+          ),
+        )}
+        <Modal
+          visible={statePickerVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setStatePickerVisible(false)}
+        >
+          <Pressable
+            onPress={() => setStatePickerVisible(false)}
             style={{
-              marginTop: 10,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: "#D5E3DA",
-              padding: 13,
-              backgroundColor: "#fff",
-              color: DARK,
+              flex: 1,
+              backgroundColor: "rgba(17, 35, 27, 0.45)",
+              justifyContent: "center",
+              padding: 24,
             }}
-          />
-        ))}
+          >
+            <Pressable
+              onPress={(event) => event.stopPropagation()}
+              style={{
+                maxHeight: "80%",
+                borderRadius: 18,
+                backgroundColor: "#fff",
+                paddingVertical: 10,
+              }}
+            >
+              <Text
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
+                  fontSize: 19,
+                  fontWeight: "800",
+                  color: DARK,
+                }}
+              >
+                Select state
+              </Text>
+              <ScrollView>
+                {INDIAN_STATES.map((state) => (
+                  <Pressable
+                    key={state}
+                    onPress={() => {
+                      updateField("state", state);
+                      setStatePickerVisible(false);
+                    }}
+                    style={{
+                      paddingHorizontal: 18,
+                      paddingVertical: 13,
+                      backgroundColor: form.state === state ? "#EAF4EE" : "#fff",
+                    }}
+                  >
+                    <Text style={{ color: DARK, fontSize: 16 }}>{state}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
         <Text
           style={{
             marginTop: 22,
