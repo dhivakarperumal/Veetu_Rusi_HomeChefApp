@@ -203,7 +203,17 @@ export default function DashboardScreen() {
     setPopupActionLoading(true);
     try {
       const id = popupOrder.id || popupOrder._id;
-      await api.patch(`/user-food-orders/status/${id}`, { status });
+      const acceptedAt = new Date();
+      const deliveryTime = new Date(acceptedAt.getTime() + 3 * 60 * 60 * 1000);
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status,
+        ...(status === "Accepted"
+          ? {
+              accepted_at: acceptedAt.toISOString(),
+              delivery_time: deliveryTime.toISOString(),
+            }
+          : {}),
+      });
       setPopupOrder(null);
       await fetchData();
     } catch (error) {

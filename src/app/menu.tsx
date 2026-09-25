@@ -282,7 +282,10 @@ export default function MenuScreen() {
       await api.put(endpoint, { status: newStatus });
     } catch (error) {
       console.error(`Failed to update ${item.type} status`, error);
-      showAppDialog("Could not update status", `Failed to update status for ${item.name}.`);
+      showAppDialog(
+        "Could not update status",
+        `Failed to update status for ${item.name}.`,
+      );
       // Revert on failure
       setItems((prev) =>
         prev.map((i) =>
@@ -292,6 +295,68 @@ export default function MenuScreen() {
         ),
       );
     }
+  };
+
+  const viewMenuItem = (item: MenuItem) => {
+    if (item.type === "product") {
+      router.push({
+        pathname: "/product/[id]",
+        params: { id: item.id },
+      } as any);
+      return;
+    }
+    showAppDialog(
+      item.name,
+      [
+        `Type: Food`,
+        `Category: ${item.category}`,
+        `Price: ₹${item.price.toFixed(2).replace(/\.00$/, "")}`,
+        `Status: ${item.status}`,
+      ].join("\n"),
+    );
+  };
+
+  const editMenuItem = (item: MenuItem) => {
+    router.push({
+      pathname: item.type === "food" ? "/add-dish" : "/add-product",
+      params: { id: item.id },
+    } as any);
+  };
+
+  const deleteMenuItem = (item: MenuItem) => {
+    showAppDialog(
+      "Delete menu item?",
+      `This will permanently remove ${item.name}.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const endpoint =
+                item.type === "food"
+                  ? `/chef-foods/${item.id}`
+                  : `/products/${item.id}`;
+              await api.delete(endpoint);
+              setItems((previous) =>
+                previous.filter(
+                  (menuItem) =>
+                    menuItem.id !== item.id || menuItem.type !== item.type,
+                ),
+              );
+              showAppDialog("Item deleted", `${item.name} was removed.`);
+            } catch (error: any) {
+              console.error("Failed to delete menu item", error);
+              showAppDialog(
+                "Could not delete item",
+                error?.message || "Please try again.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ── Derived categories from actual items if API is empty ──
@@ -635,13 +700,58 @@ export default function MenuScreen() {
                         </Text>
                       </View>
 
-                      {/* Toggle */}
-                      <Switch
-                        value={isActive}
-                        onValueChange={() => toggleStatus(item)}
-                        trackColor={{ false: "#E0E0E0", true: colors.primary }}
-                        thumbColor="#fff"
-                      />
+                      <View style={{ alignItems: "flex-end", gap: 10 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          <Pressable
+                            hitSlop={8}
+                            onPress={() => viewMenuItem(item)}
+                            accessibilityLabel={`View ${item.name}`}
+                          >
+                            <Ionicons
+                              name="eye-outline"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </Pressable>
+                          <Pressable
+                            hitSlop={8}
+                            onPress={() => editMenuItem(item)}
+                            accessibilityLabel={`Edit ${item.name}`}
+                          >
+                            <Ionicons
+                              name="create-outline"
+                              size={18}
+                              color={colors.primary}
+                            />
+                          </Pressable>
+                          <Pressable
+                            hitSlop={8}
+                            onPress={() => deleteMenuItem(item)}
+                            accessibilityLabel={`Delete ${item.name}`}
+                          >
+                            <Ionicons
+                              name="trash-outline"
+                              size={18}
+                              color="#C62828"
+                            />
+                          </Pressable>
+                        </View>
+                        <Switch
+                          value={isActive}
+                          onValueChange={() => toggleStatus(item)}
+                          trackColor={{
+                            false: "#E0E0E0",
+                            true: colors.primary,
+                          }}
+                          thumbColor="#fff"
+                        />
+                      </View>
                     </View>
                   );
                 })}

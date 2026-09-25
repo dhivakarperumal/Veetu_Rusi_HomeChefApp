@@ -294,7 +294,13 @@ export default function OrderDetailScreen() {
     if (actionLoading) return;
     setActionLoading(true);
     try {
-      await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
+      const acceptedAt = new Date();
+      const deliveryTime = new Date(acceptedAt.getTime() + 3 * 60 * 60 * 1000);
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status: "Accepted",
+        accepted_at: acceptedAt.toISOString(),
+        delivery_time: deliveryTime.toISOString(),
+      });
       showAppDialog(
         "Order Accepted",
         `#${order.order_id || id} has been accepted!`,

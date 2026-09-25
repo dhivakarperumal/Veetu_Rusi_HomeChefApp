@@ -37,6 +37,10 @@ interface Order {
   amount: number;
   location: string;
   time: string;
+  acceptedAt?: string;
+  acceptedTime?: string;
+  deliveryAt?: string;
+  deliveryTime?: string;
   cancellationReason?: string;
   cancellationNotes?: string;
   deliveryPartnerName?: string;
@@ -75,6 +79,54 @@ const mapStatus = (status: string): OrderStatus => {
   return "New";
 };
 
+const formatOrderDateTime = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString([], {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const normalizeTimestamp = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
+
+const calculateDeliveryDeadline = (acceptedAt: unknown): string | undefined => {
+  if (!acceptedAt) return undefined;
+  const acceptedDate = new Date(String(acceptedAt));
+  if (Number.isNaN(acceptedDate.getTime())) return undefined;
+  return new Date(acceptedDate.getTime() + 3 * 60 * 60 * 1000).toISOString();
+};
+
+const formatRemainingDeliveryTime = (
+  acceptedAt: string | undefined,
+  deliveryAt: string | undefined,
+  now: number,
+): string | undefined => {
+  if (!acceptedAt || !deliveryAt) return undefined;
+  const acceptedDate = new Date(acceptedAt);
+  const deliveryDate = new Date(deliveryAt);
+  if (
+    Number.isNaN(acceptedDate.getTime()) ||
+    Number.isNaN(deliveryDate.getTime())
+  ) {
+    return undefined;
+  }
+  const remainingMs = deliveryDate.getTime() - now;
+  if (remainingMs <= 0) return "Delivery Time Reached";
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
+
 // ── Order Card ────────────────────────────────────────────────────────────────
 function OrderCard({
   order,
@@ -83,6 +135,7 @@ function OrderCard({
   onMarkReady,
   onStatusUpdate,
   onPress,
+  now,
   busy = false,
 }: {
   order: Order;
@@ -91,6 +144,7 @@ function OrderCard({
   onMarkReady?: (id: string) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
+  now: number;
   busy?: boolean;
 }) {
   const cfg = STATUS_CONFIG[order.status];
@@ -217,6 +271,79 @@ function OrderCard({
           {order.location}
         </Text>
       </View>
+
+      {(order.acceptedTime || order.deliveryTime || order.status === "New") && (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 12,
+            marginTop: 8,
+            marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
+          }}
+        >
+          {order.acceptedTime && (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={15}
+                color="#2E7D32"
+              />
+              <Text
+                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
+              >
+                Accepted: {order.acceptedTime}
+              </Text>
+            </View>
+          )}
+          {order.deliveryTime && (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="time-outline" size={15} color={colors.primary} />
+              <Text
+                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
+              >
+                Delivery: {order.deliveryTime}
+              </Text>
+            </View>
+          )}
+          {order.status !== "Cancelled" &&
+            order.acceptedAt &&
+            order.deliveryAt && (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="hourglass-outline" size={15} color="#E65100" />
+                <Text
+                  style={{
+                    color: "#E65100",
+                    fontSize: 12,
+                    marginLeft: 4,
+                    fontWeight: "700",
+                  }}
+                >
+                  Delivery in{" "}
+                  {formatRemainingDeliveryTime(
+                    order.acceptedAt,
+                    order.deliveryAt,
+                    now,
+                  )}
+                </Text>
+              </View>
+            )}
+          {order.status === "New" && !order.acceptedAt && (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons
+                name="hourglass-outline"
+                size={15}
+                color={colors.muted}
+              />
+              <Text
+                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
+              >
+                Awaiting acceptance
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {order.status === "Cancelled" &&
         (order.cancellationReason || order.cancellationNotes) && (
@@ -416,6 +543,7 @@ export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderTab>("All Status");
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [clock, setClock] = useState(Date.now());
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   // Optional: you can add a filterSort state here if needed, e.g. "Newest", "Oldest", "Highest Amount"
@@ -429,6 +557,11 @@ export default function OrdersScreen() {
   const [showReasons, setShowReasons] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const cancellationReasons = [
     "Item unavailable",
     "Too busy to prepare",
@@ -441,50 +574,84 @@ export default function OrdersScreen() {
     try {
       setRefreshing(true);
       const res = await api.get("/user-food-orders/chef");
-      const mappedOrders = res.data.map((o: any) => ({
-        id: o.id || o._id,
-        order_id: o.order_id || o.id || "Unknown",
-        status: mapStatus(o.status),
-        rawStatus: o.status,
-        customer: o.customer_name || "Unknown",
-        items:
-          o.chef_total_quantity ??
-          (o.items?.reduce(
-            (sum: number, item: any) => sum + (Number(item.quantity) || 1),
-            0,
-          ) ||
-            0),
-        amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
-        location: o.street_address
-          ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
-          : o.customer_address || o.delivery_address || "Unknown Location",
-        cancellationReason:
-          o.cancellation_reason ||
-          o.cancel_reason ||
-          o.cancellationReason ||
-          "",
-        cancellationNotes:
-          o.cancellation_notes || o.cancel_notes || o.cancellationNotes || "",
-        deliveryPartnerName:
-          o.delivery_partner_name ||
-          o.deliveryPartner?.name ||
-          o.delivery_partner?.name,
-        deliveryPartnerPhone:
-          o.delivery_partner_phone ||
-          o.deliveryPartner?.phone ||
-          o.delivery_partner?.phone,
-        deliveryPartnerVehicle:
-          o.delivery_partner_vehicle ||
-          o.deliveryPartner?.vehicle ||
-          o.delivery_partner?.vehicle,
-        time:
-          o.ordered_at || o.created_at
-            ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "-",
-      }));
+      const mappedOrders = res.data.map((o: any) => {
+        const rawStatus = String(o.status || "").toLowerCase();
+        const acceptedAt = [
+          o.accepted_at,
+          o.acceptedAt,
+          o.order_accepted_at,
+          o.accepted_time,
+          o.accepted_date_time,
+          o.acceptedDateTime,
+          ["accepted", "preparing"].includes(rawStatus)
+            ? o.updated_at
+            : undefined,
+        ]
+          .map(normalizeTimestamp)
+          .find(Boolean);
+        const storedDeliveryAt = [
+          o.delivery_time,
+          o.delivery_at,
+          o.deliveryTime,
+          o.deliveryDateTime,
+          o.estimated_delivery_time,
+          o.expected_delivery_time,
+          o.delivered_at,
+        ]
+          .map(normalizeTimestamp)
+          .find(Boolean);
+        const deliveryAt =
+          storedDeliveryAt || calculateDeliveryDeadline(acceptedAt);
+
+        return {
+          id: o.id || o._id,
+          order_id: o.order_id || o.id || "Unknown",
+          status: mapStatus(o.status),
+          rawStatus: o.status,
+          customer: o.customer_name || "Unknown",
+          items:
+            o.chef_total_quantity ??
+            (o.items?.reduce(
+              (sum: number, item: any) => sum + (Number(item.quantity) || 1),
+              0,
+            ) ||
+              0),
+          amount: parseFloat((o.chef_total_amount ?? o.total_amount) || 0),
+          location: o.street_address
+            ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
+            : o.customer_address || o.delivery_address || "Unknown Location",
+          cancellationReason:
+            o.cancellation_reason ||
+            o.cancel_reason ||
+            o.cancellationReason ||
+            "",
+          cancellationNotes:
+            o.cancellation_notes || o.cancel_notes || o.cancellationNotes || "",
+          deliveryPartnerName:
+            o.delivery_partner_name ||
+            o.deliveryPartner?.name ||
+            o.delivery_partner?.name,
+          deliveryPartnerPhone:
+            o.delivery_partner_phone ||
+            o.deliveryPartner?.phone ||
+            o.delivery_partner?.phone,
+          deliveryPartnerVehicle:
+            o.delivery_partner_vehicle ||
+            o.deliveryPartner?.vehicle ||
+            o.delivery_partner?.vehicle,
+          time:
+            o.ordered_at || o.created_at
+              ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-",
+          acceptedTime: formatOrderDateTime(acceptedAt),
+          acceptedAt,
+          deliveryAt,
+          deliveryTime: formatOrderDateTime(deliveryAt),
+        };
+      });
       setOrders(mappedOrders);
     } catch (error) {
       console.error("Failed to load orders:", error);
@@ -522,7 +689,13 @@ export default function OrdersScreen() {
     if (actionId) return;
     setActionId(id);
     try {
-      await api.patch(`/user-food-orders/status/${id}`, { status: "Accepted" });
+      const acceptedAt = new Date();
+      const deliveryTime = new Date(acceptedAt.getTime() + 3 * 60 * 60 * 1000);
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status: "Accepted",
+        accepted_at: acceptedAt.toISOString(),
+        delivery_time: deliveryTime.toISOString(),
+      });
       await fetchOrders();
     } catch (error) {
       showAppDialog("Could not accept order", getApiErrorMessage(error));
@@ -788,6 +961,7 @@ export default function OrdersScreen() {
               onMarkReady={handleMarkReady}
               onStatusUpdate={handleStatusUpdate}
               busy={actionId === order.id}
+              now={clock}
               onPress={() => router.push(`/order/${order.id}`)}
             />
           ))
