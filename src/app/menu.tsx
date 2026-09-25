@@ -305,15 +305,7 @@ export default function MenuScreen() {
       } as any);
       return;
     }
-    showAppDialog(
-      item.name,
-      [
-        `Type: Food`,
-        `Category: ${item.category}`,
-        `Price: ₹${item.price.toFixed(2).replace(/\.00$/, "")}`,
-        `Status: ${item.status}`,
-      ].join("\n"),
-    );
+    router.push({ pathname: "/dish/[id]", params: { id: item.id } } as any);
   };
 
   const editMenuItem = (item: MenuItem) => {

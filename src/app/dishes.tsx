@@ -341,16 +341,7 @@ export default function DishesScreen() {
   >("All");
 
   const handleViewDish = (dish: Dish) => {
-    showAppDialog(
-      dish.name,
-      [
-        `Category: ${dish.category}`,
-        `Price: ₹${Number(dish.price).toFixed(2).replace(/\.00$/, "")}`,
-        `Status: ${dish.status || "Inactive"}`,
-        `Rating: ${dish.rating} (${dish.reviews} reviews)`,
-        `Orders: ${dish.orders}`,
-      ].join("\n"),
-    );
+    router.push({ pathname: "/dish/[id]", params: { id: dish.id } } as any);
   };
 
   const handleEditDish = (id: string) => {
