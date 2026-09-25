@@ -27,7 +27,10 @@ const resolveImageUrl = (path: string) => {
   if (!trimmedPath) return trimmedPath;
   if (trimmedPath.startsWith("data:")) return trimmedPath;
 
-  if (trimmedPath.includes("localhost:5000") || trimmedPath.includes("127.0.0.1:5000")) {
+  if (
+    trimmedPath.includes("localhost:5000") ||
+    trimmedPath.includes("127.0.0.1:5000")
+  ) {
     return trimmedPath
       .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
       .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL);
@@ -305,27 +308,31 @@ export default function OrderDetailScreen() {
   };
 
   const handleReject = () => {
-    showAppDialog("Reject Order", "Are you sure you want to reject this order?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Reject",
-        style: "destructive",
-        onPress: async () => {
-          if (actionLoading) return;
-          setActionLoading(true);
-          try {
-            await api.patch(`/user-food-orders/status/${id}`, {
-              status: "Cancelled",
-            });
-            router.back();
-          } catch (err) {
-            showAppDialog("Could not reject order", getApiErrorMessage(err));
-          } finally {
-            setActionLoading(false);
-          }
+    showAppDialog(
+      "Reject Order",
+      "Are you sure you want to reject this order?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async () => {
+            if (actionLoading) return;
+            setActionLoading(true);
+            try {
+              await api.patch(`/user-food-orders/status/${id}`, {
+                status: "Cancelled",
+              });
+              router.back();
+            } catch (err) {
+              showAppDialog("Could not reject order", getApiErrorMessage(err));
+            } finally {
+              setActionLoading(false);
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const updateOrderStatus = () => {

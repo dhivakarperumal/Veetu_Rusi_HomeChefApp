@@ -205,23 +205,33 @@ function DishCard({
           >
             {dish.name}
           </Text>
-          <Pressable
-            hitSlop={8}
-            onPress={() =>
-              showAppDialog(dish.name, "Choose an action", [
-                { text: "View", onPress: () => onView(dish) },
-                { text: "Edit", onPress: () => onEdit(dish.id) },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => onDelete(dish),
-                },
-                { text: "Cancel", style: "cancel" },
-              ])
-            }
-          >
-            <Ionicons name="ellipsis-vertical" size={16} color={colors.muted} />
-          </Pressable>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Pressable
+              hitSlop={8}
+              onPress={() => onView(dish)}
+              accessibilityLabel={`View ${dish.name}`}
+            >
+              <Ionicons name="eye-outline" size={18} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              hitSlop={8}
+              onPress={() => onEdit(dish.id)}
+              accessibilityLabel={`Edit ${dish.name}`}
+            >
+              <Ionicons
+                name="create-outline"
+                size={18}
+                color={colors.primary}
+              />
+            </Pressable>
+            <Pressable
+              hitSlop={8}
+              onPress={() => onDelete(dish)}
+              accessibilityLabel={`Delete ${dish.name}`}
+            >
+              <Ionicons name="trash-outline" size={18} color="#C62828" />
+            </Pressable>
+          </View>
         </View>
 
         {/* Price + status */}

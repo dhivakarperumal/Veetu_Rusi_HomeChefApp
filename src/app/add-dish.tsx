@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import api, { getApiErrorMessage, getStoredUser } from "../api";
+import api, { API_BASE_URL, getApiErrorMessage, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
@@ -49,6 +49,70 @@ function parseImageCollection(value: unknown): string[] {
     );
   }
   return typeof parsed === "string" && parsed.trim() ? [parsed.trim()] : [];
+}
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+function normalizeUploadedImageUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const imageUrl = value.trim();
+  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith("data:")) {
+    return imageUrl;
+  }
+  return imageUrl.startsWith("/")
+    ? `${API_ORIGIN}${imageUrl}`
+    : `${API_ORIGIN}/${imageUrl}`;
+}
+
+function getUploadedImageUrls(data: any): string[] {
+  const candidates =
+    data?.urls ||
+    data?.images ||
+    data?.files ||
+    data?.uploadedFiles ||
+    data?.data?.urls ||
+    data?.data?.images ||
+    data?.data ||
+    data?.url;
+  const values = Array.isArray(candidates) ? candidates : [candidates];
+  return values
+    .map((item: any) =>
+      normalizeUploadedImageUrl(item?.url || item?.path || item),
+    )
+    .filter((url: string | null): url is string => Boolean(url));
+}
+
+async function uploadFoodImages(assets: ImagePicker.ImagePickerAsset[]) {
+  const formData = new FormData();
+  for (const asset of assets) {
+    const compressed = await ImageManipulator.manipulateAsync(
+      asset.uri,
+      [{ resize: { width: 700 } }],
+      {
+        compress: 0.3,
+        format: ImageManipulator.SaveFormat.JPEG,
+      },
+    );
+    formData.append("images", {
+      uri: compressed.uri,
+      name: asset.fileName || `food-image-${Date.now()}.jpg`,
+      type: "image/jpeg",
+    } as any);
+  }
+
+  const response = await api.post(
+    "/upload/images?folder=homechefFoods",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000,
+    },
+  );
+  const urls = getUploadedImageUrls(response.data);
+  if (urls.length !== assets.length) {
+    throw new Error("The image upload did not return all image URLs.");
+  }
+  return urls;
 }
 
 function FormGroup({
@@ -321,23 +385,10 @@ export default function AddDishScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedImages = await Promise.all(
-          result.assets.map(async (asset) => {
-            const compressed = await ImageManipulator.manipulateAsync(
-              asset.uri,
-              [{ resize: { width: 700 } }],
-              {
-                compress: 0.3,
-                format: ImageManipulator.SaveFormat.JPEG,
-                base64: true,
-              },
-            );
-            return `data:image/jpeg;base64,${compressed.base64}`;
-          }),
-        );
+        const uploadedImages = await uploadFoodImages(result.assets);
         setForm((prev) => ({
           ...prev,
-          [field]: [...prev[field], ...selectedImages].slice(
+          [field]: [...prev[field], ...uploadedImages].slice(
             0,
             MAX_GALLERY_IMAGES,
           ),

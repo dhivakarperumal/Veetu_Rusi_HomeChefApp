@@ -54,13 +54,16 @@ const getProductImage = (product: any) => {
     }
     if (Array.isArray(imgs)) {
       const firstImage = imgs.find(
-        (image): image is string => typeof image === "string" && image.trim().length > 0,
+        (image): image is string =>
+          typeof image === "string" && image.trim().length > 0,
       );
       if (firstImage) return resolveImageUrl(firstImage.trim());
     }
     if (
       typeof imgs === "string" &&
-      (imgs.startsWith("http") || imgs.startsWith("/") || imgs.startsWith("data:image/"))
+      (imgs.startsWith("http") ||
+        imgs.startsWith("/") ||
+        imgs.startsWith("data:image/"))
     ) {
       return resolveImageUrl(imgs);
     }

@@ -4,11 +4,11 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import {
-    CART_KEY,
-    getMaterialImage,
-    loadMaterialCollection,
-    saveMaterialCollection,
-    setMaterialInCollection,
+  CART_KEY,
+  getMaterialImage,
+  loadMaterialCollection,
+  saveMaterialCollection,
+  setMaterialInCollection,
 } from "../lib/materials-store";
 import BottomBar from "./componets/buttombar";
 import PageHeader from "./componets/pageheader";
