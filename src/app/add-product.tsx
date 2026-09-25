@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Image as ExpoImage } from "expo-image";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +10,9 @@ import api, { getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
+
+const MAX_PRODUCT_IMAGES = 4;
+const MAX_PRODUCT_PAYLOAD_CHARS = 1500000;
 
 const DIETARY_OPTIONS = ["veg", "non-veg"];
 const PACKAGING_OPTIONS = ["Pouch", "Box", "Foil", "Bottle", "Packet"];
@@ -334,6 +338,18 @@ export default function AddProductScreen() {
 
   const handlePickImage = async (field: 'images' | 'packaging_image') => {
     try {
+      const currentImageCount = field === "images" ? form.images.length : form.packaging_image ? 1 : 0;
+      const remainingSlots = field === "images" ? MAX_PRODUCT_IMAGES - currentImageCount : 1;
+      if (remainingSlots <= 0) {
+        showAppDialog(
+          "Image limit reached",
+          field === "images"
+            ? `You can add up to ${MAX_PRODUCT_IMAGES} product images.`
+            : "Remove the current packaging image before choosing another.",
+        );
+        return;
+      }
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         showAppDialog("Permission denied", "Please allow camera roll access to upload images.");
@@ -342,25 +358,43 @@ export default function AddProductScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: field !== "images",
+        allowsEditing: false,
         allowsMultipleSelection: field === "images",
-        selectionLimit: field === "images" ? 8 : 1,
+        selectionLimit: remainingSlots,
         quality: 0.6,
-        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         if (field === 'images') {
-          const selectedImages = result.assets
-            .filter((asset) => asset.base64)
-            .map((asset) => `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`);
+          const selectedImages = await Promise.all(
+            result.assets.map(async (asset) => {
+              const compressed = await ImageManipulator.manipulateAsync(
+                asset.uri,
+                [{ resize: { width: 700 } }],
+                {
+                  compress: 0.3,
+                  format: ImageManipulator.SaveFormat.JPEG,
+                  base64: true,
+                },
+              );
+              return `data:image/jpeg;base64,${compressed.base64}`;
+            }),
+          );
           setForm((prev) => ({
             ...prev,
-            images: [...prev.images, ...selectedImages].slice(0, 8),
+            images: [...prev.images, ...selectedImages].slice(0, MAX_PRODUCT_IMAGES),
           }));
         } else {
-          const asset = result.assets[0];
-          const base64Img = `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`;
+          const compressed = await ImageManipulator.manipulateAsync(
+            result.assets[0].uri,
+            [{ resize: { width: 700 } }],
+            {
+              compress: 0.3,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: true,
+            },
+          );
+          const base64Img = `data:image/jpeg;base64,${compressed.base64}`;
           setForm(prev => ({ ...prev, packaging_image: base64Img }));
         }
       }
@@ -409,18 +443,30 @@ export default function AddProductScreen() {
       status: form.status || "Active",
     };
 
+    if (JSON.stringify(payload).length > MAX_PRODUCT_PAYLOAD_CHARS) {
+      setLoading(false);
+      showAppDialog(
+        "Images are too large",
+        "Please remove an image and choose smaller photos before saving the product.",
+      );
+      return;
+    }
+
     try {
       if (id && id !== 'new') {
-        await api.put(`/products/${id}`, payload);
+        await api.put(`/products/${id}`, payload, { timeout: 60000 });
         showAppDialog("Product updated", "Your product was updated successfully.");
       } else {
-        await api.post("/products", payload);
+        await api.post("/products", payload, { timeout: 60000 });
         showAppDialog("Product added", "Your new product is ready in your store.");
       }
       router.back();
     } catch (err: any) {
       console.error(err);
-      showAppDialog("Could not save product", err.response?.data?.message || "Please try again.");
+      showAppDialog(
+        "Could not save product",
+        err?.message || "Please check your connection and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -923,7 +969,7 @@ export default function AddProductScreen() {
                 <Text style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}>
                   {form.images.length > 0
                     ? `${form.images.length} image${form.images.length === 1 ? "" : "s"} selected`
-                    : "Select up to 8 images"}
+                    : `Select up to ${MAX_PRODUCT_IMAGES} images`}
                 </Text>
               </Pressable>
             </FormGroup>

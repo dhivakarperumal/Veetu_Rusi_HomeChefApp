@@ -1,18 +1,37 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import api, { getStoredUser } from "../api";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import api, { getApiErrorMessage, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
 const DIETARY_OPTIONS = ["veg", "non-veg"];
 const PACKAGING_OPTIONS = ["Pouch", "Box", "Foil", "Bottle", "Packet"];
-const CUISINE_OPTIONS = ["Multi Cuisine", "North Indian", "South Indian", "Continental", "Chinese", "Italian", "Thai", "Mexican"];
+const CUISINE_OPTIONS = [
+  "Multi Cuisine",
+  "North Indian",
+  "South Indian",
+  "Continental",
+  "Chinese",
+  "Italian",
+  "Thai",
+  "Mexican",
+];
 const PRODUCT_TYPE_OPTIONS = ["Food", "Food Product"];
+const MAX_GALLERY_IMAGES = 4;
+const MAX_DISH_PAYLOAD_CHARS = 1500000;
 
 function parseImageCollection(value: unknown): string[] {
   let parsed = value;
@@ -24,12 +43,21 @@ function parseImageCollection(value: unknown): string[] {
     }
   }
   if (Array.isArray(parsed)) {
-    return parsed.filter((image): image is string => typeof image === "string" && image.trim().length > 0);
+    return parsed.filter(
+      (image): image is string =>
+        typeof image === "string" && image.trim().length > 0,
+    );
   }
   return typeof parsed === "string" && parsed.trim() ? [parsed.trim()] : [];
 }
 
-function FormGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function FormGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <View style={{ marginBottom: 18 }}>
       <Text
@@ -77,7 +105,14 @@ function InputField({
       }}
     >
       {prefix && (
-        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.primaryDark, marginRight: 8 }}>
+        <Text
+          style={{
+            fontSize: 16,
+            fontWeight: "700",
+            color: colors.primaryDark,
+            marginRight: 8,
+          }}
+        >
           {prefix}
         </Text>
       )}
@@ -134,22 +169,22 @@ const initialForm = {
   dietary_tag: "veg",
   net_weight: "",
   packaging_type: "Pouch",
-  packaging_image: "",
+  packaging_image: [] as string[],
   ingredients: "",
   instructions: "",
-  images: [] as string[]
+  images: [] as string[],
 };
 
 export default function AddDishScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  
+
   useEffect(() => {
     const loadInit = async () => {
       try {
@@ -169,26 +204,34 @@ export default function AddDishScreen() {
       try {
         let adminUserId = null;
         try {
-          const profileRes = await api.get('/auth/profile');
+          const profileRes = await api.get("/auth/profile");
           const homeChef = profileRes.data?.homeChef || null;
-          adminUserId = homeChef?.created_by || homeChef?.franchise_user_id || homeChef?.created_by_user_id || null;
+          adminUserId =
+            homeChef?.created_by ||
+            homeChef?.franchise_user_id ||
+            homeChef?.created_by_user_id ||
+            null;
         } catch {
           // fallback
         }
 
         const res = await api.get("/home-chef-categories");
         // robust check in case it's nested
-        const allCategories = Array.isArray(res.data) 
-          ? res.data 
-          : (res.data?.data || res.data?.categories || res.data?.homeChefCategories || []);
+        const allCategories = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data ||
+            res.data?.categories ||
+            res.data?.homeChefCategories ||
+            [];
 
         let filtered = allCategories;
 
         if (adminUserId) {
-          filtered = filtered.filter((cat: any) =>
-            String(cat.created_by) === String(adminUserId) ||
-            String(cat.created_by_user_id) === String(adminUserId) ||
-            String(cat.franchise_user_id) === String(adminUserId)
+          filtered = filtered.filter(
+            (cat: any) =>
+              String(cat.created_by) === String(adminUserId) ||
+              String(cat.created_by_user_id) === String(adminUserId) ||
+              String(cat.franchise_user_id) === String(adminUserId),
           );
         }
         setCategories(filtered);
@@ -200,7 +243,7 @@ export default function AddDishScreen() {
   }, [profile]);
 
   useEffect(() => {
-    if (!profile || !id || id === 'new') return;
+    if (!profile || !id || id === "new") return;
     const loadFood = async () => {
       try {
         setFetching(true);
@@ -222,10 +265,10 @@ export default function AddDishScreen() {
           dietary_tag: item.dietary_tag || "veg",
           net_weight: item.net_weight || "",
           packaging_type: item.packaging_type || "Pouch",
-          packaging_image: item.packaging_image || "",
+          packaging_image: parseImageCollection(item.packaging_image),
           ingredients: item.ingredients || "",
           instructions: item.instructions || "",
-          images: parseImageCollection(item.images)
+          images: parseImageCollection(item.images),
         });
       } catch (err) {
         console.error(err);
@@ -247,41 +290,65 @@ export default function AddDishScreen() {
     return computed > 0 ? computed.toFixed(2) : "0.00";
   }, [form.mrp, form.offer]);
 
-  const handlePickImage = async (field: 'images' | 'packaging_image') => {
+  const handlePickImage = async (field: "images" | "packaging_image") => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        showAppDialog("Permission denied", "Please allow camera roll access to upload images.");
+      const currentImageCount = form[field].length;
+      const remainingSlots = MAX_GALLERY_IMAGES - currentImageCount;
+      if (remainingSlots <= 0) {
+        showAppDialog(
+          "Image limit reached",
+          `You can add up to ${MAX_GALLERY_IMAGES} images in this gallery.`,
+        );
+        return;
+      }
+
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        showAppDialog(
+          "Permission denied",
+          "Please allow camera roll access to upload images.",
+        );
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: field !== "images",
-        allowsMultipleSelection: field === "images",
-        selectionLimit: field === "images" ? 8 : 1,
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        selectionLimit: remainingSlots,
         quality: 0.6,
-        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        if (field === 'images') {
-          const selectedImages = result.assets
-            .filter((asset) => asset.base64)
-            .map((asset) => `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`);
-          setForm((prev) => ({
-            ...prev,
-            images: [...prev.images, ...selectedImages].slice(0, 8),
-          }));
-        } else {
-          const asset = result.assets[0];
-          const base64Img = `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}`;
-          setForm(prev => ({ ...prev, packaging_image: base64Img }));
-        }
+        const selectedImages = await Promise.all(
+          result.assets.map(async (asset) => {
+            const compressed = await ImageManipulator.manipulateAsync(
+              asset.uri,
+              [{ resize: { width: 700 } }],
+              {
+                compress: 0.3,
+                format: ImageManipulator.SaveFormat.JPEG,
+                base64: true,
+              },
+            );
+            return `data:image/jpeg;base64,${compressed.base64}`;
+          }),
+        );
+        setForm((prev) => ({
+          ...prev,
+          [field]: [...prev[field], ...selectedImages].slice(
+            0,
+            MAX_GALLERY_IMAGES,
+          ),
+        }));
       }
     } catch (e) {
       console.error("Image pick error:", e);
-      showAppDialog("Could not select image", "Please try choosing the image again.");
+      showAppDialog(
+        "Could not select image",
+        "Please try choosing the image again.",
+      );
     }
   };
 
@@ -292,36 +359,69 @@ export default function AddDishScreen() {
     }));
   };
 
+  const removePackagingImage = (index: number) => {
+    setForm((previous) => ({
+      ...previous,
+      packaging_image: previous.packaging_image.filter(
+        (_, imageIndex) => imageIndex !== index,
+      ),
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!form.category || !form.name || !form.description || !form.mrp) {
-      showAppDialog("Missing details", "Please complete the required name, category, description, and MRP fields.");
+      showAppDialog(
+        "Missing details",
+        "Please complete the required name, category, description, and MRP fields.",
+      );
       return;
     }
-    
+
     setLoading(true);
     const payload = {
       ...form,
-      shelf_life_days: form.shelf_life_days ? Number(form.shelf_life_days) : null,
+      shelf_life_days: form.shelf_life_days
+        ? Number(form.shelf_life_days)
+        : null,
       mrp: Number(form.mrp),
       product_type: form.product_type || "Food",
       offer: Number(form.offer) || 0,
       final_price: Number(computedFinalPrice) || null,
-      packaging_image: form.packaging_image || null,
-      preparation_url: form.preparation_url || null
+      packaging_image:
+        form.packaging_image.length > 0 ? form.packaging_image : null,
+      preparation_url: form.preparation_url || null,
     };
 
+    if (JSON.stringify(payload).length > MAX_DISH_PAYLOAD_CHARS) {
+      setLoading(false);
+      showAppDialog(
+        "Images are too large",
+        "Please remove an image and choose smaller photos before saving the dish.",
+      );
+      return;
+    }
+
     try {
-      if (id && id !== 'new') {
-        await api.put(`/chef-foods/${id}`, payload);
-        showAppDialog("Dish updated", "Your food item was updated successfully.");
+      if (id && id !== "new") {
+        await api.put(`/chef-foods/${id}`, payload, { timeout: 60000 });
+        showAppDialog(
+          "Dish updated",
+          "Your food item was updated successfully.",
+        );
       } else {
-        await api.post("/chef-foods", payload);
-        showAppDialog("Dish added", "Your new food item is ready in your menu.");
+        await api.post("/chef-foods", payload, { timeout: 60000 });
+        showAppDialog(
+          "Dish added",
+          "Your new food item is ready in your menu.",
+        );
       }
       router.back();
     } catch (err: any) {
       console.error(err);
-      showAppDialog("Could not save dish", err.response?.data?.message || "Please try again.");
+      showAppDialog(
+        "Could not save dish",
+        getApiErrorMessage(err, "Please check your connection and try again."),
+      );
     } finally {
       setLoading(false);
     }
@@ -329,8 +429,15 @@ export default function AddDishScreen() {
 
   if (fetching) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.pageBackground }}>
-         <ActivityIndicator size="large" color={colors.primary} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.pageBackground,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -338,7 +445,7 @@ export default function AddDishScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <PageHeader
-        title={id && id !== 'new' ? "Edit Dish" : "Add New Dish"}
+        title={id && id !== "new" ? "Edit Dish" : "Add New Dish"}
         onLeftPress={() => router.back()}
         leftIcon="arrow-back"
       />
@@ -352,7 +459,7 @@ export default function AddDishScreen() {
       >
         {/* ── Food Details ── */}
         <SectionHeader title="Food Details" />
-        
+
         <FormGroup label="Dish Name *">
           <InputField
             value={form.name}
@@ -373,15 +480,22 @@ export default function AddDishScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   alignItems: "center",
-                  borderColor: form.product_type === opt ? colors.primary : colors.border,
-                  backgroundColor: form.product_type === opt ? "#E8F5E9" : colors.cardBackground,
+                  borderColor:
+                    form.product_type === opt ? colors.primary : colors.border,
+                  backgroundColor:
+                    form.product_type === opt
+                      ? "#E8F5E9"
+                      : colors.cardBackground,
                 }}
               >
                 <Text
                   style={{
                     fontSize: 14,
                     fontWeight: "700",
-                    color: form.product_type === opt ? colors.primary : colors.primaryDark,
+                    color:
+                      form.product_type === opt
+                        ? colors.primary
+                        : colors.primaryDark,
                   }}
                 >
                   {opt}
@@ -392,22 +506,33 @@ export default function AddDishScreen() {
         </FormGroup>
 
         <FormGroup label="Category *">
-          {categories.filter(c => {
+          {categories.filter((c) => {
             const t = (c.category_type || "").toLowerCase();
             const f = (form.product_type || "food").toLowerCase();
-            return f === "food product" ? (t === "food product" || t === "food products") : t === "food";
+            return f === "food product"
+              ? t === "food product" || t === "food products"
+              : t === "food";
           }).length === 0 ? (
-            <Text style={{ fontSize: 13, color: colors.muted }}>No categories available for this type.</Text>
+            <Text style={{ fontSize: 13, color: colors.muted }}>
+              No categories available for this type.
+            </Text>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10 }}
+            >
               {categories
-                .filter(c => {
+                .filter((c) => {
                   const t = (c.category_type || "").toLowerCase();
                   const f = (form.product_type || "food").toLowerCase();
-                  return f === "food product" ? (t === "food product" || t === "food products") : t === "food";
+                  return f === "food product"
+                    ? t === "food product" || t === "food products"
+                    : t === "food";
                 })
                 .map((cat, idx) => {
-                  const catName = cat.c_name || cat.name || cat.category_name || "Unknown";
+                  const catName =
+                    cat.c_name || cat.name || cat.category_name || "Unknown";
                   const isSelected = form.category === catName;
                   return (
                     <Pressable
@@ -418,28 +543,38 @@ export default function AddDishScreen() {
                         paddingHorizontal: 16,
                         borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                        backgroundColor: isSelected ? "#E8F5E9" : colors.cardBackground,
+                        borderColor: isSelected
+                          ? colors.primary
+                          : colors.border,
+                        backgroundColor: isSelected
+                          ? "#E8F5E9"
+                          : colors.cardBackground,
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 14,
                           fontWeight: "700",
-                          color: isSelected ? colors.primary : colors.primaryDark,
+                          color: isSelected
+                            ? colors.primary
+                            : colors.primaryDark,
                         }}
                       >
                         {catName}
                       </Text>
                     </Pressable>
                   );
-              })}
+                })}
             </ScrollView>
           )}
         </FormGroup>
 
         <FormGroup label="Cuisine">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10 }}
+          >
             {CUISINE_OPTIONS.map((opt) => {
               const isSelected = form.cuisine === opt;
               return (
@@ -452,7 +587,9 @@ export default function AddDishScreen() {
                     borderRadius: 12,
                     borderWidth: 1,
                     borderColor: isSelected ? colors.primary : colors.border,
-                    backgroundColor: isSelected ? "#E8F5E9" : colors.cardBackground,
+                    backgroundColor: isSelected
+                      ? "#E8F5E9"
+                      : colors.cardBackground,
                   }}
                 >
                   <Text
@@ -482,8 +619,12 @@ export default function AddDishScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   alignItems: "center",
-                  borderColor: form.dietary_tag === opt ? colors.primary : colors.border,
-                  backgroundColor: form.dietary_tag === opt ? "#E8F5E9" : colors.cardBackground,
+                  borderColor:
+                    form.dietary_tag === opt ? colors.primary : colors.border,
+                  backgroundColor:
+                    form.dietary_tag === opt
+                      ? "#E8F5E9"
+                      : colors.cardBackground,
                 }}
               >
                 <Text
@@ -491,7 +632,10 @@ export default function AddDishScreen() {
                     fontSize: 14,
                     fontWeight: "700",
                     textTransform: "capitalize",
-                    color: form.dietary_tag === opt ? colors.primary : colors.primaryDark,
+                    color:
+                      form.dietary_tag === opt
+                        ? colors.primary
+                        : colors.primaryDark,
                   }}
                 >
                   {opt}
@@ -574,7 +718,11 @@ export default function AddDishScreen() {
         </View>
 
         <FormGroup label="Packaging Type">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10 }}
+          >
             {PACKAGING_OPTIONS.map((opt) => {
               const isSelected = form.packaging_type === opt;
               return (
@@ -587,7 +735,9 @@ export default function AddDishScreen() {
                     borderRadius: 12,
                     borderWidth: 1,
                     borderColor: isSelected ? colors.primary : colors.border,
-                    backgroundColor: isSelected ? "#E8F5E9" : colors.cardBackground,
+                    backgroundColor: isSelected
+                      ? "#E8F5E9"
+                      : colors.cardBackground,
                   }}
                 >
                   <Text
@@ -651,7 +801,7 @@ export default function AddDishScreen() {
           <View style={{ flex: 1 }}>
             <FormGroup label="Dish Image">
               <Pressable
-                onPress={() => handlePickImage('images')}
+                onPress={() => handlePickImage("images")}
                 style={{
                   height: 120,
                   borderRadius: 16,
@@ -663,14 +813,27 @@ export default function AddDishScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="image-outline" size={32} color={colors.primary} />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: colors.primary, marginTop: 8 }}>
+                <Ionicons
+                  name="image-outline"
+                  size={32}
+                  color={colors.primary}
+                />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.primary,
+                    marginTop: 8,
+                  }}
+                >
                   Upload Food Image
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}>
+                <Text
+                  style={{ fontSize: 11, color: colors.primary, marginTop: 4 }}
+                >
                   {form.images.length > 0
                     ? `${form.images.length} image${form.images.length === 1 ? "" : "s"} selected`
-                    : "Select up to 8 images"}
+                    : `Select up to ${MAX_GALLERY_IMAGES} images`}
                 </Text>
               </Pressable>
             </FormGroup>
@@ -681,7 +844,10 @@ export default function AddDishScreen() {
                 contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
               >
                 {form.images.map((image, index) => (
-                  <View key={`${image.slice(0, 24)}-${index}`} style={{ position: "relative" }}>
+                  <View
+                    key={`${image.slice(0, 24)}-${index}`}
+                    style={{ position: "relative" }}
+                  >
                     <Image
                       source={{ uri: image }}
                       style={{ width: 58, height: 58, borderRadius: 10 }}
@@ -712,32 +878,72 @@ export default function AddDishScreen() {
           <View style={{ flex: 1 }}>
             <FormGroup label="Packaging Image">
               <Pressable
-                onPress={() => handlePickImage('packaging_image')}
+                onPress={() => handlePickImage("packaging_image")}
                 style={{
                   height: 120,
                   borderRadius: 16,
                   borderWidth: 1,
                   borderStyle: "dashed",
-                  borderColor: '#BA68C8',
+                  borderColor: "#BA68C8",
                   backgroundColor: "#F3E5F5",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
                 <Ionicons name="cube-outline" size={32} color="#8E24AA" />
-                <Text style={{ fontSize: 14, fontWeight: "600", color: '#8E24AA', marginTop: 8 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: "#8E24AA",
+                    marginTop: 8,
+                  }}
+                >
                   Upload Packaging Image
                 </Text>
-                {form.packaging_image ? <Text style={{ fontSize: 11, color: '#8E24AA', marginTop: 4 }}>Image selected</Text> : null}
+                <Text style={{ fontSize: 11, color: "#8E24AA", marginTop: 4 }}>
+                  {form.packaging_image.length > 0
+                    ? `${form.packaging_image.length} image${form.packaging_image.length === 1 ? "" : "s"} selected`
+                    : `Select up to ${MAX_GALLERY_IMAGES} images`}
+                </Text>
               </Pressable>
             </FormGroup>
-            {form.packaging_image ? (
-              <Image
-                source={{ uri: form.packaging_image }}
-                style={{ width: "100%", height: 58, borderRadius: 10, marginTop: -8 }}
-                contentFit="cover"
-              />
-            ) : null}
+            {form.packaging_image.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+              >
+                {form.packaging_image.map((image, index) => (
+                  <View
+                    key={`${image.slice(0, 24)}-${index}`}
+                    style={{ position: "relative" }}
+                  >
+                    <Image
+                      source={{ uri: image }}
+                      style={{ width: 58, height: 58, borderRadius: 10 }}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      onPress={() => removePackagingImage(index)}
+                      style={{
+                        position: "absolute",
+                        top: -6,
+                        right: -6,
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#C62828",
+                      }}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
 
@@ -760,14 +966,13 @@ export default function AddDishScreen() {
           }}
         >
           {loading ? (
-             <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-             <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>
-               {id && id !== 'new' ? 'Save Changes' : 'Save Dish'}
-             </Text>
+            <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>
+              {id && id !== "new" ? "Save Changes" : "Save Dish"}
+            </Text>
           )}
         </Pressable>
-
       </ScrollView>
     </View>
   );

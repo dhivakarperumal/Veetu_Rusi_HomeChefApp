@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import {
     CART_KEY,
     FAVORITES_KEY,
@@ -19,16 +19,29 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
+  const loadFavorites = async () => {
+    const [favorites, cart] = await Promise.all([
       loadMaterialCollection(FAVORITES_KEY),
       loadMaterialCollection(CART_KEY),
-    ]).then(([favorites, cart]) => {
-      setItems(favorites);
-      setCartIds(new Set(cart.map((item: any) => String(item.id))));
-    });
+    ]);
+    setItems(favorites);
+    setCartIds(new Set(cart.map((item: any) => String(item.id))));
+  };
+
+  useEffect(() => {
+    void loadFavorites();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadFavorites();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const addToCart = async (item: any) => {
     await setMaterialInCollection(CART_KEY, item, true);
@@ -73,6 +86,14 @@ export default function FavoritesScreen() {
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor="#2E7A4F"
+            colors={["#2E7A4F"]}
+          />
+        }
         contentContainerStyle={{ padding: 16, flexGrow: 1 }}
         ListEmptyComponent={
           <Text

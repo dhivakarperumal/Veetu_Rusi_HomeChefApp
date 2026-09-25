@@ -7,6 +7,7 @@ import {
     FlatList,
     Modal,
     Pressable,
+    RefreshControl,
     ScrollView,
     Text,
     TextInput,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -94,9 +96,7 @@ const getFoodImage = (item: any): string => {
 
     // Case 1: already parsed into an array by axios
     if (Array.isArray(imgs)) {
-      const first = imgs.find(
-        (u: any) => typeof u === "string" && u.trim(),
-      );
+      const first = imgs.find((u: any) => typeof u === "string" && u.trim());
       if (first) {
         const url = resolveImageUrl(first.trim());
         return url;
@@ -129,9 +129,15 @@ const getFoodImage = (item: any): string => {
 function DishCard({
   dish,
   onToggle,
+  onView,
+  onEdit,
+  onDelete,
 }: {
   dish: Dish;
   onToggle: (id: string) => void;
+  onView: (dish: Dish) => void;
+  onEdit: (id: string) => void;
+  onDelete: (dish: Dish) => void;
 }) {
   const isActive = (dish.status || "").toLowerCase() === "active";
   // useState fallback: if the resolved URL fails to load, swap to avatar
@@ -199,7 +205,21 @@ function DishCard({
           >
             {dish.name}
           </Text>
-          <Pressable hitSlop={8}>
+          <Pressable
+            hitSlop={8}
+            onPress={() =>
+              showAppDialog(dish.name, "Choose an action", [
+                { text: "View", onPress: () => onView(dish) },
+                { text: "Edit", onPress: () => onEdit(dish.id) },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => onDelete(dish),
+                },
+                { text: "Cancel", style: "cancel" },
+              ])
+            }
+          >
             <Ionicons name="ellipsis-vertical" size={16} color={colors.muted} />
           </Pressable>
         </View>
@@ -304,13 +324,60 @@ export default function DishesScreen() {
   const [search, setSearch] = useState("");
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState<
     "All" | "Active" | "Inactive"
   >("All");
 
-  async function fetchFoods() {
-    setLoading(true);
+  const handleViewDish = (dish: Dish) => {
+    showAppDialog(
+      dish.name,
+      [
+        `Category: ${dish.category}`,
+        `Price: ₹${Number(dish.price).toFixed(2).replace(/\.00$/, "")}`,
+        `Status: ${dish.status || "Inactive"}`,
+        `Rating: ${dish.rating} (${dish.reviews} reviews)`,
+        `Orders: ${dish.orders}`,
+      ].join("\n"),
+    );
+  };
+
+  const handleEditDish = (id: string) => {
+    router.push({ pathname: "/add-dish", params: { id } } as any);
+  };
+
+  const handleDeleteDish = (dish: Dish) => {
+    showAppDialog(
+      "Delete dish?",
+      `This will permanently remove ${dish.name}.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/chef-foods/${dish.id}`);
+              setDishes((previous) =>
+                previous.filter((item) => item.id !== dish.id),
+              );
+              showAppDialog("Dish deleted", `${dish.name} was removed.`);
+            } catch (error: any) {
+              console.error("Failed to delete dish", error);
+              showAppDialog(
+                "Could not delete dish",
+                error?.message || "Please try again.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  async function fetchFoods(showLoader = true) {
+    if (showLoader) setLoading(true);
     try {
       const profile = await getStoredUser();
       const params: any = {};
@@ -346,9 +413,18 @@ export default function DishesScreen() {
     } catch (err) {
       console.error("Failed to load chef foods", err);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchFoods(false);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchFoods();
@@ -502,8 +578,22 @@ export default function DishesScreen() {
       <FlatList
         data={loading ? [] : filteredDishes}
         keyExtractor={(dish) => dish.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         renderItem={({ item }) => (
-          <DishCard dish={item} onToggle={handleToggleStatus} />
+          <DishCard
+            dish={item}
+            onToggle={handleToggleStatus}
+            onView={handleViewDish}
+            onEdit={handleEditDish}
+            onDelete={handleDeleteDish}
+          />
         )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -513,41 +603,41 @@ export default function DishesScreen() {
         }}
         ListEmptyComponent={
           loading ? (
-          <View style={{ paddingVertical: 60, alignItems: "center" }}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ marginTop: 12, color: colors.muted }}>
-              Loading dishes...
-            </Text>
-          </View>
+            <View style={{ paddingVertical: 60, alignItems: "center" }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 12, color: colors.muted }}>
+                Loading dishes...
+              </Text>
+            </View>
           ) : (
-          <View
-            style={{
-              alignItems: "center",
-              justifyContent: "center",
-              paddingVertical: 60,
-            }}
-          >
-            <Text style={{ fontSize: 48, marginBottom: 14 }}>🍽️</Text>
-            <Text
+            <View
               style={{
-                fontSize: 16,
-                fontWeight: "700",
-                color: colors.primaryDark,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 60,
               }}
             >
-              No dishes found
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: colors.muted,
-                marginTop: 4,
-                textAlign: "center",
-              }}
-            >
-              Try a different category or search term.
-            </Text>
-          </View>
+              <Text style={{ fontSize: 48, marginBottom: 14 }}>🍽️</Text>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "700",
+                  color: colors.primaryDark,
+                }}
+              >
+                No dishes found
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: colors.muted,
+                  marginTop: 4,
+                  textAlign: "center",
+                }}
+              >
+                Try a different category or search term.
+              </Text>
+            </View>
           )
         }
       />

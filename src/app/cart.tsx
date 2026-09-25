@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import {
     CART_KEY,
     getMaterialImage,
@@ -16,16 +16,30 @@ import PageHeader from "./componets/pageheader";
 export default function CartScreen() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
-  useEffect(() => {
-    loadMaterialCollection(CART_KEY).then((savedItems) =>
-      setItems(
-        savedItems.map((item: any) => ({
-          ...item,
-          quantity: Number(item.quantity) || 1,
-        })),
-      ),
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadCart = async () => {
+    const savedItems = await loadMaterialCollection(CART_KEY);
+    setItems(
+      savedItems.map((item: any) => ({
+        ...item,
+        quantity: Number(item.quantity) || 1,
+      })),
     );
+  };
+
+  useEffect(() => {
+    void loadCart();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadCart();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const total = items.reduce(
     (sum, item) =>
       sum +
@@ -51,6 +65,14 @@ export default function CartScreen() {
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor="#2E7A4F"
+            colors={["#2E7A4F"]}
+          />
+        }
         contentContainerStyle={{ padding: 16, flexGrow: 1 }}
         ListEmptyComponent={
           <Text

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
+    RefreshControl,
     ScrollView,
     Text,
     TextInput,
@@ -266,16 +267,21 @@ export default function MyProductsScreen() {
   const [selectedFilter, setSelectedFilter] = useState<ProductFilter>("All");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const user = await getStoredUser();
       const chefUserId = user?.user_id || user?.id;
-      if (!chefUserId) return setProducts([]);
+      if (!chefUserId) {
+        setProducts([]);
+        return;
+      }
 
       const res = await api.get(`/products/user/${chefUserId}`);
       let allItems = Array.isArray(res.data) ? res.data : res.data?.data || [];
@@ -284,7 +290,16 @@ export default function MyProductsScreen() {
       console.error("Failed to fetch products:", err);
       setProducts([]);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchProducts(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -436,6 +451,14 @@ export default function MyProductsScreen() {
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 4,

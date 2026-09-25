@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     Linking,
     Pressable,
+    RefreshControl,
     ScrollView,
     Text,
     View,
@@ -163,15 +164,16 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchOrder();
   }, [id]);
 
-  const fetchOrder = async () => {
+  const fetchOrder = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       // Try to fetch specific order if endpoint exists, otherwise fallback to finding from chef orders list
       let foundOrder = null;
       try {
@@ -206,7 +208,16 @@ export default function OrderDetailScreen() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchOrder(false);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -385,6 +396,14 @@ export default function OrderDetailScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingBottom: 120,
