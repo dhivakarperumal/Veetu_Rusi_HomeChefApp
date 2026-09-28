@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
@@ -38,6 +38,7 @@ interface Order {
   amount: number;
   location: string;
   time: string;
+  orderedAt?: string;
   acceptedAt?: string;
   acceptedTime?: string;
   deliveryAt?: string;
@@ -542,6 +543,11 @@ const matchesTab = (order: Order, tab: OrderTab) => {
   return order.status === tab;
 };
 
+const getOrderTimestamp = (order: Order) => {
+  const timestamp = Date.parse(order.orderedAt || "");
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderTab>("All Status");
@@ -624,6 +630,7 @@ export default function OrdersScreen() {
           location: o.street_address
             ? `${o.street_address}, ${o.city || ""}`.replace(/,\s*$/, "")
             : o.customer_address || o.delivery_address || "Unknown Location",
+          orderedAt: normalizeTimestamp(o.ordered_at || o.created_at),
           cancellationReason:
             o.cancellation_reason ||
             o.cancel_reason ||
@@ -685,9 +692,9 @@ export default function OrdersScreen() {
 
   // Apply sorting
   if (filterSort === "Newest") {
-    // Assuming higher ID or time means newer if we don't have exact timestamps to parse reliably
-    // In a real app we'd parse o.time or keep a raw date.
-    // We'll leave the default order from API for "Newest"
+    filtered.sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
+  } else if (filterSort === "Oldest") {
+    filtered.sort((a, b) => getOrderTimestamp(a) - getOrderTimestamp(b));
   } else if (filterSort === "Highest Amount") {
     filtered.sort((a, b) => b.amount - a.amount);
   }
@@ -1108,17 +1115,24 @@ export default function OrdersScreen() {
         animationType="slide"
         onRequestClose={() => setShowFilter(false)}
       >
-        <TouchableOpacity
+        <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
             justifyContent: "flex-end",
           }}
-          activeOpacity={1}
-          onPress={() => setShowFilter(false)}
         >
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
+            onPress={() => setShowFilter(false)}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              backgroundColor: "rgba(0,0,0,0.5)",
+            }}
+          />
+          <View
             style={{
               backgroundColor: "#fff",
               borderTopLeftRadius: 24,
@@ -1185,15 +1199,28 @@ export default function OrdersScreen() {
                       borderColor: isActive ? colors.primary : colors.border,
                     }}
                   >
-                    <Text
+                    <View
                       style={{
-                        fontSize: 14,
-                        fontWeight: "600",
-                        color: isActive ? "#fff" : colors.primaryDark,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 7,
                       }}
                     >
-                      {sort}
-                    </Text>
+                      <Ionicons
+                        name={isActive ? "radio-button-on" : "radio-button-off"}
+                        size={17}
+                        color={isActive ? "#fff" : colors.primaryDark}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "600",
+                          color: isActive ? "#fff" : colors.primaryDark,
+                        }}
+                      >
+                        {sort}
+                      </Text>
+                    </View>
                   </Pressable>
                 );
               })}
@@ -1212,8 +1239,8 @@ export default function OrdersScreen() {
                 Apply
               </Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
