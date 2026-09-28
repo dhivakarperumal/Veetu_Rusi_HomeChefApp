@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../theme/colors";
+
+const SAFE_AREA_GREEN = "#2E7A4F";
 
 /**
  * Reusable page header for inner screens (Orders, Dishes, Earnings, etc.)
@@ -24,10 +26,8 @@ export default function PageHeader({
   titleFontSize = 24,
 }) {
   return (
-    <SafeAreaView
-      edges={["top"]}
-      style={{ backgroundColor: headerBackgroundColor }}
-    >
+    <SafeAreaView edges={["top"]} style={{ backgroundColor: SAFE_AREA_GREEN }}>
+      <StatusBar barStyle="light-content" backgroundColor={SAFE_AREA_GREEN} />
       <View
         style={{
           flexDirection: "row",

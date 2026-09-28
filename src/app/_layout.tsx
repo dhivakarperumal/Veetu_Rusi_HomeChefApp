@@ -3,16 +3,13 @@ import * as Device from "expo-device";
 import * as NavigationBar from "expo-navigation-bar";
 import { Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { Platform, StatusBar, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../../global.css";
 import api from "../api";
 import AppDialog from "../components/AppDialog";
 import { useOrderPolling } from "../hooks/useOrderPolling";
-import {
-    subscribeToAppDialog,
-    type AppDialogOptions,
-} from "../lib/app-dialog";
+import { subscribeToAppDialog, type AppDialogOptions } from "../lib/app-dialog";
 import { getNotifications } from "../lib/notifications";
 
 const Notifications = getNotifications();
@@ -130,12 +127,15 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-      <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
+      <View style={{ flex: 1, backgroundColor: "#2E7A4F" }}>
+        <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+        <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
+      </View>
     </SafeAreaProvider>
   );
 }

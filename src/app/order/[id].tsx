@@ -8,6 +8,7 @@ import {
     Pressable,
     RefreshControl,
     ScrollView,
+    StatusBar,
     Text,
     View,
 } from "react-native";
@@ -373,10 +374,8 @@ export default function OrderDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       {/* ── Header ── */}
-      <SafeAreaView
-        edges={["top"]}
-        style={{ backgroundColor: colors.pageBackground }}
-      >
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: "#2E7A4F" }}>
+        <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
         <View
           style={{
             flexDirection: "row",
