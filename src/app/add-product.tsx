@@ -34,7 +34,6 @@ const CUISINE_OPTIONS = [
   "Thai",
   "Mexican",
 ];
-const PRODUCT_TYPE_OPTIONS = ["Food", "Food Product"];
 
 function parseImageCollection(value: unknown): string[] {
   let parsed = value;
@@ -401,7 +400,7 @@ export default function AddProductScreen() {
         setForm({
           ...initialForm,
           category: item.category || "",
-          product_type: item.product_type || "Food Product",
+          product_type: "Food Product",
           name: item.name || "",
           description: item.description || "",
           cuisine: item.cuisine || "",
@@ -535,7 +534,7 @@ export default function AddProductScreen() {
       mrp: Number(form.mrp) || 0,
       offer: Number(form.offer) || 0,
       offer_price: Number(computedFinalPrice) || 0,
-      product_type: form.product_type || "Food Product",
+      product_type: "Food Product",
       packaging_image: form.packaging_image || null,
       preparation_url: form.preparation_url || null,
       total_stock: Number(form.total_stock) || 0,
@@ -600,7 +599,6 @@ export default function AddProductScreen() {
         onLeftPress={() => router.back()}
         leftIcon="arrow-back"
       />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -640,50 +638,26 @@ export default function AddProductScreen() {
           </View>
         </View>
 
-        <FormGroup label="Product Type *">
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {PRODUCT_TYPE_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => updateForm("product_type", opt)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  alignItems: "center",
-                  borderColor:
-                    form.product_type === opt ? colors.primary : colors.border,
-                  backgroundColor:
-                    form.product_type === opt
-                      ? "#E8F5E9"
-                      : colors.cardBackground,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "700",
-                    color:
-                      form.product_type === opt
-                        ? colors.primary
-                        : colors.primaryDark,
-                  }}
-                >
-                  {opt}
-                </Text>
-              </Pressable>
-            ))}
+        <FormGroup label="Product Type">
+          <View
+            style={{
+              alignSelf: "flex-start",
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 12,
+              backgroundColor: "#E8F5E9",
+            }}
+          >
+            <Text style={{ fontWeight: "700", color: colors.primary }}>
+              Food Product
+            </Text>
           </View>
         </FormGroup>
 
         <FormGroup label="Category *">
           {categories.filter((c) => {
             const t = (c.category_type || "").toLowerCase();
-            const f = (form.product_type || "food").toLowerCase();
-            return f === "food product"
-              ? t === "food product" || t === "food products"
-              : t === "food";
+            return t === "food product" || t === "food products";
           }).length === 0 ? (
             <Text style={{ fontSize: 13, color: colors.muted }}>
               No categories available for this type.
@@ -697,10 +671,7 @@ export default function AddProductScreen() {
               {categories
                 .filter((c) => {
                   const t = (c.category_type || "").toLowerCase();
-                  const f = (form.product_type || "food").toLowerCase();
-                  return f === "food product"
-                    ? t === "food product" || t === "food products"
-                    : t === "food";
+                  return t === "food product" || t === "food products";
                 })
                 .map((cat, idx) => {
                   const catName =

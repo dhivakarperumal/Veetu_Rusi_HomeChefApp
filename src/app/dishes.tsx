@@ -3,16 +3,15 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
@@ -58,6 +57,7 @@ interface Dish {
   price: number;
   mrp?: number;
   category: string;
+  dietaryTag: string;
   status: DishStatus;
   rating: number;
   reviews: number;
@@ -402,6 +402,7 @@ export default function DishesScreen() {
         price: Number(item.final_price || item.mrp || item.price || 0),
         mrp: Number(item.mrp || 0),
         category: item.category || "All",
+        dietaryTag: item.dietary_tag || item.dietary || "",
         status: item.status || "Active",
         rating: item.rating || 4.5,
         reviews: item.reviews || Math.floor(Math.random() * 100),
@@ -441,9 +442,23 @@ export default function DishesScreen() {
       return false;
     }
     // 2. Category filter
+    const normalizedCategory = (value: string) =>
+      value.toLowerCase().replace(/[^a-z]/g, "");
+    const category = normalizedCategory(d.category || "");
+    const dietaryTag = normalizedCategory(d.dietaryTag || "");
     const matchCat =
       activeCategory === "All" ||
-      (d.category && d.category.toLowerCase() === activeCategory.toLowerCase());
+      (activeCategory === "Veg" &&
+        (dietaryTag === "veg" ||
+          dietaryTag === "vegetarian" ||
+          category === "veg" ||
+          category === "vegetarian")) ||
+      (activeCategory === "Non-Veg" &&
+        (dietaryTag === "nonveg" ||
+          dietaryTag === "nonvegetarian" ||
+          category === "nonveg" ||
+          category === "nonvegetarian")) ||
+      (activeCategory === "Combo" && category.includes("combo"));
     if (!matchCat) return false;
 
     // 3. Status filter
@@ -531,10 +546,9 @@ export default function DishesScreen() {
         </View>
 
         {/* Category filter tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
+        <View
+          style={{
+            flexDirection: "row",
             paddingHorizontal: 20,
             paddingBottom: 14,
             gap: 8,
@@ -547,7 +561,11 @@ export default function DishesScreen() {
                 key={cat}
                 onPress={() => setActiveCategory(cat)}
                 style={{
-                  paddingHorizontal: 18,
+                  flex: 1,
+                  minWidth: 0,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 4,
                   paddingVertical: 8,
                   borderRadius: 50,
                   backgroundColor: isActive
@@ -572,7 +590,7 @@ export default function DishesScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── Dish list ── */}

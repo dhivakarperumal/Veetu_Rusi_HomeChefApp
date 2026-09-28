@@ -29,7 +29,6 @@ const CUISINE_OPTIONS = [
   "Thai",
   "Mexican",
 ];
-const PRODUCT_TYPE_OPTIONS = ["Food", "Food Product"];
 const MAX_GALLERY_IMAGES = 4;
 const MAX_DISH_PAYLOAD_CHARS = 1500000;
 
@@ -316,7 +315,7 @@ export default function AddDishScreen() {
         if (!item) return;
         setForm({
           category: item.category || "",
-          product_type: item.product_type || "Food",
+          product_type: "Food",
           name: item.name || "",
           description: item.description || "",
           cuisine: item.cuisine || "",
@@ -435,7 +434,7 @@ export default function AddDishScreen() {
         ? Number(form.shelf_life_days)
         : null,
       mrp: Number(form.mrp),
-      product_type: form.product_type || "Food",
+      product_type: "Food",
       offer: Number(form.offer) || 0,
       final_price: Number(computedFinalPrice) || null,
       packaging_image:
@@ -519,50 +518,26 @@ export default function AddDishScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Product Type *">
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {PRODUCT_TYPE_OPTIONS.map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => updateForm("product_type", opt)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  alignItems: "center",
-                  borderColor:
-                    form.product_type === opt ? colors.primary : colors.border,
-                  backgroundColor:
-                    form.product_type === opt
-                      ? "#E8F5E9"
-                      : colors.cardBackground,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "700",
-                    color:
-                      form.product_type === opt
-                        ? colors.primary
-                        : colors.primaryDark,
-                  }}
-                >
-                  {opt}
-                </Text>
-              </Pressable>
-            ))}
+        <FormGroup label="Product Type">
+          <View
+            style={{
+              alignSelf: "flex-start",
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 12,
+              backgroundColor: "#E8F5E9",
+            }}
+          >
+            <Text style={{ fontWeight: "700", color: colors.primary }}>
+              Food
+            </Text>
           </View>
         </FormGroup>
 
         <FormGroup label="Category *">
           {categories.filter((c) => {
             const t = (c.category_type || "").toLowerCase();
-            const f = (form.product_type || "food").toLowerCase();
-            return f === "food product"
-              ? t === "food product" || t === "food products"
-              : t === "food";
+            return t === "food";
           }).length === 0 ? (
             <Text style={{ fontSize: 13, color: colors.muted }}>
               No categories available for this type.
@@ -576,10 +551,7 @@ export default function AddDishScreen() {
               {categories
                 .filter((c) => {
                   const t = (c.category_type || "").toLowerCase();
-                  const f = (form.product_type || "food").toLowerCase();
-                  return f === "food product"
-                    ? t === "food product" || t === "food products"
-                    : t === "food";
+                  return t === "food";
                 })
                 .map((cat, idx) => {
                   const catName =
