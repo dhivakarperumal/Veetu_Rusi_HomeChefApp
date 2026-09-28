@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import {
     ActivityIndicator,
     Modal,
@@ -191,12 +192,14 @@ export default function CheckoutScreen() {
     }
   }
   const [items, setItems] = useState<any[]>([]);
-  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addresses, setAddresses] = usePageCacheState<any[]>("checkout.addresses", []);
   const [user, setUser] = useState<any>(null);
   const [searchAddress, setSearchAddress] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "razorpay">("cod");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("checkout.addresses"),
+  );
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statePickerVisible, setStatePickerVisible] = useState(false);
@@ -238,23 +241,24 @@ export default function CheckoutScreen() {
           ? [buyNowProduct]
           : await loadMaterialCollection(CART_KEY),
       );
-      try {
-        const response = await api.get("/orders/myorders");
-        const seen = new Set<string>();
-        setAddresses(
-          (response.data || []).filter((address: any) => {
-            const key =
-              `${address.street_address}|${address.city}|${address.zip_code}`.toLowerCase();
-            if (!address.street_address || seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          }),
-        );
-      } catch {
-        console.warn("Could not load saved addresses");
-      } finally {
-        setLoading(false);
+      if (!hasCachedPageData("checkout.addresses")) {
+        try {
+          const response = await api.get("/orders/myorders");
+          const seen = new Set<string>();
+          setAddresses(
+            (response.data || []).filter((address: any) => {
+              const key =
+                `${address.street_address}|${address.city}|${address.zip_code}`.toLowerCase();
+              if (!address.street_address || seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            }),
+          );
+        } catch {
+          console.warn("Could not load saved addresses");
+          }
       }
+      setLoading(false);
     };
     loadCheckout();
     // The checkout payload is fixed when this route opens.

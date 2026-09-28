@@ -72,7 +72,7 @@ export default function BottomBar() {
           return (
             <TouchableOpacity
               key={key}
-              onPress={() => router.push(route)}
+              onPress={() => router.navigate(route)}
               activeOpacity={0.7}
               style={styles.tab}
             >

@@ -18,6 +18,7 @@ import api, {
     isNewOrderStatus,
 } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -140,8 +141,10 @@ const QUICK_ACTIONS = [
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = usePageCacheState<any[]>("dashboard.orders", []);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("dashboard.orders"),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [popupOrder, setPopupOrder] = useState<any | null>(null);
   const [popupActionLoading, setPopupActionLoading] = useState(false);
@@ -189,7 +192,7 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (!hasCachedPageData("dashboard.orders")) fetchData();
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -425,7 +428,7 @@ export default function DashboardScreen() {
         {/* ── Earnings Today Card ── */}
         <Pressable
           style={styles.earningsCard}
-          onPress={() => router.push("/earnings" as any)}
+          onPress={() => router.navigate("/earnings" as any)}
         >
           <View style={{ flex: 1 }}>
             <Text style={styles.earningsLabel}>Earnings Today</Text>
@@ -515,7 +518,7 @@ export default function DashboardScreen() {
         {/* ── Today's Overview Card ── */}
         <Pressable
           style={styles.overviewCard}
-          onPress={() => router.push("/orders" as any)}
+          onPress={() => router.navigate("/orders" as any)}
         >
           <Text style={styles.overviewTitle}>Today&apos;s Overview</Text>
           <View style={styles.overviewRow}>
@@ -541,7 +544,7 @@ export default function DashboardScreen() {
               <Pressable
                 key={a.label}
                 style={[styles.quickItem, { backgroundColor: a.tint }]}
-                onPress={() => router.push(a.route as any)}
+                onPress={() => router.navigate(a.route as any)}
               >
                 <View
                   style={[
@@ -562,7 +565,7 @@ export default function DashboardScreen() {
         {/* ── Recent Orders ── */}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Recent Orders</Text>
-          <Pressable onPress={() => router.push("/orders" as any)}>
+          <Pressable onPress={() => router.navigate("/orders" as any)}>
             <Text style={styles.seeAll}>See all →</Text>
           </Pressable>
         </View>

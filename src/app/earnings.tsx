@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import api from "../api";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -420,8 +421,10 @@ function periodLabel(period: Period) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function EarningsScreen() {
   const [period, setPeriod] = useState<Period>("Day");
-  const [allOrders, setAllOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allOrders, setAllOrders] = usePageCacheState<any[]>("earnings.orders", []);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("earnings.orders"),
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = useCallback(async () => {
@@ -439,7 +442,7 @@ export default function EarningsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    if (!hasCachedPageData("earnings.orders")) fetchOrders();
   }, [fetchOrders]);
 
   const onRefresh = () => {

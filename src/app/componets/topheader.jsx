@@ -187,7 +187,7 @@ export default function TopHeader({
                     activeOpacity={0.7}
                     onPress={() => {
                       setShowMenu(false);
-                      if (route) router.push(route);
+                      if (route) router.navigate(route);
                     }}
                     className="mx-5 mb-2 flex-row items-center rounded-2xl bg-white/10 px-4 py-3.5"
                   >
@@ -225,7 +225,7 @@ export default function TopHeader({
                   className="flex-row items-center gap-3 px-4 py-3.5"
                   onPress={() => {
                     setShowProfileDrop(false);
-                    router.push("/profile");
+                    router.navigate("/profile");
                   }}
                 >
                   <Ionicons name="person-outline" size={18} color={DARK} />

@@ -19,6 +19,11 @@ import api, {
     isNewOrderStatus,
 } from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
+import {
+  hasCachedPageData,
+  usePageCacheState,
+  usePageLoadingState,
+} from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -166,18 +171,14 @@ function SectionTitle({ title }: { title: string }) {
 export default function OrderDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [order, setOrder] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `order.details.${id || ""}`;
+  const [order, setOrder] = usePageCacheState<any>(cacheKey, null);
+  const [loading, setLoading] = usePageLoadingState(cacheKey);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [id]);
-
-  const fetchOrder = async (showLoader = true) => {
+  const fetchOrder = async () => {
     try {
-      if (showLoader) setLoading(true);
       // Try to fetch specific order if endpoint exists, otherwise fallback to finding from chef orders list
       let foundOrder = null;
       try {
@@ -212,14 +213,18 @@ export default function OrderDetailScreen() {
     } catch (err) {
       console.error(err);
     } finally {
-      if (showLoader) setLoading(false);
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!hasCachedPageData(cacheKey)) fetchOrder();
+  }, [cacheKey, id]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchOrder(false);
+      await fetchOrder();
     } finally {
       setRefreshing(false);
     }

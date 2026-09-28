@@ -14,6 +14,11 @@ import {
 } from "react-native";
 import api, { API_BASE_URL, getApiErrorMessage, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import {
+  deleteCachedPageData,
+  hasCachedPageData,
+  usePageCacheState,
+} from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -241,12 +246,15 @@ const initialForm = {
 export default function AddDishScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const formCacheKey = `add-dish.form.${id || "new"}`;
 
   const [profile, setProfile] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [form, setForm] = useState(initialForm);
+  const [categories, setCategories] = usePageCacheState<any[]>("add-dish.categories", []);
+  const [form, setForm] = usePageCacheState(formCacheKey, initialForm);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [fetching, setFetching] = useState(
+    () => Boolean(id && id !== "new" && !hasCachedPageData(formCacheKey)),
+  );
 
   useEffect(() => {
     const loadInit = async () => {
@@ -263,6 +271,7 @@ export default function AddDishScreen() {
 
   useEffect(() => {
     if (!profile) return;
+    if (hasCachedPageData("add-dish.categories")) return;
     const loadCategories = async () => {
       try {
         let adminUserId = null;
@@ -307,6 +316,7 @@ export default function AddDishScreen() {
 
   useEffect(() => {
     if (!profile || !id || id === "new") return;
+    if (hasCachedPageData(formCacheKey)) return;
     const loadFood = async () => {
       try {
         setFetching(true);
@@ -340,7 +350,7 @@ export default function AddDishScreen() {
       }
     };
     loadFood();
-  }, [profile, id]);
+  }, [profile, id, formCacheKey]);
 
   const updateForm = (key: keyof typeof form, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -465,6 +475,7 @@ export default function AddDishScreen() {
           "Your new food item is ready in your menu.",
         );
       }
+      deleteCachedPageData(formCacheKey);
       router.back();
     } catch (err: any) {
       console.error(err);

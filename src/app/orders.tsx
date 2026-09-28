@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -544,7 +545,7 @@ const matchesTab = (order: Order, tab: OrderTab) => {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<OrderTab>("All Status");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = usePageCacheState<Order[]>("orders.list", []);
   const [refreshing, setRefreshing] = useState(false);
   const [clock, setClock] = useState(Date.now());
   const [search, setSearch] = useState("");
@@ -664,7 +665,7 @@ export default function OrdersScreen() {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    if (!hasCachedPageData("orders.list")) fetchOrders();
   }, [fetchOrders]);
 
   let filtered = orders.filter((o) => matchesTab(o, activeTab));

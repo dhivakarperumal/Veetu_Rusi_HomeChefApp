@@ -5,6 +5,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import api, { API_BASE_URL } from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
+import {
+  hasCachedPageData,
+  usePageCacheState,
+  usePageLoadingState,
+} from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
 import PageHeader from "../componets/pageheader";
 
@@ -42,10 +47,12 @@ function DetailRow({ label, value }: { label: string; value: unknown }) {
 export default function DishDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [dish, setDish] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `dish.details.${id || ""}`;
+  const [dish, setDish] = usePageCacheState<any>(cacheKey, null);
+  const [loading, setLoading] = usePageLoadingState(cacheKey);
 
   useEffect(() => {
+    if (hasCachedPageData(cacheKey)) return;
     const loadDish = async () => {
       try {
         const response = await api.get(`/chef-foods/${id}`);
@@ -58,7 +65,7 @@ export default function DishDetailsScreen() {
       }
     };
     if (id) void loadDish();
-  }, [id]);
+  }, [cacheKey, id]);
 
   if (loading) {
     return (

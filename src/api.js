@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { clearPageCache } from "./lib/page-cache";
 
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
@@ -149,6 +150,7 @@ export async function loginWithIdentifier(identifier, password) {
 export async function logoutUser() {
   await AsyncStorage.multiRemove(["userToken", "userProfile"]);
   clearTokenCache();
+  clearPageCache();
 }
 
 export default api;

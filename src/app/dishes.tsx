@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -332,8 +333,10 @@ export default function DishesScreen() {
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
-  const [dishes, setDishes] = useState<Dish[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dishes, setDishes] = usePageCacheState<Dish[]>("dishes.list", []);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("dishes.list"),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [filterStatus, setFilterStatus] = useState<
@@ -429,7 +432,7 @@ export default function DishesScreen() {
   };
 
   useEffect(() => {
-    fetchFoods();
+    if (!hasCachedPageData("dishes.list")) fetchFoods();
   }, []);
 
   const filteredDishes = dishes.filter((d) => {

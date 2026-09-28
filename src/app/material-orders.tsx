@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import api from "../api";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import PageHeader from "./componets/pageheader";
 
 const GREEN = "#2E7A4F";
@@ -20,8 +21,10 @@ const MUTED = "#5A7A6E";
 
 export default function MaterialOrdersScreen() {
   const router = useRouter();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = usePageCacheState<any[]>("material-orders.list", []);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("material-orders.list"),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
@@ -44,7 +47,7 @@ export default function MaterialOrdersScreen() {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    if (!hasCachedPageData("material-orders.list")) fetchOrders();
   }, [fetchOrders]);
 
   return (

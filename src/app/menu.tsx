@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -126,17 +127,19 @@ function SectionHeader({
 export default function MenuScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = usePageCacheState<Category[]>("menu.categories", []);
   const [activeCatId, setActiveCatId] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [fabOpen, setFabOpen] = useState(false);
 
-  const [items, setItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = usePageCacheState<MenuItem[]>("menu.items", []);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("menu.items"),
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    if (!hasCachedPageData("menu.items")) fetchData();
   }, []);
 
   const fetchData = async () => {

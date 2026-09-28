@@ -18,6 +18,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
+import {
+  hasCachedPageData,
+  setCachedPageData,
+  usePageCacheState,
+} from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 
@@ -474,9 +479,11 @@ function EditField({
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const [authUser, setAuthUser] = useState<any>(null);
-  const [chefData, setChefData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [authUser, setAuthUser] = usePageCacheState<any>("profile.authUser", null);
+  const [chefData, setChefData] = usePageCacheState<any>("profile.chefData", null);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData("profile.loaded"),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
@@ -509,6 +516,8 @@ export default function ProfileScreen() {
         (d?.name ? d : null);
 
       setChefData(homeChef || null);
+      // Mark the profile loaded only after both user and profile data are resolved.
+      setCachedPageData("profile.loaded", true);
     } catch (e: any) {
       console.warn("[profile] fetch error:", e?.message || e);
       setError("Could not load profile details. Pull down to retry.");
@@ -519,7 +528,7 @@ export default function ProfileScreen() {
   }, []);
 
   useEffect(() => {
-    fetchProfile();
+    if (!hasCachedPageData("profile.loaded")) fetchProfile();
   }, [fetchProfile]);
 
   const onRefresh = () => {

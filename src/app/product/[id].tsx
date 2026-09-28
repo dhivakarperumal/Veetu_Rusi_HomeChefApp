@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -11,6 +11,11 @@ import {
 } from "react-native";
 import api, { API_BASE_URL } from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
+import {
+  hasCachedPageData,
+  usePageCacheState,
+  usePageLoadingState,
+} from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
 import PageHeader from "../componets/pageheader";
 
@@ -73,10 +78,12 @@ function DetailRow({ label, value }: { label: string; value: unknown }) {
 export default function ProductDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [product, setProduct] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `product.details.${id || ""}`;
+  const [product, setProduct] = usePageCacheState<any>(cacheKey, null);
+  const [loading, setLoading] = usePageLoadingState(cacheKey);
 
   useEffect(() => {
+    if (hasCachedPageData(cacheKey)) return;
     const loadProduct = async () => {
       try {
         const response = await api.get(`/products/${id}`);
@@ -92,7 +99,7 @@ export default function ProductDetailsScreen() {
       }
     };
     if (id) void loadProduct();
-  }, [id]);
+  }, [cacheKey, id]);
 
   if (loading) {
     return (

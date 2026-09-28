@@ -16,6 +16,11 @@ import {
 } from "react-native";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
+import {
+  deleteCachedPageData,
+  hasCachedPageData,
+  usePageCacheState,
+} from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
 
@@ -323,12 +328,15 @@ const initialForm = {
 export default function AddProductScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const formCacheKey = `add-product.form.${id || "new"}`;
 
   const [profile, setProfile] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [form, setForm] = useState(initialForm);
+  const [categories, setCategories] = usePageCacheState<any[]>("add-product.categories", []);
+  const [form, setForm] = usePageCacheState(formCacheKey, initialForm);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [fetching, setFetching] = useState(
+    () => Boolean(id && id !== "new" && !hasCachedPageData(formCacheKey)),
+  );
 
   useEffect(() => {
     const loadInit = async () => {
@@ -345,6 +353,7 @@ export default function AddProductScreen() {
 
   useEffect(() => {
     if (!profile) return;
+    if (hasCachedPageData("add-product.categories")) return;
     const loadCategories = async () => {
       try {
         let adminUserId = null;
@@ -389,6 +398,7 @@ export default function AddProductScreen() {
 
   useEffect(() => {
     if (!profile || !id || id === "new") return;
+    if (hasCachedPageData(formCacheKey)) return;
     const loadFood = async () => {
       try {
         setFetching(true);
@@ -425,7 +435,7 @@ export default function AddProductScreen() {
       }
     };
     loadFood();
-  }, [profile, id]);
+  }, [profile, id, formCacheKey]);
 
   const updateForm = (key: keyof typeof form, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -565,6 +575,7 @@ export default function AddProductScreen() {
           "Your new product is ready in your store.",
         );
       }
+      deleteCachedPageData(formCacheKey);
       router.back();
     } catch (err: any) {
       console.error(err);

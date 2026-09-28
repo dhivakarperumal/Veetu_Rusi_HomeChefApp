@@ -13,6 +13,12 @@ import {
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import {
+  getCachedPageData,
+  hasCachedPageData,
+  setCachedPageData,
+  usePageCacheState,
+} from "../lib/page-cache";
+import {
   CART_KEY,
   FAVORITES_KEY,
   getMaterialImage,
@@ -40,14 +46,23 @@ const getImage = (product: Product) => {
 
 export default function BuyMaterialsScreen() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [homeChef, setHomeChef] = useState<any>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>(["All"]);
+  const [currentUser, setCurrentUser] = useState<any>(() =>
+    getCachedPageData("buy-materials.user"),
+  );
+  const [homeChef, setHomeChef] = useState<any>(() =>
+    getCachedPageData("buy-materials.homeChef"),
+  );
+  const [profileLoaded, setProfileLoaded] = useState(() =>
+    hasCachedPageData("buy-materials.profileLoaded"),
+  );
+  const productsCacheKey = "buy-materials.products";
+  const [products, setProducts] = usePageCacheState<Product[]>(productsCacheKey, []);
+  const [categories, setCategories] = usePageCacheState<string[]>(`${productsCacheKey}.categories`, ["All"]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !hasCachedPageData(productsCacheKey),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
@@ -68,17 +83,24 @@ export default function BuyMaterialsScreen() {
   );
 
   useEffect(() => {
+    if (hasCachedPageData("buy-materials.profileLoaded")) return;
     const loadUserAndProfile = async () => {
       const storedUser = await getStoredUser();
       setCurrentUser(storedUser);
+      setCachedPageData("buy-materials.user", storedUser);
 
       try {
         const profileRes = await api.get("/auth/profile");
         setHomeChef(profileRes.data?.homeChef || null);
+        setCachedPageData(
+          "buy-materials.homeChef",
+          profileRes.data?.homeChef || null,
+        );
       } catch (error) {
         console.error("Profile load error:", error);
       } finally {
         setProfileLoaded(true);
+        setCachedPageData("buy-materials.profileLoaded", true);
       }
     };
 
@@ -111,7 +133,6 @@ export default function BuyMaterialsScreen() {
 
     try {
       if (isRefresh) setRefreshing(true);
-      else setLoading(true);
 
       const response = await api.get("/franchise-products", {
         params: userToMatch ? { franchise_user_id: userToMatch } : {},
@@ -157,10 +178,15 @@ export default function BuyMaterialsScreen() {
   };
 
   useEffect(() => {
-    if (currentUser || profileLoaded) fetchProducts();
+    if (
+      (currentUser || profileLoaded) &&
+      !hasCachedPageData(productsCacheKey)
+    ) {
+      fetchProducts();
+    }
     // Fetch again when the profile scope becomes available.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, homeChef, profileLoaded]);
+  }, [currentUser, homeChef, profileLoaded, productsCacheKey]);
 
   const toggleFavorite = (product: Product) => {
     const productId = String(product.id);
