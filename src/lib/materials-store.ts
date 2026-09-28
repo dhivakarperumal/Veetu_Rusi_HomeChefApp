@@ -60,6 +60,31 @@ export async function saveMaterialCollection(key: string, collection: any[]) {
   await AsyncStorage.setItem(key, JSON.stringify(collection));
 }
 
+export async function addMaterialsToCart(products: any[]) {
+  const cart = await loadMaterialCollection(CART_KEY);
+  const next = [...cart];
+
+  for (const product of products) {
+    const productId = String(product.id);
+    const existingIndex = next.findIndex(
+      (item: any) => String(item.id) === productId,
+    );
+
+    if (existingIndex >= 0) {
+      const existing = next[existingIndex];
+      next[existingIndex] = {
+        ...existing,
+        quantity: (Number(existing.quantity) || 1) + 1,
+      };
+    } else {
+      next.push({ ...product, quantity: 1 });
+    }
+  }
+
+  await AsyncStorage.setItem(CART_KEY, JSON.stringify(next));
+  return next;
+}
+
 export async function setMaterialInCollection(
   key: string,
   product: any,

@@ -48,7 +48,7 @@ export default function FavoritesScreen() {
   const addToCart = async (item: any) => {
     const cart = await addMaterialsToCart([item]);
     setCartIds(new Set(cart.map((cartItem: any) => String(cartItem.id))));
-    showMaterialToast("Added to cart; quantity increased if already added");
+    showMaterialToast("Added to cart");
   };
 
   const addAllToCart = async () => {
