@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import {
   CART_KEY,
   FAVORITES_KEY,
+  addMaterialsToCart,
   getMaterialImage,
   loadMaterialCollection,
-  saveMaterialCollection,
   setMaterialInCollection,
   showMaterialToast,
 } from "../lib/materials-store";
@@ -21,18 +21,20 @@ export default function FavoritesScreen() {
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     const [favorites, cart] = await Promise.all([
       loadMaterialCollection(FAVORITES_KEY),
       loadMaterialCollection(CART_KEY),
     ]);
     setItems(favorites);
     setCartIds(new Set(cart.map((item: any) => String(item.id))));
-  };
-
-  useEffect(() => {
-    void loadFavorites();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadFavorites();
+    }, [loadFavorites]),
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -44,22 +46,14 @@ export default function FavoritesScreen() {
   };
 
   const addToCart = async (item: any) => {
-    await setMaterialInCollection(CART_KEY, item, true);
-    setCartIds((previous) => new Set(previous).add(String(item.id)));
-    showMaterialToast("Added to cart");
+    const cart = await addMaterialsToCart([item]);
+    setCartIds(new Set(cart.map((cartItem: any) => String(cartItem.id))));
+    showMaterialToast("Added to cart; quantity increased if already added");
   };
 
   const addAllToCart = async () => {
-    const currentCart = await loadMaterialCollection(CART_KEY);
-    const merged = [
-      ...currentCart.filter(
-        (cartItem: any) =>
-          !items.some((item) => String(item.id) === String(cartItem.id)),
-      ),
-      ...items,
-    ];
-    await saveMaterialCollection(CART_KEY, merged);
-    setCartIds(new Set(merged.map((item: any) => String(item.id))));
+    const cart = await addMaterialsToCart(items);
+    setCartIds(new Set(cart.map((item: any) => String(item.id))));
     showMaterialToast("All favorites added to cart");
   };
 
@@ -141,8 +135,10 @@ export default function FavoritesScreen() {
                 showMaterialToast("Removed from favorites");
               }}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${item.name} from favorites`}
             >
-              <Ionicons name="heart" size={24} color="#E65100" />
+              <Ionicons name="trash-outline" size={22} color="#C62828" />
             </Pressable>
             <Pressable
               onPress={() => addToCart(item)}

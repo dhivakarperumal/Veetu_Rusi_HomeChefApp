@@ -1,24 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Pressable,
-    RefreshControl,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import {
-    CART_KEY,
-    FAVORITES_KEY,
-    getMaterialImage,
-    loadMaterialCollection,
-    setMaterialInCollection,
-    showMaterialToast,
+  CART_KEY,
+  FAVORITES_KEY,
+  getMaterialImage,
+  loadMaterialCollection,
+  setMaterialInCollection,
+  showMaterialToast,
 } from "../lib/materials-store";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
@@ -52,17 +52,20 @@ export default function BuyMaterialsScreen() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [cartIds, setCartIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    Promise.all([
+  const syncCollections = useCallback(async () => {
+    const [favorites, cart] = await Promise.all([
       loadMaterialCollection(FAVORITES_KEY),
       loadMaterialCollection(CART_KEY),
-    ]).then(([favorites, cart]) => {
-      setFavoriteIds(
-        new Set(favorites.map((item: Product) => String(item.id))),
-      );
-      setCartIds(new Set(cart.map((item: Product) => String(item.id))));
-    });
+    ]);
+    setFavoriteIds(new Set(favorites.map((item: Product) => String(item.id))));
+    setCartIds(new Set(cart.map((item: Product) => String(item.id))));
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void syncCollections();
+    }, [syncCollections]),
+  );
 
   useEffect(() => {
     const loadUserAndProfile = async () => {

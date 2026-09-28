@@ -1,15 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import {
-    CART_KEY,
-    FAVORITES_KEY,
-    getMaterialImage,
-    loadMaterialCollection,
-    setMaterialInCollection,
-    showMaterialToast,
+  CART_KEY,
+  FAVORITES_KEY,
+  getMaterialImage,
+  loadMaterialCollection,
+  setMaterialInCollection,
+  showMaterialToast,
 } from "../lib/materials-store";
 import PageHeader from "./componets/pageheader";
 
@@ -21,6 +21,8 @@ export default function MaterialProductScreen() {
   const [product, setProduct] = useState<any>(null);
   const [favorite, setFavorite] = useState(false);
   const [inCart, setInCart] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedWeight, setSelectedWeight] = useState("");
 
@@ -33,27 +35,31 @@ export default function MaterialProductScreen() {
     }
   }, [productParam]);
 
-  useEffect(() => {
+  const syncCollections = useCallback(async () => {
     if (!product) return;
-    Promise.all([
+    const [favorites, cart] = await Promise.all([
       loadMaterialCollection(FAVORITES_KEY),
       loadMaterialCollection(CART_KEY),
-    ]).then(([favorites, cart]) => {
-      setFavorite(
-        favorites.some((item: any) => String(item.id) === String(product.id)),
-      );
-      setInCart(
-        cart.some((item: any) => String(item.id) === String(product.id)),
-      );
-      const savedCartItem = cart.find(
-        (item: any) => String(item.id) === String(product.id),
-      );
-      if (savedCartItem) {
-        setQuantity(Number(savedCartItem.quantity) || 1);
-        setSelectedWeight(savedCartItem.weight || "");
-      }
-    });
+    ]);
+    const isFavorite = favorites.some(
+      (item: any) => String(item.id) === String(product.id),
+    );
+    const savedCartItem = cart.find(
+      (item: any) => String(item.id) === String(product.id),
+    );
+    setFavorite(isFavorite);
+    setInCart(Boolean(savedCartItem));
+    setFavoriteCount(favorites.length);
+    setCartCount(cart.length);
+    setQuantity(Number(savedCartItem?.quantity) || 1);
+    setSelectedWeight(savedCartItem?.weight || "");
   }, [product]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void syncCollections();
+    }, [syncCollections]),
+  );
 
   if (!product) {
     return (
@@ -86,18 +92,17 @@ export default function MaterialProductScreen() {
   const toggleFavorite = async () => {
     const next = !favorite;
     await setMaterialInCollection(FAVORITES_KEY, product, next);
-    setFavorite(next);
+    await syncCollections();
     showMaterialToast(next ? "Added to favorites" : "Removed from favorites");
   };
   const toggleCart = async () => {
-    const next = !inCart;
     await setMaterialInCollection(
       CART_KEY,
       { ...product, quantity, weight: activeWeight },
-      next,
+      true,
     );
-    setInCart(next);
-    showMaterialToast(next ? "Added to cart" : "Removed from cart");
+    await syncCollections();
+    showMaterialToast(inCart ? "Cart updated" : "Added to cart");
   };
   const buyNow = () =>
     router.push({
@@ -109,13 +114,58 @@ export default function MaterialProductScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
-      <PageHeader title="Product Details" onLeftPress={() => router.back()} />
+      <PageHeader
+        title="Product Details"
+        onLeftPress={() => router.back()}
+        rightActions={
+          [
+            {
+              icon: "heart",
+              onPress: () => router.push("/favorites"),
+              badge: favoriteCount,
+            },
+            {
+              icon: "cart-outline",
+              onPress: () => router.push("/cart"),
+              badge: cartCount,
+            },
+          ] as any
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
-        <Image
-          source={{ uri: getMaterialImage(product) }}
-          style={{ width: "100%", aspectRatio: 1, borderRadius: 16 }}
-          contentFit="cover"
-        />
+        <View style={{ position: "relative" }}>
+          <Image
+            source={{ uri: getMaterialImage(product) }}
+            style={{ width: "100%", aspectRatio: 1, borderRadius: 16 }}
+            contentFit="cover"
+          />
+          <Pressable
+            onPress={toggleFavorite}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={
+              favorite ? "Remove from favorites" : "Add to favorites"
+            }
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 22,
+              backgroundColor: "#FFFFFF",
+              elevation: 3,
+            }}
+          >
+            <Ionicons
+              name={favorite ? "heart" : "heart-outline"}
+              size={25}
+              color={favorite ? "#C2415D" : "#A75D6C"}
+            />
+          </Pressable>
+        </View>
         <View style={{ marginTop: 18 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <Text
@@ -128,17 +178,6 @@ export default function MaterialProductScreen() {
             >
               {product.name}
             </Text>
-            <Pressable
-              onPress={toggleFavorite}
-              hitSlop={8}
-              style={{ marginLeft: 12 }}
-            >
-              <Ionicons
-                name={favorite ? "heart" : "heart-outline"}
-                size={29}
-                color={favorite ? "#C2415D" : "#A75D6C"}
-              />
-            </Pressable>
           </View>
           <Text
             style={{
@@ -300,7 +339,7 @@ export default function MaterialProductScreen() {
                   color: inCart ? "#1F6B45" : "#fff",
                 }}
               >
-                {inCart ? "Added" : "Add to Cart"}
+                {inCart ? "Update Cart" : "Add to Cart"}
               </Text>
             </Pressable>
             <Pressable
