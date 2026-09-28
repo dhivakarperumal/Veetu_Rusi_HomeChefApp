@@ -6,20 +6,20 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import {
-  deleteCachedPageData,
-  hasCachedPageData,
-  usePageCacheState,
+    deleteCachedPageData,
+    hasCachedPageData,
+    usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import PageHeader from "./componets/pageheader";
@@ -331,11 +331,14 @@ export default function AddProductScreen() {
   const formCacheKey = `add-product.form.${id || "new"}`;
 
   const [profile, setProfile] = useState<any>(null);
-  const [categories, setCategories] = usePageCacheState<any[]>("add-product.categories", []);
+  const [categories, setCategories] = usePageCacheState<any[]>(
+    "add-product.categories",
+    [],
+  );
   const [form, setForm] = usePageCacheState(formCacheKey, initialForm);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(
-    () => Boolean(id && id !== "new" && !hasCachedPageData(formCacheKey)),
+  const [fetching, setFetching] = useState(() =>
+    Boolean(id && id !== "new" && !hasCachedPageData(formCacheKey)),
   );
 
   useEffect(() => {

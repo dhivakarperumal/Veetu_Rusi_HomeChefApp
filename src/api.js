@@ -4,7 +4,7 @@ import { clearPageCache } from "./lib/page-cache";
 
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
-  // process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
+// process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -129,10 +129,7 @@ export async function loginWithIdentifier(identifier, password) {
     resData.authToken;
 
   const user =
-    resData.user ||
-    resData.data?.user ||
-    resData.chef ||
-    resData.data?.chef;
+    resData.user || resData.data?.user || resData.chef || resData.data?.chef;
 
   const message = resData.message || "Login successful";
 

@@ -127,7 +127,10 @@ function SectionHeader({
 export default function MenuScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [categories, setCategories] = usePageCacheState<Category[]>("menu.categories", []);
+  const [categories, setCategories] = usePageCacheState<Category[]>(
+    "menu.categories",
+    [],
+  );
   const [activeCatId, setActiveCatId] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [fabOpen, setFabOpen] = useState(false);
@@ -137,10 +140,6 @@ export default function MenuScreen() {
     () => !hasCachedPageData("menu.items"),
   );
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    if (!hasCachedPageData("menu.items")) fetchData();
-  }, []);
 
   const fetchData = async () => {
     try {
@@ -259,6 +258,13 @@ export default function MenuScreen() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (!hasCachedPageData("menu.items")) {
+      const timer = setTimeout(() => void fetchData(), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);

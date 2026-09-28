@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableWithoutFeedback,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import api from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
@@ -21,7 +21,10 @@ const MUTED = "#5A7A6E";
 
 export default function MaterialOrdersScreen() {
   const router = useRouter();
-  const [orders, setOrders] = usePageCacheState<any[]>("material-orders.list", []);
+  const [orders, setOrders] = usePageCacheState<any[]>(
+    "material-orders.list",
+    [],
+  );
   const [loading, setLoading] = useState(
     () => !hasCachedPageData("material-orders.list"),
   );
@@ -47,7 +50,10 @@ export default function MaterialOrdersScreen() {
   }, []);
 
   useEffect(() => {
-    if (!hasCachedPageData("material-orders.list")) fetchOrders();
+    if (!hasCachedPageData("material-orders.list")) {
+      const timer = setTimeout(() => void fetchOrders(), 0);
+      return () => clearTimeout(timer);
+    }
   }, [fetchOrders]);
 
   return (

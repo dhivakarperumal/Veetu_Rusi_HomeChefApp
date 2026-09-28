@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    View,
 } from "react-native";
 import api from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
@@ -41,7 +41,7 @@ interface PeriodStats {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const isCompleted = (status: string) =>
   ["completed", "delivered", "out for delivery"].includes(
-    (status || "").toLowerCase()
+    (status || "").toLowerCase(),
   );
 
 const isCancelled = (status: string) =>
@@ -79,7 +79,7 @@ function trendPercent(current: number, previous: number): string {
 function buildChartPoints(
   orders: any[],
   period: Period,
-  now: Date
+  now: Date,
 ): { points: number[]; xLabels: string[] } {
   if (period === "Day") {
     const buckets = new Array(24).fill(0);
@@ -88,7 +88,7 @@ function buildChartPoints(
       const d = new Date(o.ordered_at || o.created_at || "");
       if (d >= todayStart && isCompleted(o.status)) {
         buckets[d.getHours()] += Number(
-          o.chef_total_amount ?? o.total_amount ?? 0
+          o.chef_total_amount ?? o.total_amount ?? 0,
         );
       }
     }
@@ -116,7 +116,7 @@ function buildChartPoints(
       const d = new Date(o.ordered_at || o.created_at || "");
       if (d >= weekStart && isCompleted(o.status)) {
         buckets[d.getDay()] += Number(
-          o.chef_total_amount ?? o.total_amount ?? 0
+          o.chef_total_amount ?? o.total_amount ?? 0,
         );
       }
     }
@@ -130,9 +130,7 @@ function buildChartPoints(
     const d = new Date(o.ordered_at || o.created_at || "");
     if (d >= monthStart && isCompleted(o.status)) {
       const weekIndex = Math.min(3, Math.floor((d.getDate() - 1) / 7));
-      buckets[weekIndex] += Number(
-        o.chef_total_amount ?? o.total_amount ?? 0
-      );
+      buckets[weekIndex] += Number(o.chef_total_amount ?? o.total_amount ?? 0);
     }
   }
   return {
@@ -181,11 +179,11 @@ function computeStats(orders: any[], period: Period, now: Date): PeriodStats {
 
   const currentEarnings = completedCurrent.reduce(
     (s, o) => s + Number(o.chef_total_amount ?? o.total_amount ?? 0),
-    0
+    0,
   );
   const prevEarnings = completedPrevious.reduce(
     (s, o) => s + Number(o.chef_total_amount ?? o.total_amount ?? 0),
-    0
+    0,
   );
 
   const cancelledCount = current.filter((o) => isCancelled(o.status)).length;
@@ -200,7 +198,7 @@ function computeStats(orders: any[], period: Period, now: Date): PeriodStats {
     .sort(
       (a: any, b: any) =>
         new Date(b.ordered_at || b.created_at || "").getTime() -
-        new Date(a.ordered_at || a.created_at || "").getTime()
+        new Date(a.ordered_at || a.created_at || "").getTime(),
     )
     .slice(0, 8)
     .map((o: any) => ({
@@ -421,7 +419,10 @@ function periodLabel(period: Period) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function EarningsScreen() {
   const [period, setPeriod] = useState<Period>("Day");
-  const [allOrders, setAllOrders] = usePageCacheState<any[]>("earnings.orders", []);
+  const [allOrders, setAllOrders] = usePageCacheState<any[]>(
+    "earnings.orders",
+    [],
+  );
   const [loading, setLoading] = useState(
     () => !hasCachedPageData("earnings.orders"),
   );
@@ -572,9 +573,7 @@ export default function EarningsScreen() {
           >
             <Ionicons
               name={
-                data.trendUp
-                  ? "trending-up-outline"
-                  : "trending-down-outline"
+                data.trendUp ? "trending-up-outline" : "trending-down-outline"
               }
               size={16}
               color={data.trendUp ? "#2E7D32" : "#C62828"}
@@ -615,16 +614,10 @@ export default function EarningsScreen() {
         <View style={{ gap: 10, marginBottom: 14 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <StatCard label="Total Orders" value={data.totalOrders} />
-            <StatCard
-              label="Completed Orders"
-              value={data.completedOrders}
-            />
+            <StatCard label="Completed Orders" value={data.completedOrders} />
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <StatCard
-              label="Cancelled Orders"
-              value={data.cancelledOrders}
-            />
+            <StatCard label="Cancelled Orders" value={data.cancelledOrders} />
             <StatCard
               label="Avg Order Value"
               value={data.avgOrderValue}
@@ -667,11 +660,7 @@ export default function EarningsScreen() {
 
           {data.transactions.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 32 }}>
-              <Ionicons
-                name="receipt-outline"
-                size={32}
-                color={colors.muted}
-              />
+              <Ionicons name="receipt-outline" size={32} color={colors.muted} />
               <Text
                 style={{
                   fontSize: 14,

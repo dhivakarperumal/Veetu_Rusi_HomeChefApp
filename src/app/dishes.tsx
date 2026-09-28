@@ -3,15 +3,15 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  RefreshControl,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    Pressable,
+    RefreshControl,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
@@ -432,7 +432,10 @@ export default function DishesScreen() {
   };
 
   useEffect(() => {
-    if (!hasCachedPageData("dishes.list")) fetchFoods();
+    if (!hasCachedPageData("dishes.list")) {
+      const timer = setTimeout(() => void fetchFoods(), 0);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const filteredDishes = dishes.filter((d) => {

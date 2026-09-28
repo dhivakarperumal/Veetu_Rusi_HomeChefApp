@@ -12,9 +12,9 @@ import {
 import api, { API_BASE_URL } from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
 import {
-  hasCachedPageData,
-  usePageCacheState,
-  usePageLoadingState,
+    hasCachedPageData,
+    usePageCacheState,
+    usePageLoadingState,
 } from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
 import PageHeader from "../componets/pageheader";

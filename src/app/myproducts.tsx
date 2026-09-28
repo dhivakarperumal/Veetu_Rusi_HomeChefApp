@@ -269,15 +269,14 @@ export default function MyProductsScreen() {
   const insets = useSafeAreaInsets();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<ProductFilter>("All");
-  const [products, setProducts] = usePageCacheState<any[]>("myproducts.list", []);
+  const [products, setProducts] = usePageCacheState<any[]>(
+    "myproducts.list",
+    [],
+  );
   const [loading, setLoading] = useState(
     () => !hasCachedPageData("myproducts.list"),
   );
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    if (!hasCachedPageData("myproducts.list")) fetchProducts();
-  }, []);
 
   const fetchProducts = async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -299,6 +298,13 @@ export default function MyProductsScreen() {
       if (showLoader) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!hasCachedPageData("myproducts.list")) {
+      const timer = setTimeout(() => void fetchProducts(), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);

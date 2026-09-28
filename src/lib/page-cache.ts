@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { useCallback, useState } from "react";
 
 const pageCache = new Map<string, unknown>();
 
@@ -23,13 +23,14 @@ export function clearPageCache(): void {
   pageCache.clear();
 }
 
-export function usePageLoadingState(key: string): [boolean, (value: boolean) => void] {
+export function usePageLoadingState(
+  key: string,
+): [boolean, (value: boolean) => void] {
   const [state, setState] = useState(() => ({
     key,
     loading: !hasCachedPageData(key),
   }));
-  const loading =
-    state.key === key ? state.loading : !hasCachedPageData(key);
+  const loading = state.key === key ? state.loading : !hasCachedPageData(key);
   const setLoading = useCallback(
     (nextLoading: boolean) => setState({ key, loading: nextLoading }),
     [key],
@@ -54,25 +55,17 @@ export function usePageCacheState<T>(
       : hasCachedPageData(key)
         ? (getCachedPageData<T>(key) as T)
         : initialValue;
-
   const setCachedValue = useCallback<Dispatch<SetStateAction<T>>>(
     (nextValue) => {
-      setState((currentState) => {
-        const currentValue =
-          currentState.key === key
-            ? currentState.value
-            : hasCachedPageData(key)
-              ? (getCachedPageData<T>(key) as T)
-              : initialValue;
-        const resolvedValue =
-          typeof nextValue === "function"
-            ? (nextValue as (previousValue: T) => T)(currentValue)
-            : nextValue;
-        setCachedPageData(key, resolvedValue);
-        return { key, value: resolvedValue };
-      });
+      const resolvedValue =
+        typeof nextValue === "function"
+          ? (nextValue as (previousValue: T) => T)(value)
+          : nextValue;
+      const nextState = { key, value: resolvedValue };
+      setCachedPageData(key, resolvedValue);
+      setState(nextState);
     },
-    [initialValue, key],
+    [key, value],
   );
 
   return [value, setCachedValue];

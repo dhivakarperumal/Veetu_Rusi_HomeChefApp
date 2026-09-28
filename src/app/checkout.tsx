@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import {
     ActivityIndicator,
     Modal,
@@ -18,6 +17,7 @@ import {
     loadMaterialCollection,
     saveMaterialCollection,
 } from "../lib/materials-store";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import BottomBar from "./componets/buttombar";
 import PageHeader from "./componets/pageheader";
 
@@ -192,7 +192,10 @@ export default function CheckoutScreen() {
     }
   }
   const [items, setItems] = useState<any[]>([]);
-  const [addresses, setAddresses] = usePageCacheState<any[]>("checkout.addresses", []);
+  const [addresses, setAddresses] = usePageCacheState<any[]>(
+    "checkout.addresses",
+    [],
+  );
   const [user, setUser] = useState<any>(null);
   const [searchAddress, setSearchAddress] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
@@ -256,7 +259,7 @@ export default function CheckoutScreen() {
           );
         } catch {
           console.warn("Could not load saved addresses");
-          }
+        }
       }
       setLoading(false);
     };
@@ -308,7 +311,8 @@ export default function CheckoutScreen() {
       setSelectedAddress(null);
       setDialog({
         title: "Location added",
-        message: "Your delivery address has been filled in from your current location.",
+        message:
+          "Your delivery address has been filled in from your current location.",
         tone: "success",
       });
     } catch {
@@ -646,7 +650,8 @@ export default function CheckoutScreen() {
                     style={{
                       paddingHorizontal: 18,
                       paddingVertical: 13,
-                      backgroundColor: form.state === state ? "#EAF4EE" : "#fff",
+                      backgroundColor:
+                        form.state === state ? "#EAF4EE" : "#fff",
                     }}
                   >
                     <Text style={{ color: DARK, fontSize: 16 }}>{state}</Text>

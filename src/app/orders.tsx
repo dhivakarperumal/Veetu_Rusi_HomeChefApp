@@ -665,7 +665,10 @@ export default function OrdersScreen() {
   }, []);
 
   useEffect(() => {
-    if (!hasCachedPageData("orders.list")) fetchOrders();
+    if (!hasCachedPageData("orders.list")) {
+      const timer = setTimeout(() => void fetchOrders(), 0);
+      return () => clearTimeout(timer);
+    }
   }, [fetchOrders]);
 
   let filtered = orders.filter((o) => matchesTab(o, activeTab));

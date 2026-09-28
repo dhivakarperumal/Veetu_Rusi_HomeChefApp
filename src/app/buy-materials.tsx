@@ -3,29 +3,29 @@ import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    RefreshControl,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
 import {
-  getCachedPageData,
-  hasCachedPageData,
-  setCachedPageData,
-  usePageCacheState,
-} from "../lib/page-cache";
-import {
-  CART_KEY,
-  FAVORITES_KEY,
-  getMaterialImage,
-  loadMaterialCollection,
-  setMaterialInCollection,
-  showMaterialToast,
+    CART_KEY,
+    FAVORITES_KEY,
+    getMaterialImage,
+    loadMaterialCollection,
+    setMaterialInCollection,
+    showMaterialToast,
 } from "../lib/materials-store";
+import {
+    getCachedPageData,
+    hasCachedPageData,
+    setCachedPageData,
+    usePageCacheState,
+} from "../lib/page-cache";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
 
@@ -56,8 +56,14 @@ export default function BuyMaterialsScreen() {
     hasCachedPageData("buy-materials.profileLoaded"),
   );
   const productsCacheKey = "buy-materials.products";
-  const [products, setProducts] = usePageCacheState<Product[]>(productsCacheKey, []);
-  const [categories, setCategories] = usePageCacheState<string[]>(`${productsCacheKey}.categories`, ["All"]);
+  const [products, setProducts] = usePageCacheState<Product[]>(
+    productsCacheKey,
+    [],
+  );
+  const [categories, setCategories] = usePageCacheState<string[]>(
+    `${productsCacheKey}.categories`,
+    ["All"],
+  );
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(
@@ -182,7 +188,8 @@ export default function BuyMaterialsScreen() {
       (currentUser || profileLoaded) &&
       !hasCachedPageData(productsCacheKey)
     ) {
-      fetchProducts();
+      const timer = setTimeout(() => void fetchProducts(), 0);
+      return () => clearTimeout(timer);
     }
     // Fetch again when the profile scope becomes available.
     // eslint-disable-next-line react-hooks/exhaustive-deps
