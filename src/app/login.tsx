@@ -1,22 +1,26 @@
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+    FontAwesome5,
+    Ionicons,
+    MaterialCommunityIcons,
+} from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Keyboard,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Keyboard,
+    KeyboardAvoidingView,
+    Linking,
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStoredToken, loginWithIdentifier } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 
@@ -185,7 +189,11 @@ export default function LoginScreen() {
     }
   };
 
-  const scheduleAutoLogin = (emailVal: string, passVal: string, delay = 700) => {
+  const scheduleAutoLogin = (
+    emailVal: string,
+    passVal: string,
+    delay = 700,
+  ) => {
     if (autoLoginTimerRef.current) {
       clearTimeout(autoLoginTimerRef.current);
       autoLoginTimerRef.current = null;
@@ -275,7 +283,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F1EA" />
+      <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
       <ScrollView
         ref={scrollViewRef}
         contentContainerStyle={{
@@ -283,7 +291,11 @@ export default function LoginScreen() {
           alignItems: "center",
           paddingHorizontal: 20,
           paddingTop: Platform.OS === "android" ? 28 : 44,
-          paddingBottom: keyboardVisible ? (Platform.OS === "android" ? 280 : 120) : 36,
+          paddingBottom: keyboardVisible
+            ? Platform.OS === "android"
+              ? 280
+              : 120
+            : 36,
         }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -333,7 +345,11 @@ export default function LoginScreen() {
           {/* Card Header */}
           <View className="flex-row items-center pb-3.5 mb-4 border-b border-[#F0F5F2]">
             <View className="w-11 h-11 rounded-2xl bg-[#EAF4EE] border border-[#D6EBE0] items-center justify-center mr-3">
-              <MaterialCommunityIcons name="chef-hat" size={24} color="#1E6A4B" />
+              <MaterialCommunityIcons
+                name="chef-hat"
+                size={24}
+                color="#1E6A4B"
+              />
             </View>
             <View className="flex-1">
               <Text className="text-[17px] font-extrabold text-[#1D3D30]">
@@ -401,7 +417,9 @@ export default function LoginScreen() {
           {/* Password Input */}
           <View className="mb-4">
             <View className="flex-row justify-between items-center mb-1.5 ml-0.5">
-              <Text className="text-[13px] font-bold text-[#1D3D30]">Password</Text>
+              <Text className="text-[13px] font-bold text-[#1D3D30]">
+                Password
+              </Text>
               <TouchableOpacity
                 onPress={handleForgotPassword}
                 hitSlop={8}
@@ -470,7 +488,11 @@ export default function LoginScreen() {
           >
             {loading ? (
               <View className="flex-row items-center">
-                <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+                <ActivityIndicator
+                  color="#FFFFFF"
+                  size="small"
+                  style={{ marginRight: 8 }}
+                />
                 <Text className="text-white text-base font-extrabold tracking-wide">
                   Signing In...
                 </Text>
@@ -524,15 +546,21 @@ export default function LoginScreen() {
         <View className="flex-row items-center justify-center gap-2 w-full mb-[18px]">
           <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
             <Ionicons name="receipt-outline" size={14} color="#1E6A4B" />
-            <Text className="text-[11px] font-bold text-[#4A675F]">Live Orders</Text>
+            <Text className="text-[11px] font-bold text-[#4A675F]">
+              Live Orders
+            </Text>
           </View>
           <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
             <Ionicons name="trending-up-outline" size={14} color="#1E6A4B" />
-            <Text className="text-[11px] font-bold text-[#4A675F]">Instant Payouts</Text>
+            <Text className="text-[11px] font-bold text-[#4A675F]">
+              Instant Payouts
+            </Text>
           </View>
           <View className="flex-row items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-[#DDE6E1]">
             <Ionicons name="heart-outline" size={14} color="#1E6A4B" />
-            <Text className="text-[11px] font-bold text-[#4A675F]">Cooked with Love</Text>
+            <Text className="text-[11px] font-bold text-[#4A675F]">
+              Cooked with Love
+            </Text>
           </View>
         </View>
 
@@ -540,7 +568,10 @@ export default function LoginScreen() {
         <View className="items-center px-2.5">
           <Text className="text-[13px] text-[#698077] text-center">
             Need to register as a partner chef?{" "}
-            <Text onPress={handleAdminSupport} className="text-[#1E6A4B] font-extrabold">
+            <Text
+              onPress={handleAdminSupport}
+              className="text-[#1E6A4B] font-extrabold"
+            >
               Contact Admin
             </Text>
           </Text>

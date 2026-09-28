@@ -441,7 +441,7 @@ function OrderCard({
           onPress={() => onMarkReady?.(order.id)}
           disabled={busy}
           style={{
-            backgroundColor: "#1565C0",
+            backgroundColor: colors.primary,
             borderRadius: 14,
             paddingVertical: 13,
             alignItems: "center",
@@ -456,9 +456,12 @@ function OrderCard({
       {nextStatus && (
         <Pressable
           onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
-          disabled={busy}
+          disabled={busy || nextStatus.label === "Partner Accepted"}
           style={{
-            backgroundColor: colors.primary,
+            backgroundColor:
+              nextStatus.label === "Partner Accepted"
+                ? colors.muted
+                : colors.primary,
             borderRadius: 14,
             paddingVertical: 13,
             alignItems: "center",
@@ -843,9 +846,7 @@ export default function OrdersScreen() {
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 50,
-                  backgroundColor: isActive
-                    ? colors.primary
-                    : colors.cardBackground,
+                  backgroundColor: isActive ? "#2E7A4F" : colors.cardBackground,
                   shadowColor: "#000",
                   shadowOpacity: isActive ? 0 : 0.05,
                   shadowOffset: { width: 0, height: 1 },

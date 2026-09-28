@@ -3,7 +3,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -11,6 +10,7 @@ import {
     Modal,
     RefreshControl,
     ScrollView,
+    StatusBar,
     Text,
     TextInput,
     TouchableOpacity,
@@ -31,8 +31,8 @@ const resolveUrl = (path: string | null | undefined): string | null => {
   if (t.includes("localhost:5000") || t.includes("127.0.0.1:5000")) {
     return resolveUrl(
       t
-      .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
-      .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL),
+        .replace(/https?:\/\/localhost:5000/g, IMAGE_BASE_URL)
+        .replace(/https?:\/\/127\.0\.0\.1:5000/g, IMAGE_BASE_URL),
     );
   }
   if (t.startsWith("http")) {
@@ -49,7 +49,8 @@ const resolveUrl = (path: string | null | undefined): string | null => {
   }
   if (t.startsWith("//")) return `https:${t}`;
   if (t.startsWith("/uploads/")) return `${IMAGE_BASE_URL}${t}`;
-  if (t.startsWith("/")) return `${IMAGE_BASE_URL}${HOME_CHEF_UPLOADS_PATH}${t}`;
+  if (t.startsWith("/"))
+    return `${IMAGE_BASE_URL}${HOME_CHEF_UPLOADS_PATH}${t}`;
   return `${IMAGE_BASE_URL}${HOME_CHEF_UPLOADS_PATH}/${t.replace(/^\/+/, "")}`;
 };
 
@@ -96,7 +97,12 @@ function ProfileDialog({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View
         style={{
           flex: 1,
@@ -167,7 +173,13 @@ function ProfileDialog({
                   alignItems: "center",
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: colors.primaryDark }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "700",
+                    color: colors.primaryDark,
+                  }}
+                >
                   {cancelLabel}
                 </Text>
               </TouchableOpacity>
@@ -740,7 +752,8 @@ export default function ProfileScreen() {
       console.warn("Document upload failed:", e);
       showDialog({
         title: "Upload failed",
-        message: e?.message || "Could not upload this document. Please try again.",
+        message:
+          e?.message || "Could not upload this document. Please try again.",
         tone: "error",
       });
     } finally {
@@ -783,7 +796,7 @@ export default function ProfileScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
-      <StatusBar style="light" />
+      <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={

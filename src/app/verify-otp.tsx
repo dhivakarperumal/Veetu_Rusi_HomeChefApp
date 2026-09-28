@@ -3,16 +3,16 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { loginWithIdentifier } from "../api";
 import { colors } from "../theme/colors";
@@ -32,7 +32,9 @@ export default function VerifyOTPScreen() {
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
   const [canResend, setCanResend] = useState(false);
-  const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+  const inputRefs = useRef<Array<TextInput | null>>(
+    Array(OTP_LENGTH).fill(null),
+  );
 
   // Focus first box on mount
   useEffect(() => {
@@ -42,7 +44,10 @@ export default function VerifyOTPScreen() {
 
   // Countdown
   useEffect(() => {
-    if (countdown <= 0) { setCanResend(true); return; }
+    if (countdown <= 0) {
+      setCanResend(true);
+      return;
+    }
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [countdown]);
@@ -118,7 +123,7 @@ export default function VerifyOTPScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.screen}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#F5EFE6" />
+      <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -128,7 +133,10 @@ export default function VerifyOTPScreen() {
         {/* Back */}
         <Pressable
           onPress={() => router.back()}
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.55 }]}
+          style={({ pressed }) => [
+            styles.backBtn,
+            pressed && { opacity: 0.55 },
+          ]}
           hitSlop={14}
         >
           <View style={styles.backCircle}>
@@ -150,14 +158,11 @@ export default function VerifyOTPScreen() {
 
         {/* Heading */}
         <Text style={styles.heading}>Verify OTP</Text>
-        <Text style={styles.desc}>
-          We have sent OTP to
-        </Text>
+        <Text style={styles.desc}>We have sent OTP to</Text>
         <Text style={styles.identifierText}>{identifier}</Text>
 
         {/* OTP Card */}
         <View style={styles.card}>
-
           {/* Progress bar */}
           <View style={styles.progressTrack}>
             <View
@@ -173,7 +178,9 @@ export default function VerifyOTPScreen() {
             {otp.map((digit, idx) => (
               <TextInput
                 key={idx}
-                ref={(r) => { inputRefs.current[idx] = r; }}
+                ref={(r) => {
+                  inputRefs.current[idx] = r;
+                }}
                 value={digit}
                 onChangeText={(v) => handleChange(v, idx)}
                 onKeyPress={(e) => handleKeyPress(e, idx)}
@@ -210,8 +217,7 @@ export default function VerifyOTPScreen() {
               </Pressable>
             ) : (
               <Text style={styles.timerText}>
-                Resend OTP in{" "}
-                <Text style={styles.timerBold}>{timerLabel}</Text>
+                Resend OTP in <Text style={styles.timerBold}>{timerLabel}</Text>
               </Text>
             )}
           </View>
@@ -259,7 +265,9 @@ export default function VerifyOTPScreen() {
           </View>
           <View style={styles.securityTextWrap}>
             <Text style={styles.securityTitle}>Secure &amp; Easy</Text>
-            <Text style={styles.securitySub}>Your details are safe with us</Text>
+            <Text style={styles.securitySub}>
+              Your details are safe with us
+            </Text>
           </View>
         </View>
       </ScrollView>

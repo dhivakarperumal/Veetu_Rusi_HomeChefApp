@@ -21,6 +21,10 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.HomeChefApp"
     },
+    "androidStatusBar": {
+      "backgroundColor": "#2E7A4F",
+      "barStyle": "light-content"
+    },
     "web": {
       "output": "static",
       "favicon": "./assets/images/logo.png",
