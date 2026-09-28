@@ -531,7 +531,14 @@ const TABS: OrderTab[] = [
 ];
 
 const matchesTab = (order: Order, tab: OrderTab) => {
-  if (tab === "All Status") return true;
+  if (tab === "All Status") {
+    const rawStatus = (order.rawStatus || "").toLowerCase();
+    return (
+      order.status !== "Cancelled" &&
+      order.status !== "Completed" &&
+      !/\bdelivered\b/.test(rawStatus)
+    );
+  }
   if (
     tab === "Packing" ||
     tab === "Searching Delivery Partner" ||
