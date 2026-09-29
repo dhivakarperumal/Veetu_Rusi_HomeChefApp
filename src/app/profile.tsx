@@ -5,23 +5,29 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Linking,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Linking,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api, { API_BASE_URL, getStoredUser, logoutUser } from "../api";
+import api, {
+    API_BASE_URL,
+    getHomeChefAttendance,
+    getStoredUser,
+    logoutUser,
+    setHomeChefAttendanceStatus,
+} from "../api";
 import {
-  hasCachedPageData,
-  setCachedPageData,
-  usePageCacheState,
+    hasCachedPageData,
+    setCachedPageData,
+    usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
@@ -537,6 +543,8 @@ export default function ProfileScreen() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attendance, setAttendance] = useState<any>(null);
+  const [attendanceActionLoading, setAttendanceActionLoading] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", phone: "" });
   const [dialog, setDialog] = useState<ProfileDialogOptions | null>(null);
 
@@ -581,9 +589,66 @@ export default function ProfileScreen() {
     }
   }, [fetchProfile]);
 
+  const loadAttendanceStatus = useCallback(async () => {
+    try {
+      const data = await getHomeChefAttendance();
+      const currentSession =
+        data?.currentSession ?? data?.current_session ?? data?.session ?? null;
+      setAttendance(currentSession ? { ...data, currentSession } : data || null);
+    } catch (error) {
+      if ((error as any)?.status === 401) return;
+      setAttendance(null);
+    }
+  }, []);
+
+  const handleAttendanceToggle = async () => {
+    const action = attendance?.currentSession ? "check_out" : "check_in";
+    setAttendanceActionLoading(true);
+    try {
+      const result = await setHomeChefAttendanceStatus(action);
+      const currentSession =
+        result?.currentSession ??
+        result?.current_session ??
+        result?.session ??
+        null;
+      setAttendance(currentSession ? { ...result, currentSession } : result || null);
+      showDialog({
+        title: action === "check_in" ? "Checked in" : "Checked out",
+        message:
+          result?.message ||
+          (action === "check_in"
+            ? "You are now online and ready to cook."
+            : "You are now offline and your attendance has been closed."),
+        tone: "success",
+        confirmLabel: "Okay",
+      });
+    } catch (error: any) {
+      showDialog({
+        title: "Attendance update failed",
+        message:
+          error?.message ||
+          error?.response?.data?.message ||
+          "Unable to update your attendance right now.",
+        tone: "error",
+        confirmLabel: "Okay",
+      });
+    } finally {
+      setAttendanceActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAttendanceStatus();
+    const attendanceInterval = setInterval(() => {
+      void loadAttendanceStatus();
+    }, 15000);
+    return () => clearInterval(attendanceInterval);
+  }, [loadAttendanceStatus]);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchProfile();
+    void loadAttendanceStatus();
   };
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -600,6 +665,8 @@ export default function ProfileScreen() {
     chefData?.mobile || authUser?.phone || authUser?.mobile || "—";
   const displayStatus = chefData?.status || null;
   const displayCity = chefData?.city || null;
+  const attendanceStatus = attendance?.currentSession ? "Online" : "Offline";
+  const todaysAttendance = attendance?.records?.[0] || null;
   const displayKitchenType = chefData?.kitchen_type || null;
   const profilePhotoUrl = resolveUrl(chefData?.profile_photo);
   const documentRows = [
@@ -1444,6 +1511,97 @@ export default function ProfileScreen() {
             </SectionCard>
           </View>
 
+          {/* ════════════════════════════════════ ATTENDANCE CARD */}
+          <View className="mx-5 mt-5 rounded-[20px] bg-white p-[18px] shadow-sm shadow-black/5">
+            <View className="mb-3 flex-row items-center justify-between">
+              <View className="flex-row items-center gap-[10px]">
+                <View
+                  className={
+                    attendance?.currentSession
+                      ? "h-10 w-10 items-center justify-center rounded-xl bg-[#E8F5E9]"
+                      : "h-10 w-10 items-center justify-center rounded-xl bg-[#FFF3E0]"
+                  }
+                >
+                  <Ionicons
+                    name={attendance?.currentSession ? "checkmark-circle" : "time-outline"}
+                    size={20}
+                    color={attendance?.currentSession ? "#2E7A4F" : "#E65100"}
+                  />
+                </View>
+                <View>
+                  <Text className="text-[11px] font-bold uppercase tracking-[0.6px] text-[#7A8E87]">
+                    My Attendance
+                  </Text>
+                  <Text className="mt-1 text-[18px] font-extrabold text-[#1A3328]">
+                    {attendanceStatus}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleAttendanceToggle}
+                disabled={attendanceActionLoading}
+                className={
+                  attendance?.currentSession
+                    ? "rounded-xl bg-[#C62828] px-[14px] py-[10px] opacity-100"
+                    : "rounded-xl bg-[#2E7A4F] px-[14px] py-[10px] opacity-100"
+                }
+                style={attendanceActionLoading ? { opacity: 0.7 } : undefined}
+              >
+                <Text className="text-[11px] font-extrabold uppercase tracking-wide text-white">
+                  {attendanceActionLoading
+                    ? "Updating..."
+                    : attendance?.currentSession
+                      ? "Check out"
+                      : "Check in"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View
+              className={
+                attendance?.currentSession
+                  ? "mt-2 rounded-[14px] bg-[#E8F5E9] p-3"
+                  : "mt-2 rounded-[14px] bg-[#FFF8F1] p-3"
+              }
+            >
+              <Text
+                className={
+                  attendance?.currentSession
+                    ? "text-[12px] font-bold text-[#2E7A4F]"
+                    : "text-[12px] font-bold text-[#E65100]"
+                }
+              >
+                {attendance?.currentSession
+                  ? `Checked in since ${new Date(attendance.currentSession.check_in_at).toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}`
+                  : "You are currently offline. Check in to start your shift."}
+              </Text>
+            </View>
+
+            {todaysAttendance && (
+              <View className="mt-4 flex-row items-center justify-between border-t border-[#E7EEE9] pt-3">
+                <View className="flex-1">
+                  <Text className="text-[10px] font-bold uppercase tracking-[0.6px] text-[#7A8E87]">
+                    Latest session
+                  </Text>
+                  <Text className="mt-1 text-[13px] font-bold text-[#1A3328]">
+                    {new Date(todaysAttendance.check_in_at).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
+                  </Text>
+                </View>
+                <Text className="self-center text-[13px] font-bold text-[#1A3328]">
+                  {todaysAttendance.check_out_at ? "Completed" : "Active"}
+                </Text>
+              </View>
+            )}
+          </View>
+
           {/* ════════════════════════════════════ QUICK NAV */}
           <View
             style={{
@@ -1464,6 +1622,11 @@ export default function ProfileScreen() {
                 label: "My Orders",
                 icon: "receipt-outline" as const,
                 route: "/material-orders",
+              },
+              {
+                label: "My Attendance",
+                icon: "time-outline" as const,
+                route: "/profile",
               },
               {
                 label: "Show All Orders",

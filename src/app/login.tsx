@@ -21,7 +21,12 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { getStoredToken, loginWithIdentifier } from "../api";
+import {
+    getHomeChefAttendance,
+    getStoredToken,
+    loginWithIdentifier,
+    setHomeChefAttendanceStatus,
+} from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 
 const isValidPassword = (val: string) => {
@@ -133,6 +138,44 @@ export default function LoginScreen() {
       if (response?.token) {
         Keyboard.dismiss();
         AsyncStorage.setItem("lastLoginIdentifier", cleanEmail).catch(() => {});
+
+        try {
+          const attendanceData = await getHomeChefAttendance();
+          const currentSession =
+            attendanceData?.currentSession ??
+            attendanceData?.current_session ??
+            attendanceData?.session ??
+            null;
+
+          if (!currentSession) {
+            showAppDialog(
+              "Check in to continue",
+              "Your kitchen is currently offline. Check in now to start receiving orders.",
+              [
+                {
+                  text: "Later",
+                  style: "cancel",
+                  onPress: () => router.replace("/dashboard"),
+                },
+                {
+                  text: "Check in now",
+                  onPress: async () => {
+                    try {
+                      await setHomeChefAttendanceStatus("check_in");
+                    } catch {
+                      // Ignore and continue to dashboard even if there is a backend issue.
+                    }
+                    router.replace("/dashboard");
+                  },
+                },
+              ],
+            );
+            return;
+          }
+        } catch {
+          // If attendance cannot be loaded, continue normally to the dashboard.
+        }
+
         router.replace("/dashboard");
         return;
       } else {
