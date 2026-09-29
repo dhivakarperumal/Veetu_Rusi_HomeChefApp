@@ -1,20 +1,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Linking,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Linking,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
@@ -80,6 +82,31 @@ type ProfileDialogProps = ProfileDialogOptions & {
   visible: boolean;
   onClose: () => void;
 };
+
+const categoryRequestStyles = StyleSheet.create({
+  label: {
+    marginBottom: 7,
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.primaryDark,
+    textTransform: "uppercase",
+    letterSpacing: 0.55,
+  },
+  input: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#F8FAF8",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.primaryDark,
+  },
+});
+const categoryRequestLabelStyle = categoryRequestStyles.label;
+const categoryRequestInputStyle = categoryRequestStyles.input;
 
 function ProfileDialog({
   visible,
@@ -553,6 +580,135 @@ export default function ProfileScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (key: string) =>
     setExpanded((prev) => (prev === key ? null : key));
+  const [categoryRequestSheetOpen, setCategoryRequestSheetOpen] =
+    useState(false);
+  const [submittingCategoryRequest, setSubmittingCategoryRequest] =
+    useState(false);
+  const [categoryRequestForm, setCategoryRequestForm] = useState({
+    catType: "Food",
+    name: "",
+    description: "",
+    subcategory: [] as string[],
+    images: [] as string[],
+  });
+  const [subcategoryInput, setSubcategoryInput] = useState("");
+
+  const resetCategoryRequestForm = () => {
+    setCategoryRequestForm({
+      catType: "Food",
+      name: "",
+      description: "",
+      subcategory: [],
+      images: [],
+    });
+    setSubcategoryInput("");
+  };
+
+  const addCategorySubcategory = () => {
+    const value = subcategoryInput.trim();
+    if (!value || categoryRequestForm.subcategory.includes(value)) return;
+    setCategoryRequestForm((current) => ({
+      ...current,
+      subcategory: [...current.subcategory, value],
+    }));
+    setSubcategoryInput("");
+  };
+
+  const pickCategoryRequestImages = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showDialog({
+          title: "Permission needed",
+          message: "Allow photo library access to add category images.",
+          tone: "error",
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        quality: 0.7,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const images = await Promise.all(
+        result.assets.map(async (asset) => {
+          const compressed = await ImageManipulator.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 700 } }],
+            {
+              compress: 0.35,
+              format: ImageManipulator.SaveFormat.JPEG,
+              base64: true,
+            },
+          );
+          if (!compressed.base64) {
+            throw new Error("Could not process one of the selected images.");
+          }
+          return `data:image/jpeg;base64,${compressed.base64}`;
+        }),
+      );
+      setCategoryRequestForm((current) => ({
+        ...current,
+        images: [...current.images, ...images],
+      }));
+    } catch (pickError: any) {
+      console.warn("Category request image selection failed:", pickError);
+      showDialog({
+        title: "Could not select images",
+        message: pickError?.message || "Please try choosing the images again.",
+        tone: "error",
+      });
+    }
+  };
+
+  const submitCategoryRequest = async () => {
+    if (
+      !categoryRequestForm.name.trim() ||
+      !categoryRequestForm.description.trim() ||
+      categoryRequestForm.images.length === 0
+    ) {
+      showDialog({
+        title: "Complete the request",
+        message:
+          "Enter a category name and description, and select at least one image.",
+        tone: "error",
+      });
+      return;
+    }
+
+    try {
+      setSubmittingCategoryRequest(true);
+      await api.post("/category-requests", {
+        category_type: categoryRequestForm.catType,
+        c_name: categoryRequestForm.name.trim(),
+        discripti: categoryRequestForm.description.trim(),
+        subcategory: categoryRequestForm.subcategory,
+        image: categoryRequestForm.images,
+      });
+      setCategoryRequestSheetOpen(false);
+      resetCategoryRequestForm();
+      showDialog({
+        title: "Request submitted",
+        message: "Your category request has been submitted for review.",
+        tone: "success",
+      });
+    } catch (submitError: any) {
+      showDialog({
+        title: "Submission failed",
+        message:
+          submitError?.data?.message ||
+          submitError?.message ||
+          "Could not submit your category request. Please try again.",
+        tone: "error",
+      });
+    } finally {
+      setSubmittingCategoryRequest(false);
+    }
+  };
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
@@ -1629,6 +1785,11 @@ export default function ProfileScreen() {
                 route: "/attendance",
               },
               {
+                label: "Category Requests",
+                icon: "receipt-outline" as const,
+                route: "/category-requests",
+              },
+              {
                 label: "Show All Orders",
                 icon: "receipt-outline" as const,
                 route: "/all-orders",
@@ -1763,6 +1924,436 @@ export default function ProfileScreen() {
           onConfirm={dialog?.onConfirm}
           onClose={() => setDialog(null)}
         />
+
+        <Modal
+          visible={categoryRequestSheetOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCategoryRequestSheetOpen(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              backgroundColor: "rgba(17, 35, 27, 0.52)",
+            }}
+          >
+            <View
+              style={{
+                maxHeight: "92%",
+                backgroundColor: colors.cardBackground,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: 20,
+                  paddingVertical: 17,
+                  backgroundColor: colors.primary,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: "900",
+                      color: "#fff",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    New category request
+                  </Text>
+                  <Text
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: "rgba(255,255,255,0.85)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Submit a product classification for review
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setCategoryRequestSheetOpen(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close category request"
+                  style={{
+                    width: 42,
+                    height: 42,
+                    marginLeft: 10,
+                    borderRadius: 14,
+                    backgroundColor: "rgba(0,0,0,0.12)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="close" size={23} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ padding: 18, paddingBottom: 24 }}
+              >
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={categoryRequestLabelStyle}>
+                      Category type <Text style={{ color: "#D32F2F" }}>*</Text>
+                    </Text>
+                    <View
+                      style={{
+                        minHeight: 50,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: "#F8FAF8",
+                        borderRadius: 14,
+                        padding: 4,
+                      }}
+                    >
+                      {[
+                        { value: "Food", label: "Food" },
+                        { value: "food products", label: "Food Products" },
+                      ].map(({ value, label }) => {
+                        const selected = categoryRequestForm.catType === value;
+                        return (
+                          <TouchableOpacity
+                            key={value}
+                            onPress={() =>
+                              setCategoryRequestForm((current) => ({
+                                ...current,
+                                catType: value,
+                              }))
+                            }
+                            style={{
+                              flex: 1,
+                              minHeight: 40,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 10,
+                              backgroundColor: selected
+                                ? "#fff"
+                                : "transparent",
+                            }}
+                          >
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: "700",
+                                color: selected
+                                  ? colors.primaryDark
+                                  : colors.muted,
+                              }}
+                            >
+                              {label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={categoryRequestLabelStyle}>Category ID</Text>
+                    <View
+                      style={{
+                        minHeight: 49,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        borderWidth: 1,
+                        borderColor: "#C8EBD8",
+                        backgroundColor: "#EFFAF4",
+                        borderRadius: 14,
+                        paddingHorizontal: 12,
+                      }}
+                    >
+                      <Ionicons
+                        name="document-text-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={{
+                          flex: 1,
+                          fontSize: 12,
+                          fontWeight: "700",
+                          color: colors.primaryDark,
+                        }}
+                      >
+                        Generated after approval
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <Text style={[categoryRequestLabelStyle, { marginTop: 17 }]}>
+                  Category name <Text style={{ color: "#D32F2F" }}>*</Text>
+                </Text>
+                <TextInput
+                  value={categoryRequestForm.name}
+                  onChangeText={(name) =>
+                    setCategoryRequestForm((current) => ({ ...current, name }))
+                  }
+                  placeholder="Enter name"
+                  maxLength={100}
+                  style={categoryRequestInputStyle}
+                />
+
+                <Text style={[categoryRequestLabelStyle, { marginTop: 17 }]}>
+                  Detailed description{" "}
+                  <Text style={{ color: "#D32F2F" }}>*</Text>
+                </Text>
+                <TextInput
+                  value={categoryRequestForm.description}
+                  onChangeText={(description) =>
+                    setCategoryRequestForm((current) => ({
+                      ...current,
+                      description,
+                    }))
+                  }
+                  placeholder="Describe this category"
+                  multiline
+                  textAlignVertical="top"
+                  maxLength={1000}
+                  style={[categoryRequestInputStyle, { minHeight: 110 }]}
+                />
+
+                <Text style={[categoryRequestLabelStyle, { marginTop: 17 }]}>
+                  Subcategories
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TextInput
+                    value={subcategoryInput}
+                    onChangeText={setSubcategoryInput}
+                    onSubmitEditing={addCategorySubcategory}
+                    returnKeyType="done"
+                    placeholder="Type a subcategory"
+                    style={[categoryRequestInputStyle, { flex: 1 }]}
+                  />
+                  <TouchableOpacity
+                    onPress={addCategorySubcategory}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add subcategory"
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 15,
+                      backgroundColor: colors.primary,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="add" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                {!!categoryRequestForm.subcategory.length && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      marginTop: 10,
+                    }}
+                  >
+                    {categoryRequestForm.subcategory.map((subcategory) => (
+                      <TouchableOpacity
+                        key={subcategory}
+                        onPress={() =>
+                          setCategoryRequestForm((current) => ({
+                            ...current,
+                            subcategory: current.subcategory.filter(
+                              (item) => item !== subcategory,
+                            ),
+                          }))
+                        }
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 5,
+                          paddingHorizontal: 11,
+                          paddingVertical: 7,
+                          borderRadius: 20,
+                          backgroundColor: "#EAF6EF",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: colors.primaryDark,
+                          }}
+                        >
+                          {subcategory}
+                        </Text>
+                        <Ionicons
+                          name="close-circle"
+                          size={15}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                <Text style={[categoryRequestLabelStyle, { marginTop: 17 }]}>
+                  Images <Text style={{ color: "#D32F2F" }}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={pickCategoryRequestImages}
+                  style={{
+                    minHeight: 112,
+                    borderRadius: 18,
+                    borderWidth: 1.5,
+                    borderStyle: "dashed",
+                    borderColor: "#83D8AD",
+                    backgroundColor: "#F0FBF5",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 16,
+                  }}
+                >
+                  <Ionicons
+                    name="image-outline"
+                    size={28}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={{
+                      marginTop: 7,
+                      fontSize: 13,
+                      fontWeight: "800",
+                      color: colors.primaryDark,
+                    }}
+                  >
+                    Select category images
+                  </Text>
+                </TouchableOpacity>
+                {!!categoryRequestForm.images.length && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      gap: 10,
+                      marginTop: 12,
+                    }}
+                  >
+                    {categoryRequestForm.images.map((image, index) => (
+                      <View
+                        key={`${index}-${image.length}`}
+                        style={{
+                          width: 70,
+                          height: 70,
+                          borderRadius: 12,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <Image
+                          source={{ uri: image }}
+                          style={{ width: "100%", height: "100%" }}
+                          contentFit="cover"
+                        />
+                        <TouchableOpacity
+                          onPress={() =>
+                            setCategoryRequestForm((current) => ({
+                              ...current,
+                              images: current.images.filter(
+                                (_, imageIndex) => imageIndex !== index,
+                              ),
+                            }))
+                          }
+                          accessibilityLabel="Remove image"
+                          style={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            backgroundColor: "rgba(0,0,0,0.65)",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Ionicons name="close" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ScrollView>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                  paddingHorizontal: 18,
+                  paddingVertical: 13,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                  backgroundColor: colors.cardBackground,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => setCategoryRequestSheetOpen(false)}
+                  disabled={submittingCategoryRequest}
+                  style={{
+                    paddingHorizontal: 17,
+                    paddingVertical: 12,
+                    borderRadius: 13,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "700",
+                      color: colors.primaryDark,
+                    }}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={submitCategoryRequest}
+                  disabled={submittingCategoryRequest}
+                  style={{
+                    minWidth: 150,
+                    paddingHorizontal: 18,
+                    paddingVertical: 12,
+                    borderRadius: 13,
+                    backgroundColor: colors.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: submittingCategoryRequest ? 0.65 : 1,
+                  }}
+                >
+                  {submittingCategoryRequest ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text
+                      style={{ fontSize: 13, fontWeight: "800", color: "#fff" }}
+                    >
+                      Submit request
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <BottomBar />
       </View>
