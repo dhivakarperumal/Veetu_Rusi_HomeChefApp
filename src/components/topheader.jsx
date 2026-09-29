@@ -207,7 +207,7 @@ export default function TopHeader({
                   <View className="mr-2 flex-1 flex-row items-center">
                     <View className="h-[52px] w-[52px] overflow-hidden rounded-full bg-white/20">
                       <Image
-                        source={require("../../../assets/images/logo.png")}
+                        source={require("../../assets/images/logo.png")}
                         style={{ width: 52, height: 52, borderRadius: 26 }}
                         contentFit="contain"
                       />
