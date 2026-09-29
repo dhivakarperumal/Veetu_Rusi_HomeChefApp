@@ -167,6 +167,150 @@ function SectionTitle({ title }: { title: string }) {
   );
 }
 
+const ORDER_TRACKING_STAGES = [
+  "New",
+  "Preparing",
+  "Ready",
+  "Packing",
+  "Searching Delivery Partner",
+  "Delivery Partner Assigned",
+  "Completed",
+];
+
+function OrderStatusTracker({ status }: { status: string }) {
+  const normalizedStatus = String(status || "").toLowerCase();
+  const isCancelled = ["cancelled", "canceled"].includes(normalizedStatus);
+
+  if (isCancelled) {
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          padding: 14,
+          marginBottom: 16,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: "#F1CACA",
+          backgroundColor: "#FFF5F5",
+        }}
+      >
+        <Ionicons name="close-circle" size={22} color="#C62828" />
+        <Text
+          style={{
+            marginLeft: 9,
+            color: "#A52222",
+            fontSize: 14,
+            fontWeight: "800",
+          }}
+        >
+          Order cancelled
+        </Text>
+      </View>
+    );
+  }
+
+  const currentStageIndex = (() => {
+    if (isNewOrderStatus(normalizedStatus)) return 0;
+    if (["accepted", "preparing"].includes(normalizedStatus)) return 1;
+    if (["food ready", "ready"].includes(normalizedStatus)) return 2;
+    if (normalizedStatus === "packing") return 3;
+    if (normalizedStatus === "searching delivery partner") return 4;
+    if (normalizedStatus === "delivery partner assigned") return 5;
+    const mappedStatus = mapStatus(status);
+    return Math.max(0, ORDER_TRACKING_STAGES.indexOf(mappedStatus));
+  })();
+  const currentStage = ORDER_TRACKING_STAGES[currentStageIndex];
+
+  return (
+    <View
+      style={{
+        padding: 16,
+        marginBottom: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.cardBackground,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ color: colors.primaryDark, fontSize: 14, fontWeight: "800" }}>
+          Status Tracking
+        </Text>
+        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: "800" }}>
+          {currentStage}
+        </Text>
+      </View>
+      <View>
+        {ORDER_TRACKING_STAGES.map((stage, index) => {
+          const isComplete = index < currentStageIndex;
+          const isCurrent = index === currentStageIndex;
+          return (
+            <View
+              key={stage}
+              style={{
+                minHeight: 44,
+                flexDirection: "row",
+                alignItems: "center",
+                borderBottomWidth:
+                  index < ORDER_TRACKING_STAGES.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              }}
+            >
+              <View
+                style={{
+                  width: 25,
+                  height: 25,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 13,
+                  borderWidth: 1.5,
+                  borderColor: isComplete || isCurrent ? colors.primary : colors.border,
+                  backgroundColor: isComplete || isCurrent ? colors.primary : colors.cardBackground,
+                }}
+              >
+                <Ionicons
+                  name={isComplete ? "checkmark" : isCurrent ? "ellipse" : "ellipse-outline"}
+                  size={isComplete ? 16 : 11}
+                  color={isComplete || isCurrent ? "#FFFFFF" : colors.muted}
+                />
+              </View>
+              <Text
+                style={{
+                  flex: 1,
+                  marginLeft: 12,
+                  color: isComplete || isCurrent ? colors.primaryDark : colors.muted,
+                  fontSize: 13,
+                  fontWeight: isCurrent ? "800" : isComplete ? "700" : "500",
+                }}
+              >
+                {stage}
+              </Text>
+              <Text
+                style={{
+                  marginLeft: 8,
+                  color: isCurrent ? colors.primary : colors.muted,
+                  fontSize: 11,
+                  fontWeight: isCurrent ? "800" : "600",
+                }}
+              >
+                {isComplete ? "Done" : isCurrent ? "Current" : "Next"}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrderDetailScreen() {
   const router = useRouter();
@@ -264,6 +408,30 @@ export default function OrderDetailScreen() {
 
   const uiStatus = mapStatus(order.status);
   const cfg = STATUS_CONFIG[uiStatus] ?? STATUS_CONFIG["New"];
+  const deliveryPartner =
+    order.deliveryPartner ||
+    order.delivery_partner ||
+    order.assigned_delivery_partner ||
+    {};
+  const deliveryPartnerName =
+    order.delivery_partner_name ||
+    order.deliveryPartnerName ||
+    order.partner_name ||
+    deliveryPartner.name ||
+    deliveryPartner.full_name ||
+    deliveryPartner.fullName;
+  const deliveryPartnerPhone =
+    order.delivery_partner_phone ||
+    order.deliveryPartnerPhone ||
+    order.delivery_partner_mobile ||
+    order.partner_phone ||
+    deliveryPartner.phone ||
+    deliveryPartner.phone_number ||
+    deliveryPartner.mobile ||
+    deliveryPartner.mobile_number;
+  const isDeliveryPartnerAssigned = String(order.status || "")
+    .toLowerCase()
+    .includes("delivery partner assigned");
 
   // Calculate totals gracefully
   const parsedItems = Array.isArray(order.items) ? order.items : [];
@@ -392,18 +560,27 @@ export default function OrderDetailScreen() {
         >
           <Pressable
             onPress={() => router.back()}
-            style={{ marginRight: 12, padding: 4 }}
+            hitSlop={8}
+            style={{
+              width: 40,
+              height: 40,
+              marginRight: 12,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.65)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.primaryDark} />
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </Pressable>
           <Text
             style={{
               fontSize: 18,
               fontWeight: "800",
-              color: colors.primaryDark,
+              color: "#FFFFFF",
               flex: 1,
-              textAlign: "center",
-              marginRight: 36,
+              textAlign: "left",
             }}
           >
             Order Details
@@ -477,6 +654,97 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         </View>
+
+        <OrderStatusTracker status={order.status} />
+
+        {(isDeliveryPartnerAssigned ||
+          deliveryPartnerName ||
+          deliveryPartnerPhone) && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 16,
+              padding: 16,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.cardBackground,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.softCard,
+              }}
+            >
+              <Ionicons name="bicycle-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                }}
+              >
+                Delivery Partner
+              </Text>
+              <Text
+                style={{
+                  marginTop: 3,
+                  color: colors.primaryDark,
+                  fontSize: 15,
+                  fontWeight: "800",
+                }}
+              >
+                {deliveryPartnerName || "Assigned partner"}
+              </Text>
+              {deliveryPartnerPhone ? (
+                <Text
+                  style={{
+                    marginTop: 3,
+                    color: colors.muted,
+                    fontSize: 13,
+                  }}
+                >
+                  {String(deliveryPartnerPhone)}
+                </Text>
+              ) : (
+                <Text style={{ marginTop: 3, color: colors.muted, fontSize: 12 }}>
+                  Phone number unavailable
+                </Text>
+              )}
+            </View>
+            {deliveryPartnerPhone ? (
+              <Pressable
+                onPress={() =>
+                  Linking.openURL(
+                    `tel:${String(deliveryPartnerPhone).replace(/\s/g, "")}`,
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Call delivery partner ${deliveryPartnerName || ""}`}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.softCard,
+                  marginLeft: 10,
+                }}
+              >
+                <Ionicons name="call-outline" size={19} color={colors.primary} />
+              </Pressable>
+            ) : null}
+          </View>
+        )}
 
         {/* ── Customer card ── */}
         <View
