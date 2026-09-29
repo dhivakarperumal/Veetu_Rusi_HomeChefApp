@@ -137,7 +137,7 @@ export default function TopHeader({
       if (isFetchingNotifications.current) return;
       isFetchingNotifications.current = true;
       try {
-        const { default: api } = await import("../../api");
+        const { default: api } = await import("../api");
         const res = await api.get("/user-food-orders/chef");
         const today = new Date().toDateString();
         const orders = res.data || [];
