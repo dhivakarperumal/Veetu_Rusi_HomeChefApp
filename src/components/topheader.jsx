@@ -85,7 +85,9 @@ export default function TopHeader({
       const data = await getHomeChefAttendance();
       const currentSession =
         data?.currentSession ?? data?.current_session ?? data?.session ?? null;
-      setAttendance(currentSession ? { ...data, currentSession } : data || null);
+      setAttendance(
+        currentSession ? { ...data, currentSession } : data || null,
+      );
     } catch (error) {
       if (error?.status === 401) return;
       console.log("Error fetching chef attendance", error);
@@ -103,7 +105,9 @@ export default function TopHeader({
         result?.current_session ??
         result?.session ??
         null;
-      setAttendance(currentSession ? { ...result, currentSession } : result || null);
+      setAttendance(
+        currentSession ? { ...result, currentSession } : result || null,
+      );
       showAppDialog(
         action === "check_in" ? "Checked in" : "Checked out",
         result?.message ||
@@ -493,21 +497,21 @@ export default function TopHeader({
           (() => {
             const greeting = getGreeting();
             return (
-              <View className="mx-4 mb-5 h-40 overflow-hidden rounded-[24px] bg-black/20">
+              <View className="mx-4 mb-5 h-[230px] overflow-hidden rounded-[24px] bg-black/20">
                 <Image
                   source={require("../../assets/images/chef_hero.jpg")}
                   style={{
                     position: "absolute",
                     right: 0,
                     bottom: 0,
-                    width: 178,
-                    height: 165,
+                    width: 200,
+                    height: 230,
                   }}
                   contentFit="cover"
                   contentPosition="center"
                 />
                 <View className="absolute bottom-0 left-0 right-0 top-0 bg-black/10" />
-                <View className="max-w-[62%] p-5">
+                <View className="max-w-[68%] p-5 pb-16">
                   <Text className="text-sm font-medium text-white/85">
                     Hello, {greetingName}! 👋
                   </Text>
@@ -518,60 +522,59 @@ export default function TopHeader({
                     {greeting.sub}
                   </Text>
 
-                  <View className="mt-3 flex-row items-center gap-2">
-                    <View
-                      className={
-                        attendance?.currentSession
-                          ? "rounded-full bg-[#E8F5E9] px-2.5 py-1"
-                          : "rounded-full bg-[#FFF3E0] px-2.5 py-1"
-                      }
-                    >
-                      <View className="flex-row items-center">
-                        <View
-                          className={
-                            attendance?.currentSession
-                              ? "mr-1.5 h-2.5 w-2.5 rounded-full bg-[#2E7A4F]"
-                              : "mr-1.5 h-2.5 w-2.5 rounded-full bg-[#E65100]"
-                          }
-                        />
-                        <Text
-                          className={
-                            attendance?.currentSession
-                              ? "text-[11px] font-bold text-[#2E7A4F]"
-                              : "text-[11px] font-bold text-[#E65100]"
-                          }
-                        >
-                          {attendance?.currentSession ? "Online" : "Offline"}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={handleAttendanceToggle}
-                      disabled={attendanceActionLoading}
-                      className={
-                        attendance?.currentSession
-                          ? "rounded-full border border-white/30 bg-white/10 px-3 py-1.5"
-                          : "rounded-full border border-white/30 bg-[#153A2A] px-3 py-1.5"
-                      }
-                    >
-                      <Text className="text-[11px] font-bold text-white">
-                        {attendanceActionLoading
-                          ? "Updating..."
-                          : attendance?.currentSession
-                            ? "Check out"
-                            : "Check in"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View className="mt-3 flex-row items-center self-start rounded-full bg-white/25 px-3 py-1">
+                  <View className="mt-2 flex-row items-center self-start rounded-full bg-white/25 px-3 py-1">
                     <Ionicons name="heart" size={12} color="#FF8A65" />
                     <Text className="ml-1.5 text-xs font-bold text-white">
                       Cooked with Love
                     </Text>
                   </View>
+                </View>
+
+                <View className="absolute bottom-3 left-3 right-3 flex-row items-center justify-between rounded-2xl border border-white/20 bg-black/40 px-3.5 py-2.5">
+                  <View className="flex-row items-center gap-2">
+                    <View
+                      className={
+                        attendance?.currentSession
+                          ? "h-2.5 w-2.5 rounded-full bg-[#9BE7B2]"
+                          : "h-2.5 w-2.5 rounded-full bg-[#FFC078]"
+                      }
+                    />
+                    <Text className="text-[13px] font-extrabold text-white">
+                      {attendance?.currentSession ? "Online" : "Offline"}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleAttendanceToggle}
+                    disabled={attendanceActionLoading}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      attendance?.currentSession ? "Check out" : "Check in"
+                    }
+                    className={
+                      attendance?.currentSession
+                        ? "min-w-[104px] items-center rounded-xl bg-white px-4 py-2.5"
+                        : "min-w-[104px] items-center rounded-xl bg-[#153A2A] px-4 py-2.5"
+                    }
+                    style={
+                      attendanceActionLoading ? { opacity: 0.7 } : undefined
+                    }
+                  >
+                    <Text
+                      className={
+                        attendance?.currentSession
+                          ? "text-[12px] font-extrabold text-[#A52D22]"
+                          : "text-[12px] font-extrabold text-white"
+                      }
+                    >
+                      {attendanceActionLoading
+                        ? "Updating..."
+                        : attendance?.currentSession
+                          ? "Check out"
+                          : "Go online"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             );
