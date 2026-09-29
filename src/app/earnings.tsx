@@ -8,7 +8,7 @@ import {
     Text,
     View,
 } from "react-native";
-import api from "../api";
+import api, { getApiErrorMessage } from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
@@ -38,11 +38,18 @@ interface PeriodStats {
   transactions: Transaction[];
 }
 
+interface PayoutSummary {
+  pending_payment: number;
+  payment_requested: number;
+  paid_amount: number;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const isCompleted = (status: string) =>
-  ["completed", "delivered", "out for delivery"].includes(
-    (status || "").toLowerCase(),
-  );
+  ["completed", "delivered"].includes((status || "").toLowerCase());
+
+const getOrderStatus = (order: any) =>
+  String(order.order_status || order.status || "").toLowerCase();
 
 const isCancelled = (status: string) =>
   (status || "").toLowerCase() === "cancelled";
@@ -68,6 +75,13 @@ function formatAmount(n: number) {
   return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
+function formatCurrency(n: number) {
+  return `₹${(Number(n) || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 function trendPercent(current: number, previous: number): string {
   if (previous === 0) return current > 0 ? "+100%" : "0%";
   const pct = ((current - previous) / previous) * 100;
@@ -86,7 +100,7 @@ function buildChartPoints(
     const todayStart = startOfDay(now);
     for (const o of orders) {
       const d = new Date(o.ordered_at || o.created_at || "");
-      if (d >= todayStart && isCompleted(o.status)) {
+      if (d >= todayStart && isCompleted(getOrderStatus(o))) {
         buckets[d.getHours()] += Number(
           o.chef_total_amount ?? o.total_amount ?? 0,
         );
@@ -114,7 +128,7 @@ function buildChartPoints(
     const weekStart = startOfWeek(now);
     for (const o of orders) {
       const d = new Date(o.ordered_at || o.created_at || "");
-      if (d >= weekStart && isCompleted(o.status)) {
+      if (d >= weekStart && isCompleted(getOrderStatus(o))) {
         buckets[d.getDay()] += Number(
           o.chef_total_amount ?? o.total_amount ?? 0,
         );
@@ -128,7 +142,7 @@ function buildChartPoints(
   const monthStart = startOfMonth(now);
   for (const o of orders) {
     const d = new Date(o.ordered_at || o.created_at || "");
-    if (d >= monthStart && isCompleted(o.status)) {
+    if (d >= monthStart && isCompleted(getOrderStatus(o))) {
       const weekIndex = Math.min(3, Math.floor((d.getDate() - 1) / 7));
       buckets[weekIndex] += Number(o.chef_total_amount ?? o.total_amount ?? 0);
     }
@@ -174,8 +188,12 @@ function computeStats(orders: any[], period: Period, now: Date): PeriodStats {
   const current = orders.filter(inRange);
   const previous = orders.filter(inPrev);
 
-  const completedCurrent = current.filter((o) => isCompleted(o.status));
-  const completedPrevious = previous.filter((o) => isCompleted(o.status));
+  const completedCurrent = current.filter((o) =>
+    isCompleted(getOrderStatus(o)),
+  );
+  const completedPrevious = previous.filter((o) =>
+    isCompleted(getOrderStatus(o)),
+  );
 
   const currentEarnings = completedCurrent.reduce(
     (s, o) => s + Number(o.chef_total_amount ?? o.total_amount ?? 0),
@@ -427,6 +445,15 @@ export default function EarningsScreen() {
     () => !hasCachedPageData("earnings.orders"),
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [payoutSummary, setPayoutSummary] = useState<PayoutSummary>({
+    pending_payment: 0,
+    payment_requested: 0,
+    paid_amount: 0,
+  });
+  const [payoutLoading, setPayoutLoading] = useState(true);
+  const [requestingPayment, setRequestingPayment] = useState(false);
+  const [payoutError, setPayoutError] = useState("");
+  const [payoutMessage, setPayoutMessage] = useState("");
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -440,19 +467,79 @@ export default function EarningsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
+  }, [setAllOrders]);
+
+  const fetchPayoutSummary = useCallback(async () => {
+    setPayoutLoading(true);
+    try {
+      const response = await api.get("/earnings/summary");
+      const summary = response.data?.data || response.data || {};
+      setPayoutSummary({
+        pending_payment: Number(summary.pending_payment) || 0,
+        payment_requested: Number(summary.payment_requested) || 0,
+        paid_amount: Number(summary.paid_amount) || 0,
+      });
+      setPayoutError("");
+    } catch (error) {
+      console.error("Could not load payout summary:", error);
+      setPayoutError(
+        getApiErrorMessage(error, "Could not load payment summary."),
+      );
+    } finally {
+      setPayoutLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     if (!hasCachedPageData("earnings.orders")) fetchOrders();
   }, [fetchOrders]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => void fetchPayoutSummary(), 0);
+    return () => clearTimeout(timer);
+  }, [fetchPayoutSummary]);
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchOrders();
+    void fetchOrders();
+    void fetchPayoutSummary();
+  };
+
+  const handleRequestPayment = async () => {
+    const amount = payoutSummary.pending_payment;
+    if (requestingPayment || amount <= 0) return;
+
+    setRequestingPayment(true);
+    setPayoutError("");
+    setPayoutMessage("");
+    try {
+      const response = await api.post("/earnings/request-payment", { amount });
+      setPayoutMessage(
+        response.data?.message || "Payment request submitted successfully.",
+      );
+      await fetchPayoutSummary();
+    } catch (error) {
+      setPayoutError(
+        getApiErrorMessage(
+          error,
+          "Could not request payment. Please try again.",
+        ),
+      );
+    } finally {
+      setRequestingPayment(false);
+    }
   };
 
   const now = new Date();
   const data: PeriodStats = computeStats(allOrders, period, now);
+  const completedOrders = allOrders.filter((order) =>
+    isCompleted(getOrderStatus(order)),
+  );
+  const totalEarnings = completedOrders.reduce(
+    (total, order) =>
+      total + Number(order.chef_total_amount ?? order.total_amount ?? 0),
+    0,
+  );
 
   if (loading) {
     return (
@@ -534,6 +621,187 @@ export default function EarningsScreen() {
           paddingTop: 4,
         }}
       >
+        <View
+          style={{
+            backgroundColor: colors.cardBackground,
+            borderRadius: 18,
+            padding: 16,
+            marginBottom: 14,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Text
+            style={{
+              marginBottom: 8,
+              color: colors.primaryDark,
+              fontSize: 16,
+              fontWeight: "800",
+            }}
+          >
+            Payout Overview
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingVertical: 11,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <Text style={{ flex: 1, color: colors.muted, fontSize: 13 }}>
+              Completed / Delivered Orders
+            </Text>
+            <Text
+              style={{
+                marginLeft: 10,
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {completedOrders.length}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingVertical: 11,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              Total Earnings
+            </Text>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {formatCurrency(totalEarnings)}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingVertical: 11,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              Pending Payment
+            </Text>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {payoutLoading
+                ? "Loading..."
+                : formatCurrency(payoutSummary.pending_payment)}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingVertical: 11,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              Payment Requested
+            </Text>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {payoutLoading
+                ? "Loading..."
+                : formatCurrency(payoutSummary.payment_requested)}
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingVertical: 11,
+              marginBottom: 10,
+            }}
+          >
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              Paid Amount
+            </Text>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {payoutLoading
+                ? "Loading..."
+                : formatCurrency(payoutSummary.paid_amount)}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => void handleRequestPayment()}
+            disabled={
+              payoutLoading ||
+              requestingPayment ||
+              Boolean(payoutError) ||
+              payoutSummary.pending_payment <= 0
+            }
+            style={{
+              minHeight: 48,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              borderRadius: 12,
+              backgroundColor:
+                payoutLoading ||
+                requestingPayment ||
+                Boolean(payoutError) ||
+                payoutSummary.pending_payment <= 0
+                  ? colors.muted
+                  : colors.primary,
+            }}
+          >
+            {requestingPayment ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : null}
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>
+              {requestingPayment ? "Requesting Payment..." : "Request Payment"}
+            </Text>
+          </Pressable>
+          {payoutError ? (
+            <Text style={{ marginTop: 10, color: "#C62828", fontSize: 12 }}>
+              {payoutError}
+            </Text>
+          ) : null}
+          {payoutMessage ? (
+            <Text
+              style={{ marginTop: 10, color: colors.primary, fontSize: 12 }}
+            >
+              {payoutMessage}
+            </Text>
+          ) : null}
+        </View>
+
         {/* ── Earnings Chart Card ── */}
         <View
           style={{
@@ -614,13 +882,17 @@ export default function EarningsScreen() {
         <View style={{ gap: 10, marginBottom: 14 }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <StatCard label="Total Orders" value={data.totalOrders} />
-            <StatCard label="Completed Orders" value={data.completedOrders} />
+            <StatCard label="Cancelled Orders" value={data.cancelledOrders} />
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <StatCard label="Cancelled Orders" value={data.cancelledOrders} />
             <StatCard
               label="Avg Order Value"
               value={data.avgOrderValue}
+              prefix="₹"
+            />
+            <StatCard
+              label="Period Earnings"
+              value={formatAmount(data.amount)}
               prefix="₹"
             />
           </View>
