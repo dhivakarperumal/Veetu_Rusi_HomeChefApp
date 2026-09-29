@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getHomeChefAttendance, setHomeChefAttendanceStatus } from "../api";
-import TopHeader from "./componets/topheader";
 
 const dateKey = (value: any) => String(value || "").slice(0, 10);
 
@@ -235,7 +234,21 @@ export default function AttendanceScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F5F6F4]">
-      <TopHeader showHero={false} showNotifications={false} title="Attendance" />
+      <View className="flex-row items-center justify-between bg-[#2E7A4F] px-5 pb-4 pt-3">
+        <View className="flex-row items-center gap-3">
+          <View className="h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+            <Ionicons name="time-outline" size={21} color="#FFFFFF" />
+          </View>
+          <Text className="text-[18px] font-extrabold text-white">
+            My Attendance
+          </Text>
+        </View>
+        <View className="rounded-full bg-white/15 px-3 py-1.5">
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] text-white">
+            Home Chef
+          </Text>
+        </View>
+      </View>
 
       <ScrollView
         className="flex-1 bg-[#F5F6F4]"
