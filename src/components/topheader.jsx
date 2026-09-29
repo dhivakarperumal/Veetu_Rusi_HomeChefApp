@@ -495,7 +495,7 @@ export default function TopHeader({
             return (
               <View className="mx-4 mb-5 h-40 overflow-hidden rounded-[24px] bg-black/20">
                 <Image
-                  source={require("../../../assets/images/chef_hero.jpg")}
+                  source={require("../../assets/images/chef_hero.jpg")}
                   style={{
                     position: "absolute",
                     right: 0,
