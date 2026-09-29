@@ -625,12 +625,13 @@ const getOrderTimestamp = (order: Order) => {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function OrdersScreen() {
-  const [activeTab, setActiveTab] = useState<OrderTab>("All Status");
+  const [activeTab, setActiveTab] = useState<OrderTab>("New");
   const [orders, setOrders] = usePageCacheState<Order[]>("orders.list", []);
   const [refreshing, setRefreshing] = useState(false);
   const [clock, setClock] = useState(Date.now());
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [showStatusSelect, setShowStatusSelect] = useState(false);
   // Optional: you can add a filterSort state here if needed, e.g. "Newest", "Oldest", "Highest Amount"
   const [filterSort, setFilterSort] = useState<
     "Newest" | "Oldest" | "Highest Amount"
@@ -907,79 +908,169 @@ export default function OrdersScreen() {
           <Ionicons name="options-outline" size={20} color={colors.primary} />
         </Pressable>
       </View>
-      {/* ── Tab bar ── */}
-      <View style={{ height: 60, marginTop: 12, marginBottom: 10 }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flexGrow: 0 }}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
+      <View style={{ marginHorizontal: 20, marginTop: 12, marginBottom: 10 }}>
+        <Pressable
+          onPress={() => setShowStatusSelect(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter orders by status. Current status: ${activeTab}`}
+          style={{
+            flexDirection: "row",
             alignItems: "center",
-            gap: 8,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.cardBackground,
           }}
         >
-          {TABS.map((tab) => {
-            const count = orders.filter((o) => matchesTab(o, tab)).length;
-            const isActive = activeTab === tab;
-            return (
+          <Ionicons name="funnel-outline" size={19} color={colors.primary} />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: 10,
+                fontWeight: "700",
+                textTransform: "uppercase",
+              }}
+            >
+              Order status
+            </Text>
+            <Text
+              style={{
+                marginTop: 2,
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "800",
+              }}
+            >
+              {activeTab}
+            </Text>
+          </View>
+          <View
+            style={{
+              minWidth: 30,
+              height: 28,
+              paddingHorizontal: 8,
+              borderRadius: 14,
+              backgroundColor: colors.softCard,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 8,
+            }}
+          >
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: "800" }}>
+              {filtered.length}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={18} color={colors.primaryDark} />
+        </Pressable>
+      </View>
+
+      <Modal
+        visible={showStatusSelect}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStatusSelect(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={() => setShowStatusSelect(false)}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              backgroundColor: "rgba(0,0,0,0.45)",
+            }}
+          />
+          <View
+            style={{
+              maxHeight: "78%",
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              paddingBottom: 32,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              backgroundColor: colors.pageBackground,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <Text style={{ color: colors.primaryDark, fontSize: 18, fontWeight: "800" }}>
+                Select order status
+              </Text>
               <Pressable
-                key={tab}
-                onPress={() => setActiveTab(tab)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 50,
-                  backgroundColor: isActive ? "#2E7A4F" : colors.cardBackground,
-                  shadowColor: "#000",
-                  shadowOpacity: isActive ? 0 : 0.05,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowRadius: 3,
-                  elevation: isActive ? 0 : 1,
-                }}
+                onPress={() => setShowStatusSelect(false)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close status selector"
               >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "700",
-                    color: isActive ? "#fff" : colors.label,
-                  }}
-                >
-                  {tab}
-                </Text>
-                {count > 0 && (
-                  <View
+                <Ionicons name="close" size={22} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                const count = orders.filter((order) => matchesTab(order, tab)).length;
+                return (
+                  <Pressable
+                    key={tab}
+                    onPress={() => {
+                      setActiveTab(tab);
+                      setShowStatusSelect(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
                     style={{
-                      marginLeft: 6,
-                      height: 20,
-                      minWidth: 20,
-                      borderRadius: 10,
-                      backgroundColor: isActive
-                        ? "rgba(255,255,255,0.28)"
-                        : colors.softCard,
+                      minHeight: 50,
+                      flexDirection: "row",
                       alignItems: "center",
-                      justifyContent: "center",
-                      paddingHorizontal: 5,
+                      paddingHorizontal: 12,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
                     }}
                   >
                     <Text
                       style={{
-                        fontSize: 11,
-                        fontWeight: "800",
-                        color: isActive ? "#fff" : colors.primary,
+                        flex: 1,
+                        color: isActive ? colors.primary : colors.primaryDark,
+                        fontSize: 14,
+                        fontWeight: isActive ? "800" : "600",
+                      }}
+                    >
+                      {tab}
+                    </Text>
+                    <Text
+                      style={{
+                        minWidth: 28,
+                        marginRight: 10,
+                        color: colors.muted,
+                        fontSize: 12,
+                        textAlign: "right",
                       }}
                     >
                       {count}
                     </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+                    {isActive ? (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    ) : (
+                      <View style={{ width: 20, height: 20 }} />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Order list ── */}
       <ScrollView
