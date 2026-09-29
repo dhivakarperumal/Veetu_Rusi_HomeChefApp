@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
     Modal,
+    ScrollView,
     Text,
     TouchableOpacity,
     TouchableWithoutFeedback,
@@ -170,33 +171,59 @@ export default function TopHeader({
                   </View>
                 </View>
 
-                {[
-                  {
-                    icon: "speedometer-outline",
-                    label: "Dashboard",
-                    route: "/orders",
-                  },
-                  {
-                    icon: "settings-outline",
-                    label: "Settings",
-                    route: "/profile",
-                  },
-                ].map(({ icon, label, route }) => (
-                  <TouchableOpacity
-                    key={label}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setShowMenu(false);
-                      if (route) router.navigate(route);
-                    }}
-                    className="mx-5 mb-2 flex-row items-center rounded-2xl bg-white/10 px-4 py-3.5"
-                  >
-                    <Ionicons name={icon} size={22} color="#fff" />
-                    <Text className="ml-3.5 text-[15px] font-semibold text-white">
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <ScrollView
+                  className="flex-1"
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+                >
+                  {[
+                    {
+                      icon: "home-outline",
+                      label: "Home",
+                      route: "/dashboard",
+                    },
+                    {
+                      icon: "receipt-outline",
+                      label: "Orders",
+                      route: "/orders",
+                    },
+                    {
+                      icon: "restaurant-outline",
+                      label: "Dishes",
+                      route: "/dishes",
+                    },
+                    {
+                      icon: "cash-outline",
+                      label: "Earnings",
+                      route: "/earnings",
+                    },
+                    {
+                      icon: "bag-outline",
+                      label: "Materials",
+                      route: "/buy-materials",
+                    },
+                    {
+                      icon: "person-outline",
+                      label: "Profile",
+                      route: "/profile",
+                    },
+                  ].map(({ icon, label, route }) => (
+                    <TouchableOpacity
+                      key={label}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setShowMenu(false);
+                        router.navigate(route);
+                      }}
+                      className="mx-5 mb-2 flex-row items-center rounded-2xl bg-white/10 px-4 py-3.5"
+                    >
+                      <Ionicons name={icon} size={22} color="#fff" />
+                      <Text className="ml-3.5 text-[15px] font-semibold text-white">
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             </TouchableWithoutFeedback>
           </View>
