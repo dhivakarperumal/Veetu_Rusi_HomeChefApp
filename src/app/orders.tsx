@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -11,12 +13,64 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
+import api, {
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
+} from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 import BottomBar from "./componets/buttombar";
 import TopHeader from "./componets/topheader";
+
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+async function uploadPackingImage(asset: ImagePicker.ImagePickerAsset) {
+  const compressed = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [{ resize: { width: 900 } }],
+    { compress: 0.55, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  const formData = new FormData();
+  formData.append(
+    "images",
+    {
+      uri: compressed.uri,
+      name: asset.fileName || `packing-${Date.now()}.jpg`,
+      type: "image/jpeg",
+    } as any,
+  );
+
+  const response = await api.post(
+    "/upload/images?folder=orderPacking",
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000,
+    },
+  );
+  const data = response.data;
+  const imageCandidate =
+    data?.urls?.[0] ||
+    data?.images?.[0] ||
+    data?.files?.[0] ||
+    data?.data?.urls?.[0] ||
+    data?.data?.images?.[0] ||
+    data?.data?.url ||
+    data?.url;
+  const imagePath =
+    imageCandidate?.url || imageCandidate?.path || imageCandidate;
+  if (typeof imagePath !== "string" || !imagePath.trim()) {
+    throw new Error("The image upload did not return an image URL.");
+  }
+  if (/^https?:\/\//i.test(imagePath) || imagePath.startsWith("data:")) {
+    return imagePath;
+  }
+  return imagePath.startsWith("/")
+    ? `${API_ORIGIN}${imagePath}`
+    : `${API_ORIGIN}/${imagePath}`;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus = "New" | "Preparing" | "Ready" | "Completed" | "Cancelled";
@@ -135,6 +189,7 @@ function OrderCard({
   onAccept,
   onReject,
   onMarkReady,
+  onStartPacking,
   onStatusUpdate,
   onPress,
   now,
@@ -144,6 +199,7 @@ function OrderCard({
   onAccept?: (id: string) => void;
   onReject?: (order: Order) => void;
   onMarkReady?: (id: string) => void;
+  onStartPacking?: (id: string) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
   now: number;
@@ -152,7 +208,10 @@ function OrderCard({
   const cfg = STATUS_CONFIG[order.status];
   const rawStatus = (order.rawStatus || "").toLowerCase();
   const showAccept = order.status === "New";
-  const showStart = order.status === "Preparing";
+  const showStartCooking =
+    order.status === "Preparing" && rawStatus === "accepted";
+  const showStart =
+    order.status === "Preparing" && rawStatus !== "accepted";
   const nextStatus =
     rawStatus === "food ready" || rawStatus === "ready"
       ? { label: "Start Packing", status: "Packing" }
@@ -272,7 +331,8 @@ function OrderCard({
           style={{
             flexDirection: "row",
             alignItems: "center",
-            marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
+            marginBottom:
+              showAccept || showStartCooking || showStart || nextStatus ? 14 : 0,
           }}
         >
           <Ionicons name="location-outline" size={14} color={colors.muted} />
@@ -290,7 +350,10 @@ function OrderCard({
               flexWrap: "wrap",
               gap: 12,
               marginTop: 8,
-              marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
+              marginBottom:
+                showAccept || showStartCooking || showStart || nextStatus
+                  ? 14
+                  : 0,
             }}
           >
             {order.acceptedTime && (
@@ -479,7 +542,8 @@ function OrderCard({
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: showAccept || showStart || nextStatus ? 12 : 0,
+            marginBottom:
+              showAccept || showStartCooking || showStart || nextStatus ? 12 : 0,
           }}
         >
           <View>
@@ -545,6 +609,23 @@ function OrderCard({
           </View>
         )}
 
+        {showStartCooking && (
+          <Pressable
+            onPress={() => onStatusUpdate?.(order.id, "Preparing")}
+            disabled={busy}
+            style={{
+              backgroundColor: colors.primary,
+              borderRadius: 14,
+              paddingVertical: 13,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+              {busy ? "Starting..." : "Start Cooking"}
+            </Text>
+          </Pressable>
+        )}
+
         {showStart && (
           <Pressable
             onPress={() => onMarkReady?.(order.id)}
@@ -564,7 +645,11 @@ function OrderCard({
 
         {nextStatus && (
           <Pressable
-            onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
+            onPress={() =>
+              nextStatus.status === "Packing"
+                ? onStartPacking?.(order.id)
+                : onStatusUpdate?.(order.id, nextStatus.status)
+            }
             disabled={busy || nextStatus.label === "Partner Accepted"}
             style={{
               backgroundColor:
@@ -853,6 +938,45 @@ export default function OrdersScreen() {
     }
   };
 
+  const handleStartPacking = async (id: string) => {
+    if (actionId) return;
+    setActionId(id);
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        showAppDialog(
+          "Photo access required",
+          "Allow photo library access to upload a packing image.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const packingImage = await uploadPackingImage(result.assets[0]);
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status: "Packing",
+        packing_image: packingImage,
+      });
+      await fetchOrders();
+    } catch (error) {
+      console.error("Could not upload packing image:", error);
+      showAppDialog(
+        "Could not start packing",
+        getApiErrorMessage(error, "Please choose another packing image and try again."),
+      );
+    } finally {
+      setActionId(null);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
       <TopHeader showHero={false} title="Orders" />
@@ -992,6 +1116,7 @@ export default function OrdersScreen() {
               onAccept={handleAccept}
               onReject={openCancelModal}
               onMarkReady={handleMarkReady}
+              onStartPacking={handleStartPacking}
               onStatusUpdate={handleStatusUpdate}
               busy={actionId === order.id}
               now={clock}
