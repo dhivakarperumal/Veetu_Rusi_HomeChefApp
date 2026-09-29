@@ -1091,7 +1091,11 @@ export default function AddProductScreen() {
               }}
             >
               <Text
-                style={{ fontSize: 15, fontWeight: "800", color: colors.primaryDark }}
+                style={{
+                  fontSize: 15,
+                  fontWeight: "800",
+                  color: colors.primaryDark,
+                }}
               >
                 Variant {index + 1}
               </Text>
@@ -1112,7 +1116,9 @@ export default function AddProductScreen() {
                 <FormGroup label="Weight / Pack" required>
                   <InputField
                     value={variant.weight}
-                    onChangeText={(value) => updateVariant(index, "weight", value)}
+                    onChangeText={(value) =>
+                      updateVariant(index, "weight", value)
+                    }
                     placeholder="e.g. 500 g"
                   />
                 </FormGroup>
@@ -1121,7 +1127,9 @@ export default function AddProductScreen() {
                 <FormGroup label="Stock" required>
                   <InputField
                     value={variant.stock}
-                    onChangeText={(value) => updateVariant(index, "stock", value)}
+                    onChangeText={(value) =>
+                      updateVariant(index, "stock", value)
+                    }
                     placeholder="0"
                     keyboardType="numeric"
                   />
@@ -1135,7 +1143,9 @@ export default function AddProductScreen() {
                   <InputField
                     prefix="₹"
                     value={variant.price}
-                    onChangeText={(value) => updateVariant(index, "price", value)}
+                    onChangeText={(value) =>
+                      updateVariant(index, "price", value)
+                    }
                     placeholder="0.00"
                     keyboardType="numeric"
                   />
@@ -1146,7 +1156,9 @@ export default function AddProductScreen() {
                   <InputField
                     prefix="%"
                     value={variant.offer}
-                    onChangeText={(value) => updateVariant(index, "offer", value)}
+                    onChangeText={(value) =>
+                      updateVariant(index, "offer", value)
+                    }
                     placeholder="0"
                     keyboardType="numeric"
                   />
@@ -1181,14 +1193,22 @@ export default function AddProductScreen() {
           accessibilityRole="button"
           accessibilityLabel="Add product variant"
         >
-          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Ionicons
+            name="add-circle-outline"
+            size={20}
+            color={colors.primary}
+          />
           <Text style={{ fontWeight: "800", color: colors.primary }}>
             Add Variant
           </Text>
         </Pressable>
 
         <Text style={{ marginBottom: 16, color: colors.muted, fontSize: 13 }}>
-          Total inventory: {variantRows.reduce((total, variant) => total + (Number(variant.stock) || 0), 0)}
+          Total inventory:{" "}
+          {variantRows.reduce(
+            (total, variant) => total + (Number(variant.stock) || 0),
+            0,
+          )}
         </Text>
 
         <FormGroup label="Status" required>
@@ -1203,15 +1223,18 @@ export default function AddProductScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   alignItems: "center",
-                  borderColor: form.status === opt ? colors.primary : colors.border,
-                  backgroundColor: form.status === opt ? "#E8F5E9" : colors.cardBackground,
+                  borderColor:
+                    form.status === opt ? colors.primary : colors.border,
+                  backgroundColor:
+                    form.status === opt ? "#E8F5E9" : colors.cardBackground,
                 }}
               >
                 <Text
                   style={{
                     fontSize: 13,
                     fontWeight: "700",
-                    color: form.status === opt ? colors.primary : colors.primaryDark,
+                    color:
+                      form.status === opt ? colors.primary : colors.primaryDark,
                   }}
                 >
                   {opt}

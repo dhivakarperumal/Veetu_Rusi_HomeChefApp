@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import api, { getApiErrorMessage, isNewOrderStatus } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
@@ -170,9 +170,11 @@ function OrderCard({
       onPress={onPress}
       style={{
         backgroundColor: colors.cardBackground,
-        borderRadius: 20,
+        borderRadius: 16,
         marginBottom: 12,
-        padding: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        overflow: "hidden",
         shadowColor: "#000",
         shadowOpacity: 0.05,
         shadowOffset: { width: 0, height: 2 },
@@ -180,251 +182,373 @@ function OrderCard({
         elevation: 2,
       }}
     >
-      {/* Top row: status badge + order id + time */}
+      {/* Card header */}
       <View
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 10,
+          paddingHorizontal: 16,
+          paddingVertical: 13,
+          backgroundColor: "#2E7A4F",
+          borderBottomWidth: 1,
+          borderBottomColor: "#286E48",
         }}
       >
+        <View style={{ flex: 1, marginRight: 10 }}>
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontSize: 14,
+              fontWeight: "800",
+            }}
+            numberOfLines={1}
+          >
+            Order #{order.order_id}
+          </Text>
+          <View
+            style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}
+          >
+            <Ionicons name="time-outline" size={13} color="#EAF4EE" />
+            <Text style={{ color: "#EAF4EE", fontSize: 12, marginLeft: 4 }}>
+              {order.time}
+            </Text>
+          </View>
+        </View>
         <View
           style={{
             backgroundColor: cfg.bg,
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
+            borderRadius: 10,
+            paddingHorizontal: 11,
+            paddingVertical: 6,
           }}
         >
           <Text style={{ color: cfg.color, fontSize: 12, fontWeight: "700" }}>
             {cfg.label}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text
-            style={{
-              color: colors.primaryDark,
-              fontSize: 13,
-              fontWeight: "700",
-            }}
-          >
-            #{order.order_id}
-          </Text>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>
-            {order.time}
-          </Text>
-        </View>
       </View>
 
-      {/* Divider */}
-      <View
-        style={{
-          height: 1,
-          backgroundColor: colors.border,
-          marginBottom: 12,
-        }}
-      />
-
-      {/* Customer row */}
-      <View
-        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
-      >
-        <View
-          style={{
-            height: 42,
-            width: 42,
-            borderRadius: 21,
-            backgroundColor: colors.softCard,
-            alignItems: "center",
-            justifyContent: "center",
-            marginRight: 12,
-          }}
-        >
-          <Ionicons name="person" size={20} color={colors.primarySoft} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              color: colors.primaryDark,
-              fontSize: 15,
-              fontWeight: "700",
-            }}
-          >
-            {order.customer}
-          </Text>
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
-            {order.items} {order.items === 1 ? "item" : "items"} · ₹
-            {order.amount % 1 === 0 ? order.amount : order.amount.toFixed(2)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Location */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
-        }}
-      >
-        <Ionicons name="location-outline" size={14} color={colors.muted} />
-        <Text style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}>
-          {order.location}
-        </Text>
-      </View>
-
-      {(order.acceptedTime || order.deliveryTime || order.status === "New") && (
+      <View style={{ padding: 16 }}>
         <View
           style={{
             flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 12,
-            marginTop: 8,
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <View
+            style={{
+              height: 42,
+              width: 42,
+              borderRadius: 21,
+              backgroundColor: colors.softCard,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+            }}
+          >
+            <Ionicons name="person" size={20} color={colors.primarySoft} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 15,
+                fontWeight: "700",
+              }}
+            >
+              {order.customer}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
+              {order.items} {order.items === 1 ? "item" : "items"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Location */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
             marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
           }}
         >
-          {order.acceptedTime && (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={15}
-                color="#2E7D32"
-              />
-              <Text
-                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
-              >
-                Accepted: {order.acceptedTime}
-              </Text>
-            </View>
-          )}
-          {order.deliveryTime && (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons name="time-outline" size={15} color={colors.primary} />
-              <Text
-                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
-              >
-                Delivery: {order.deliveryTime}
-              </Text>
-            </View>
-          )}
-          {order.status !== "Cancelled" &&
-            order.acceptedAt &&
-            order.deliveryAt && (
+          <Ionicons name="location-outline" size={14} color={colors.muted} />
+          <Text style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}>
+            {order.location}
+          </Text>
+        </View>
+
+        {(order.acceptedTime ||
+          order.deliveryTime ||
+          order.status === "New") && (
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 12,
+              marginTop: 8,
+              marginBottom: showAccept || showStart || nextStatus ? 14 : 0,
+            }}
+          >
+            {order.acceptedTime && (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="hourglass-outline" size={15} color="#E65100" />
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={15}
+                  color="#2E7D32"
+                />
                 <Text
-                  style={{
-                    color: "#E65100",
-                    fontSize: 12,
-                    marginLeft: 4,
-                    fontWeight: "700",
-                  }}
+                  style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
                 >
-                  Delivery in{" "}
-                  {formatRemainingDeliveryTime(
-                    order.acceptedAt,
-                    order.deliveryAt,
-                    now,
-                  )}
+                  Accepted: {order.acceptedTime}
                 </Text>
               </View>
             )}
-          {order.status === "New" && !order.acceptedAt && (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons
-                name="hourglass-outline"
-                size={15}
-                color={colors.muted}
-              />
-              <Text
-                style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
-              >
-                Awaiting acceptance
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {order.status === "Cancelled" &&
-        (order.cancellationReason || order.cancellationNotes) && (
-          <View
-            style={{
-              marginTop: 12,
-              marginBottom: 2,
-              padding: 12,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: "#FFD7D7",
-              backgroundColor: "#FFF7F7",
-            }}
-          >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color="#C62828"
-              />
-              <Text
-                style={{ color: "#A52A2A", fontSize: 12, fontWeight: "800" }}
-              >
-                Cancellation reason
-              </Text>
-            </View>
-            {order.cancellationReason && (
-              <Text
-                style={{
-                  marginTop: 5,
-                  color: "#4A3535",
-                  fontSize: 13,
-                  fontWeight: "700",
-                }}
-              >
-                {order.cancellationReason}
-              </Text>
+            {order.deliveryTime && (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons
+                  name="time-outline"
+                  size={15}
+                  color={colors.primary}
+                />
+                <Text
+                  style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
+                >
+                  Delivery: {order.deliveryTime}
+                </Text>
+              </View>
             )}
-            {order.cancellationNotes && (
-              <Text
-                style={{
-                  marginTop: 3,
-                  color: "#765F5F",
-                  fontSize: 12,
-                  lineHeight: 18,
-                }}
-              >
-                {order.cancellationNotes}
-              </Text>
+            {order.status !== "Cancelled" &&
+              order.acceptedAt &&
+              order.deliveryAt && (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Ionicons
+                    name="hourglass-outline"
+                    size={15}
+                    color="#E65100"
+                  />
+                  <Text
+                    style={{
+                      color: "#E65100",
+                      fontSize: 12,
+                      marginLeft: 4,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Delivery in{" "}
+                    {formatRemainingDeliveryTime(
+                      order.acceptedAt,
+                      order.deliveryAt,
+                      now,
+                    )}
+                  </Text>
+                </View>
+              )}
+            {order.status === "New" && !order.acceptedAt && (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons
+                  name="hourglass-outline"
+                  size={15}
+                  color={colors.muted}
+                />
+                <Text
+                  style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}
+                >
+                  Awaiting acceptance
+                </Text>
+              </View>
             )}
           </View>
         )}
 
-      {/* Action button */}
-      {showAccept && (
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Pressable
-            onPress={() => onReject?.(order)}
-            disabled={busy}
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: "#C62828",
-              borderRadius: 14,
-              paddingVertical: 13,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#C62828", fontSize: 15, fontWeight: "700" }}>
-              Reject
+        {order.status === "Cancelled" &&
+          (order.cancellationReason || order.cancellationNotes) && (
+            <View
+              style={{
+                marginTop: 12,
+                marginBottom: 2,
+                padding: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#FFD7D7",
+                backgroundColor: "#FFF7F7",
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color="#C62828"
+                />
+                <Text
+                  style={{ color: "#A52A2A", fontSize: 12, fontWeight: "800" }}
+                >
+                  Cancellation reason
+                </Text>
+              </View>
+              {order.cancellationReason && (
+                <Text
+                  style={{
+                    marginTop: 5,
+                    color: "#4A3535",
+                    fontSize: 13,
+                    fontWeight: "700",
+                  }}
+                >
+                  {order.cancellationReason}
+                </Text>
+              )}
+              {order.cancellationNotes && (
+                <Text
+                  style={{
+                    marginTop: 3,
+                    color: "#765F5F",
+                    fontSize: 12,
+                    lineHeight: 18,
+                  }}
+                >
+                  {order.cancellationNotes}
+                </Text>
+              )}
+            </View>
+          )}
+
+        {rawStatus === "delivery partner assigned" &&
+          (order.deliveryPartnerName ||
+            order.deliveryPartnerPhone ||
+            order.deliveryPartnerVehicle) && (
+            <View
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: colors.softCard,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.primaryDark,
+                  fontSize: 13,
+                  fontWeight: "700",
+                }}
+              >
+                Delivery Partner
+              </Text>
+              {order.deliveryPartnerName && (
+                <Text
+                  style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}
+                >
+                  {order.deliveryPartnerName}
+                </Text>
+              )}
+              {order.deliveryPartnerPhone && (
+                <Text
+                  style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}
+                >
+                  {order.deliveryPartnerPhone}
+                </Text>
+              )}
+              {order.deliveryPartnerVehicle && (
+                <Text
+                  style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}
+                >
+                  {order.deliveryPartnerVehicle}
+                </Text>
+              )}
+            </View>
+          )}
+      </View>
+
+      {/* Card footer */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 13,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          backgroundColor: "#FBFCFA",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: showAccept || showStart || nextStatus ? 12 : 0,
+          }}
+        >
+          <View>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>
+              Order total
             </Text>
-          </Pressable>
+            <Text
+              style={{
+                color: colors.primaryDark,
+                fontSize: 17,
+                fontWeight: "800",
+                marginTop: 2,
+              }}
+            >
+              ₹{order.amount % 1 === 0 ? order.amount : order.amount.toFixed(2)}
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text
+              style={{ color: colors.primary, fontSize: 12, fontWeight: "700" }}
+            >
+              View details
+            </Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+          </View>
+        </View>
+
+        {showAccept && (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              onPress={() => onReject?.(order)}
+              disabled={busy}
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: "#C62828",
+                borderRadius: 14,
+                paddingVertical: 13,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{ color: "#C62828", fontSize: 15, fontWeight: "700" }}
+              >
+                Reject
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onAccept?.(order.id)}
+              disabled={busy}
+              style={{
+                flex: 1.5,
+                backgroundColor: colors.primary,
+                borderRadius: 14,
+                paddingVertical: 13,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+                {busy ? "Accepting..." : "Accept Order"}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {showStart && (
           <Pressable
-            onPress={() => onAccept?.(order.id)}
+            onPress={() => onMarkReady?.(order.id)}
             disabled={busy}
             style={{
-              flex: 1.5,
               backgroundColor: colors.primary,
               borderRadius: 14,
               paddingVertical: 13,
@@ -432,87 +556,31 @@ function OrderCard({
             }}
           >
             <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-              {busy ? "Accepting..." : "Accept Order"}
+              Mark Ready
             </Text>
           </Pressable>
-        </View>
-      )}
+        )}
 
-      {showStart && (
-        <Pressable
-          onPress={() => onMarkReady?.(order.id)}
-          disabled={busy}
-          style={{
-            backgroundColor: colors.primary,
-            borderRadius: 14,
-            paddingVertical: 13,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-            Mark Ready
-          </Text>
-        </Pressable>
-      )}
-
-      {nextStatus && (
-        <Pressable
-          onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
-          disabled={busy || nextStatus.label === "Partner Accepted"}
-          style={{
-            backgroundColor:
-              nextStatus.label === "Partner Accepted"
-                ? colors.muted
-                : colors.primary,
-            borderRadius: 14,
-            paddingVertical: 13,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-            {nextStatus.label}
-          </Text>
-        </Pressable>
-      )}
-
-      {rawStatus === "delivery partner assigned" &&
-        (order.deliveryPartnerName ||
-          order.deliveryPartnerPhone ||
-          order.deliveryPartnerVehicle) && (
-          <View
+        {nextStatus && (
+          <Pressable
+            onPress={() => onStatusUpdate?.(order.id, nextStatus.status)}
+            disabled={busy || nextStatus.label === "Partner Accepted"}
             style={{
-              marginTop: 12,
-              padding: 12,
-              borderRadius: 12,
-              backgroundColor: colors.softCard,
+              backgroundColor:
+                nextStatus.label === "Partner Accepted"
+                  ? colors.muted
+                  : colors.primary,
+              borderRadius: 14,
+              paddingVertical: 13,
+              alignItems: "center",
             }}
           >
-            <Text
-              style={{
-                color: colors.primaryDark,
-                fontSize: 13,
-                fontWeight: "700",
-              }}
-            >
-              Delivery Partner
+            <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
+              {nextStatus.label}
             </Text>
-            {order.deliveryPartnerName && (
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
-                {order.deliveryPartnerName}
-              </Text>
-            )}
-            {order.deliveryPartnerPhone && (
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-                {order.deliveryPartnerPhone}
-              </Text>
-            )}
-            {order.deliveryPartnerVehicle && (
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
-                {order.deliveryPartnerVehicle}
-              </Text>
-            )}
-          </View>
+          </Pressable>
         )}
+      </View>
     </Pressable>
   );
 }
