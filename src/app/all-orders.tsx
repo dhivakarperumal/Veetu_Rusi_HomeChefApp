@@ -28,6 +28,21 @@ type AllOrder = {
 };
 
 const CACHE_KEY = "all-orders.list";
+const ORDER_STATUS_OPTIONS = [
+  "New",
+  "Accepted",
+  "Preparing",
+  "Cooking",
+  "Ready",
+  "Packing",
+  "Packed",
+  "Searching Delivery Partner",
+  "Delivery Partner Assigned",
+  "Out for Delivery",
+  "Delivered",
+  "Completed",
+  "Cancelled",
+];
 
 const getStatusColor = (status: string) => {
   const normalized = status.toLowerCase();
@@ -81,7 +96,7 @@ export default function AllOrdersPage() {
             ),
             orderId: String(order.order_id || order.id || order._id || "—"),
             customer: order.customer_name || "Unknown customer",
-            status: String(order.status || "Unknown"),
+            status: String(order.order_status || order.status || "Unknown"),
             quantity,
             amount:
               Number(order.chef_total_amount ?? order.total_amount ?? 0) || 0,
@@ -118,7 +133,9 @@ export default function AllOrdersPage() {
   const normalizedSearch = search.trim().toLowerCase();
   const availableStatuses = Array.from(
     new Map(
-      orders.map((order) => [order.status.toLowerCase(), order.status]),
+      [...ORDER_STATUS_OPTIONS, ...orders.map((order) => order.status)].map(
+        (status) => [status.toLowerCase(), status],
+      ),
     ).values(),
   );
   const statusOptions = ["All Status", ...availableStatuses];
