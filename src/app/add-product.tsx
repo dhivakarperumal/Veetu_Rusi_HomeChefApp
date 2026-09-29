@@ -124,10 +124,12 @@ async function uploadProductImages(assets: ImagePicker.ImagePickerAsset[]) {
 
 function DatePickerField({
   label,
+  required = false,
   value,
   onChange,
 }: {
   label: string;
+  required?: boolean;
   value: string;
   onChange: (date: string) => void;
 }) {
@@ -137,6 +139,16 @@ function DatePickerField({
 
   return (
     <View style={{ marginBottom: 18 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}>
+          {label}
+        </Text>
+        {required ? (
+          <Text style={{ marginLeft: 4, color: "#C62828", fontWeight: "800" }}>
+            *
+          </Text>
+        ) : null}
+      </View>
       <Pressable
         onPress={() => setShow(true)}
         style={{
@@ -185,23 +197,25 @@ function DatePickerField({
 
 function FormGroup({
   label,
+  required = false,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ marginBottom: 18 }}>
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: "700",
-          color: colors.primaryDark,
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}>
+          {label}
+        </Text>
+        {required ? (
+          <Text style={{ marginLeft: 4, color: "#C62828", fontWeight: "800" }}>
+            *
+          </Text>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -519,10 +533,67 @@ export default function AddProductScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!form.category || !form.name || !form.description || !form.mrp) {
+    const hasText = (value: unknown) => String(value ?? "").trim().length > 0;
+    const missingFields = [
+      !hasText(form.name) && "Product Name",
+      !hasText(form.product_code) && "Product Code",
+      !hasText(form.subcategory) && "Subcategory",
+      !hasText(form.category) && "Category",
+      !hasText(form.cuisine) && "Cuisine",
+      !hasText(form.prep_time) && "Preparation Time",
+      !hasText(form.spice_level) && "Spice Level",
+      !hasText(form.storage_instructions) && "Storage Instructions",
+      !hasText(form.serving_size) && "Serving Size",
+      !hasText(form.nutrition_info) && "Nutrition Info",
+      !hasText(form.material) && "Material / Ingredients",
+      !hasText(form.total_stock) && "Total Stock",
+      !hasText(form.mrp) && "MRP",
+      !hasText(form.offer) && "Offer",
+      !hasText(form.net_weight) && "Net Weight",
+      !hasText(form.shelf_life_days) && "Shelf Life",
+      !hasText(form.package_count) && "Package Count",
+      !hasText(form.manufacture_date) && "Manufacture Date",
+      !hasText(form.expiry_date) && "Expiry Date",
+      !hasText(form.packaging_notes) && "Packaging Notes",
+      !hasText(form.description) && "Description",
+      !hasText(form.ingredients) && "Ingredients List",
+      !hasText(form.instructions) && "Instructions",
+      !hasText(form.preparation_url) && "Preparation Video URL",
+      form.images.length === 0 && "Product Image",
+      !hasText(form.packaging_image) && "Packaging Image",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
       showAppDialog(
         "Missing details",
-        "Please complete the required name, category, description, and MRP fields.",
+        `Please complete: ${missingFields.join(", ")}.`,
+      );
+      return;
+    }
+
+    const numericFields = [
+      ["MRP", form.mrp, 0],
+      ["Offer", form.offer, 0, 100],
+      ["Total Stock", form.total_stock, 0],
+      ["Shelf Life", form.shelf_life_days, 0],
+      ["Package Count", form.package_count, 0],
+    ] as const;
+    const invalidNumericField = numericFields.find(([, value, minimum, maximum]) => {
+      const number = Number(value);
+      return (
+        !Number.isFinite(number) ||
+        number < minimum ||
+        (maximum !== undefined && number > maximum)
+      );
+    });
+    if (invalidNumericField) {
+      showAppDialog(
+        "Check product details",
+        `${invalidNumericField[0]} must be a valid number${
+          invalidNumericField[3] !== undefined
+            ? ` between ${invalidNumericField[2]} and ${invalidNumericField[3]}`
+            : ` greater than or equal to ${invalidNumericField[2]}`
+        }.`,
       );
       return;
     }
@@ -628,7 +699,7 @@ export default function AddProductScreen() {
         {/* ── Product Details ── */}
         <SectionHeader title="Product Details" />
 
-        <FormGroup label="Product Name *">
+        <FormGroup label="Product Name" required>
           <InputField
             value={form.name}
             onChangeText={(t) => updateForm("name", t)}
@@ -638,7 +709,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Product Code">
+            <FormGroup label="Product Code" required>
               <InputField
                 value={form.product_code}
                 onChangeText={(t) => updateForm("product_code", t)}
@@ -647,7 +718,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Subcategory">
+            <FormGroup label="Subcategory" required>
               <InputField
                 value={form.subcategory}
                 onChangeText={(t) => updateForm("subcategory", t)}
@@ -673,7 +744,7 @@ export default function AddProductScreen() {
           </View>
         </FormGroup>
 
-        <FormGroup label="Category *">
+        <FormGroup label="Category" required>
           {categories.filter((c) => {
             const t = (c.category_type || "").toLowerCase();
             return t === "food product" || t === "food products";
@@ -731,7 +802,7 @@ export default function AddProductScreen() {
           )}
         </FormGroup>
 
-        <FormGroup label="Cuisine">
+        <FormGroup label="Cuisine" required>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -769,7 +840,7 @@ export default function AddProductScreen() {
           </ScrollView>
         </FormGroup>
 
-        <FormGroup label="Dietary Tag">
+        <FormGroup label="Dietary Tag" required>
           <View style={{ flexDirection: "row", gap: 10 }}>
             {DIETARY_OPTIONS.map((opt) => (
               <Pressable
@@ -809,7 +880,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Preparation Time">
+            <FormGroup label="Preparation Time" required>
               <InputField
                 value={form.prep_time}
                 onChangeText={(t) => updateForm("prep_time", t)}
@@ -818,7 +889,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Spice Level">
+            <FormGroup label="Spice Level" required>
               <InputField
                 value={form.spice_level}
                 onChangeText={(t) => updateForm("spice_level", t)}
@@ -832,7 +903,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Storage Instructions">
+            <FormGroup label="Storage Instructions" required>
               <InputField
                 value={form.storage_instructions}
                 onChangeText={(t) => updateForm("storage_instructions", t)}
@@ -841,7 +912,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Serving Size">
+            <FormGroup label="Serving Size" required>
               <InputField
                 value={form.serving_size}
                 onChangeText={(t) => updateForm("serving_size", t)}
@@ -851,7 +922,7 @@ export default function AddProductScreen() {
           </View>
         </View>
 
-        <FormGroup label="Nutrition Info">
+        <FormGroup label="Nutrition Info" required>
           <InputField
             value={form.nutrition_info}
             onChangeText={(t) => updateForm("nutrition_info", t)}
@@ -860,7 +931,7 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Material / Ingredients">
+        <FormGroup label="Material / Ingredients" required>
           <InputField
             value={form.material}
             onChangeText={(t) => updateForm("material", t)}
@@ -873,7 +944,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Total Stock">
+            <FormGroup label="Total Stock" required>
               <InputField
                 value={form.total_stock}
                 onChangeText={(t) => updateForm("total_stock", t)}
@@ -883,7 +954,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Status">
+            <FormGroup label="Status" required>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 {["Active", "Inactive"].map((opt) => (
                   <Pressable
@@ -922,7 +993,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="MRP *">
+            <FormGroup label="MRP" required>
               <InputField
                 prefix="₹"
                 value={form.mrp}
@@ -933,7 +1004,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Offer (%)">
+            <FormGroup label="Offer (%)" required>
               <InputField
                 prefix="%"
                 value={form.offer}
@@ -957,7 +1028,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Net Weight">
+            <FormGroup label="Net Weight" required>
               <InputField
                 value={form.net_weight}
                 onChangeText={(t) => updateForm("net_weight", t)}
@@ -971,7 +1042,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Shelf Life (Days)">
+            <FormGroup label="Shelf Life (Days)" required>
               <InputField
                 value={form.shelf_life_days}
                 onChangeText={(t) => updateForm("shelf_life_days", t)}
@@ -981,7 +1052,7 @@ export default function AddProductScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Package Count">
+            <FormGroup label="Package Count" required>
               <InputField
                 value={form.package_count}
                 onChangeText={(t) => updateForm("package_count", t)}
@@ -996,6 +1067,7 @@ export default function AddProductScreen() {
           <View style={{ flex: 1 }}>
             <DatePickerField
               label="Manufacture Date"
+              required
               value={form.manufacture_date}
               onChange={(d) => updateForm("manufacture_date", d)}
             />
@@ -1003,13 +1075,14 @@ export default function AddProductScreen() {
           <View style={{ flex: 1 }}>
             <DatePickerField
               label="Expiry Date"
+              required
               value={form.expiry_date}
               onChange={(d) => updateForm("expiry_date", d)}
             />
           </View>
         </View>
 
-        <FormGroup label="Packaging Notes">
+        <FormGroup label="Packaging Notes" required>
           <InputField
             value={form.packaging_notes}
             onChangeText={(t) => updateForm("packaging_notes", t)}
@@ -1017,7 +1090,7 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Packaging Type">
+        <FormGroup label="Packaging Type" required>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1058,7 +1131,7 @@ export default function AddProductScreen() {
         {/* ── Instructions & Description ── */}
         <SectionHeader title="Instructions & Description" />
 
-        <FormGroup label="Description *">
+        <FormGroup label="Description" required>
           <InputField
             value={form.description}
             onChangeText={(t) => updateForm("description", t)}
@@ -1067,7 +1140,7 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Ingredients List">
+        <FormGroup label="Ingredients List" required>
           <InputField
             value={form.ingredients}
             onChangeText={(t) => updateForm("ingredients", t)}
@@ -1076,7 +1149,7 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Instructions / Recipe">
+        <FormGroup label="Instructions / Recipe" required>
           <InputField
             value={form.instructions}
             onChangeText={(t) => updateForm("instructions", t)}
@@ -1085,7 +1158,7 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Preparation Video URL">
+        <FormGroup label="Preparation Video URL" required>
           <InputField
             value={form.preparation_url}
             onChangeText={(t) => updateForm("preparation_url", t)}
@@ -1099,7 +1172,7 @@ export default function AddProductScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Product Image">
+            <FormGroup label="Product Image" required>
               <Pressable
                 onPress={() => handlePickImage("images")}
                 style={{
@@ -1176,7 +1249,7 @@ export default function AddProductScreen() {
           </View>
 
           <View style={{ flex: 1 }}>
-            <FormGroup label="Packaging Image">
+            <FormGroup label="Packaging Image" required>
               <Pressable
                 onPress={() => handlePickImage("packaging_image")}
                 style={{
