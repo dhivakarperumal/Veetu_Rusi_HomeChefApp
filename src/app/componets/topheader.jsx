@@ -4,12 +4,12 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
-    Modal,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getStoredUser, isNewOrderStatus, logoutUser } from "../../api";
@@ -145,30 +145,33 @@ export default function TopHeader({
                 className="absolute bottom-0 left-0 top-0 w-[280px] bg-[#2E7A4F]"
                 style={{ paddingTop: insets.top + 20 }}
               >
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setShowMenu(false)}
-                  className="ml-5 mb-6 h-11 w-11 items-center justify-center rounded-full bg-black/20"
-                >
-                  <Ionicons name="close" size={24} color="#fff" />
-                </TouchableOpacity>
-
-                <View className="mb-8 flex-row items-center px-5">
-                  <View className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-white/20">
-                    <MaterialCommunityIcons
-                      name="home-heart"
-                      size={26}
-                      color="#fff"
-                    />
+                <View className="mb-8 flex-row items-start justify-between px-5">
+                  <View className="mr-2 flex-1 flex-row items-center">
+                    <View className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-white/20">
+                      <MaterialCommunityIcons
+                        name="home-heart"
+                        size={26}
+                        color="#fff"
+                      />
+                    </View>
+                    <View className="ml-3.5">
+                      <Text className="text-xl font-extrabold text-white">
+                        Veetu Rusi
+                      </Text>
+                      <Text className="mt-0.5 text-[13px] text-white/75">
+                        Cooked with Love
+                      </Text>
+                    </View>
                   </View>
-                  <View className="ml-3.5">
-                    <Text className="text-xl font-extrabold text-white">
-                      Veetu Rusi
-                    </Text>
-                    <Text className="mt-0.5 text-[13px] text-white/75">
-                      Cooked with Love
-                    </Text>
-                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setShowMenu(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close menu"
+                    className="h-11 w-11 items-center justify-center rounded-full bg-black/20"
+                  >
+                    <Ionicons name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
                 </View>
 
                 <ScrollView
@@ -188,9 +191,19 @@ export default function TopHeader({
                       route: "/orders",
                     },
                     {
+                      icon: "list-outline",
+                      label: "Show All Orders",
+                      route: "/all-orders",
+                    },
+                    {
                       icon: "restaurant-outline",
                       label: "Dishes",
                       route: "/dishes",
+                    },
+                    {
+                      icon: "cube-outline",
+                      label: "My Products",
+                      route: "/myproducts",
                     },
                     {
                       icon: "cash-outline",
