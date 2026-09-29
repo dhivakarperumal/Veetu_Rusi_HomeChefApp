@@ -3,8 +3,8 @@ import axios from "axios";
 import { clearPageCache } from "./lib/page-cache";
 
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
-// process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
+  // process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
+process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -142,6 +142,16 @@ export async function loginWithIdentifier(identifier, password) {
   }
 
   return { ...resData, token, user, message };
+}
+
+export async function getHomeChefAttendance() {
+  const response = await api.get("/home-chef-attendance");
+  return response.data || {};
+}
+
+export async function setHomeChefAttendanceStatus(action = "check_in") {
+  const response = await api.post("/home-chef-attendance", { action });
+  return response.data || {};
 }
 
 export async function logoutUser() {

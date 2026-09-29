@@ -707,10 +707,10 @@ export default function AddProductScreen() {
       return;
     }
 
-    const numericFields = [
+    const numericFields: Array<[string, string | number, number, number?]> = [
       ["Shelf Life", form.shelf_life_days, 0],
       ["Package Count", form.package_count, 0],
-    ] as const;
+    ];
     const invalidNumericField = numericFields.find(
       ([, value, minimum, maximum]) => {
         const number = Number(value);

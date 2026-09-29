@@ -4,15 +4,22 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getStoredUser, isNewOrderStatus, logoutUser } from "../../api";
+import {
+    getApiErrorMessage,
+    getHomeChefAttendance,
+    getStoredUser,
+    isNewOrderStatus,
+    logoutUser,
+    setHomeChefAttendanceStatus,
+} from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
 
 const GREEN = "#2E7A4F";
@@ -59,6 +66,8 @@ export default function TopHeader({
   const [showProfileDrop, setShowProfileDrop] = useState(false);
   const [showNotifDrop, setShowNotifDrop] = useState(false);
   const [user, setUser] = useState(null);
+  const [attendance, setAttendance] = useState(null);
+  const [attendanceActionLoading, setAttendanceActionLoading] = useState(false);
   const [todayNewOrders, setTodayNewOrders] = useState([]);
   const isFetchingNotifications = useRef(false);
   const insets = useSafeAreaInsets();
@@ -70,6 +79,55 @@ export default function TopHeader({
     };
     loadUser();
   }, []);
+
+  const loadAttendanceStatus = async () => {
+    try {
+      const data = await getHomeChefAttendance();
+      const currentSession =
+        data?.currentSession ?? data?.current_session ?? data?.session ?? null;
+      setAttendance(currentSession ? { ...data, currentSession } : data || null);
+    } catch (error) {
+      if (error?.status === 401) return;
+      console.log("Error fetching chef attendance", error);
+      setAttendance(null);
+    }
+  };
+
+  const handleAttendanceToggle = async () => {
+    const action = attendance?.currentSession ? "check_out" : "check_in";
+    setAttendanceActionLoading(true);
+    try {
+      const result = await setHomeChefAttendanceStatus(action);
+      const currentSession =
+        result?.currentSession ??
+        result?.current_session ??
+        result?.session ??
+        null;
+      setAttendance(currentSession ? { ...result, currentSession } : result || null);
+      showAppDialog(
+        action === "check_in" ? "Checked in" : "Checked out",
+        result?.message ||
+          (action === "check_in"
+            ? "You are now online and ready to cook."
+            : "You have been checked out and are offline."),
+      );
+    } catch (error) {
+      showAppDialog(
+        "Attendance update failed",
+        getApiErrorMessage(error, "Unable to update your attendance."),
+      );
+    } finally {
+      setAttendanceActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showHero) {
+      loadAttendanceStatus();
+      const attendanceInterval = setInterval(loadAttendanceStatus, 15000);
+      return () => clearInterval(attendanceInterval);
+    }
+  }, [showHero]);
 
   useEffect(() => {
     if (!showNotifications) return;
@@ -459,6 +517,55 @@ export default function TopHeader({
                   <Text className="mt-1.5 text-[13px] leading-[18px] text-white/80">
                     {greeting.sub}
                   </Text>
+
+                  <View className="mt-3 flex-row items-center gap-2">
+                    <View
+                      className={
+                        attendance?.currentSession
+                          ? "rounded-full bg-[#E8F5E9] px-2.5 py-1"
+                          : "rounded-full bg-[#FFF3E0] px-2.5 py-1"
+                      }
+                    >
+                      <View className="flex-row items-center">
+                        <View
+                          className={
+                            attendance?.currentSession
+                              ? "mr-1.5 h-2.5 w-2.5 rounded-full bg-[#2E7A4F]"
+                              : "mr-1.5 h-2.5 w-2.5 rounded-full bg-[#E65100]"
+                          }
+                        />
+                        <Text
+                          className={
+                            attendance?.currentSession
+                              ? "text-[11px] font-bold text-[#2E7A4F]"
+                              : "text-[11px] font-bold text-[#E65100]"
+                          }
+                        >
+                          {attendance?.currentSession ? "Online" : "Offline"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={handleAttendanceToggle}
+                      disabled={attendanceActionLoading}
+                      className={
+                        attendance?.currentSession
+                          ? "rounded-full border border-white/30 bg-white/10 px-3 py-1.5"
+                          : "rounded-full border border-white/30 bg-[#153A2A] px-3 py-1.5"
+                      }
+                    >
+                      <Text className="text-[11px] font-bold text-white">
+                        {attendanceActionLoading
+                          ? "Updating..."
+                          : attendance?.currentSession
+                            ? "Check out"
+                            : "Check in"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
                   <View className="mt-3 flex-row items-center self-start rounded-full bg-white/25 px-3 py-1">
                     <Ionicons name="heart" size={12} color="#FF8A65" />
                     <Text className="ml-1.5 text-xs font-bold text-white">
