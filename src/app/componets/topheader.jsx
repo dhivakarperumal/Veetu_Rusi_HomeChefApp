@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -147,11 +147,11 @@ export default function TopHeader({
               >
                 <View className="mb-8 flex-row items-start justify-between px-5">
                   <View className="mr-2 flex-1 flex-row items-center">
-                    <View className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-white/20">
-                      <MaterialCommunityIcons
-                        name="home-heart"
-                        size={26}
-                        color="#fff"
+                    <View className="h-[52px] w-[52px] overflow-hidden rounded-full bg-white/20">
+                      <Image
+                        source={require("../../../assets/images/logo.png")}
+                        style={{ width: 52, height: 52, borderRadius: 26 }}
+                        contentFit="contain"
                       />
                     </View>
                     <View className="ml-3.5">

@@ -2,13 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import api, { getApiErrorMessage } from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
@@ -31,10 +32,7 @@ const CACHE_KEY = "all-orders.list";
 const getStatusColor = (status: string) => {
   const normalized = status.toLowerCase();
   if (normalized.includes("cancel")) return "#C62828";
-  if (
-    normalized.includes("deliver") ||
-    normalized.includes("complete")
-  ) {
+  if (normalized.includes("deliver") || normalized.includes("complete")) {
     return "#2E7D32";
   }
   if (normalized.includes("pending") || normalized.includes("new")) {
@@ -49,6 +47,8 @@ export default function AllOrdersPage() {
   const [loading, setLoading] = useState(() => !hasCachedPageData(CACHE_KEY));
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
@@ -56,12 +56,13 @@ export default function AllOrdersPage() {
       setError(null);
       setRefreshing(true);
       const response = await api.get("/user-food-orders/chef");
-      const data = [
-        response.data,
-        response.data?.orders,
-        response.data?.data,
-        response.data?.data?.orders,
-      ].find(Array.isArray) || [];
+      const data =
+        [
+          response.data,
+          response.data?.orders,
+          response.data?.data,
+          response.data?.data?.orders,
+        ].find(Array.isArray) || [];
 
       setOrders(
         data.map((order: any, index: number) => {
@@ -75,7 +76,9 @@ export default function AllOrdersPage() {
               0);
 
           return {
-            id: String(order.id || order._id || order.order_id || `order-${index}`),
+            id: String(
+              order.id || order._id || order.order_id || `order-${index}`,
+            ),
             orderId: String(order.order_id || order.id || order._id || "—"),
             customer: order.customer_name || "Unknown customer",
             status: String(order.status || "Unknown"),
@@ -96,7 +99,9 @@ export default function AllOrdersPage() {
       );
     } catch (error) {
       console.error("Could not load all orders:", error);
-      setError(getApiErrorMessage(error, "Could not load orders. Please retry."));
+      setError(
+        getApiErrorMessage(error, "Could not load orders. Please retry."),
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -111,11 +116,24 @@ export default function AllOrdersPage() {
   }, [fetchOrders]);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const visibleOrders = orders.filter((order) =>
-    [order.orderId, order.customer, order.status, order.location].some((value) =>
-      value.toLowerCase().includes(normalizedSearch),
-    ),
+  const availableStatuses = Array.from(
+    new Map(
+      orders.map((order) => [order.status.toLowerCase(), order.status]),
+    ).values(),
   );
+  const statusOptions = ["All Status", ...availableStatuses];
+  const visibleOrders = orders.filter((order) => {
+    const matchesSearch = [
+      order.orderId,
+      order.customer,
+      order.status,
+      order.location,
+    ].some((value) => value.toLowerCase().includes(normalizedSearch));
+    const matchesStatus =
+      statusFilter === "All Status" ||
+      order.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.pageBackground }}>
@@ -154,7 +172,149 @@ export default function AllOrdersPage() {
             <Ionicons name="close-circle" size={18} color={colors.muted} />
           </Pressable>
         )}
+        <View
+          style={{ width: 1, height: 24, backgroundColor: colors.border }}
+        />
+        <Pressable
+          onPress={() => setShowStatusFilter(true)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Filter all orders by status. Current filter: ${statusFilter}`}
+          style={{ padding: 3, position: "relative" }}
+        >
+          <Ionicons name="options-outline" size={20} color={colors.primary} />
+          {statusFilter !== "All Status" ? (
+            <View
+              style={{
+                position: "absolute",
+                top: 1,
+                right: 1,
+                width: 7,
+                height: 7,
+                borderRadius: 4,
+                backgroundColor: colors.primary,
+              }}
+            />
+          ) : null}
+        </Pressable>
       </View>
+
+      <Modal
+        visible={showStatusFilter}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStatusFilter(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={() => setShowStatusFilter(false)}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              backgroundColor: "rgba(0,0,0,0.45)",
+            }}
+          />
+          <View
+            style={{
+              maxHeight: "75%",
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              paddingBottom: 30,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              backgroundColor: colors.pageBackground,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.primaryDark,
+                  fontSize: 18,
+                  fontWeight: "800",
+                }}
+              >
+                Filter Orders
+              </Text>
+              <Pressable
+                onPress={() => setShowStatusFilter(false)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close status filter"
+              >
+                <Ionicons name="close" size={22} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {statusOptions.map((status) => {
+                const isSelected = statusFilter === status;
+                const count =
+                  status === "All Status"
+                    ? orders.length
+                    : orders.filter(
+                        (order) =>
+                          order.status.toLowerCase() === status.toLowerCase(),
+                      ).length;
+                return (
+                  <Pressable
+                    key={status}
+                    onPress={() => {
+                      setStatusFilter(status);
+                      setShowStatusFilter(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    style={{
+                      minHeight: 48,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.border,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        flex: 1,
+                        color: isSelected ? colors.primary : colors.primaryDark,
+                        fontSize: 14,
+                        fontWeight: isSelected ? "800" : "600",
+                      }}
+                    >
+                      {status}
+                    </Text>
+                    <Text
+                      style={{
+                        minWidth: 30,
+                        marginRight: 10,
+                        color: colors.muted,
+                        fontSize: 12,
+                        textAlign: "right",
+                      }}
+                    >
+                      {count}
+                    </Text>
+                    <Ionicons
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                      size={19}
+                      color={isSelected ? colors.primary : colors.muted}
+                    />
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {error && (
         <View
@@ -207,16 +367,13 @@ export default function AllOrdersPage() {
               fontWeight: "600",
             }}
           >
-            {visibleOrders.length} {visibleOrders.length === 1 ? "order" : "orders"}
+            {visibleOrders.length}{" "}
+            {visibleOrders.length === 1 ? "order" : "orders"}
           </Text>
 
           {visibleOrders.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 56 }}>
-              <Ionicons
-                name="receipt-outline"
-                size={42}
-                color={colors.muted}
-              />
+              <Ionicons name="receipt-outline" size={42} color={colors.muted} />
               <Text
                 style={{
                   marginTop: 12,
@@ -227,7 +384,7 @@ export default function AllOrdersPage() {
               >
                 {error
                   ? "Orders are unavailable"
-                  : normalizedSearch
+                  : normalizedSearch || statusFilter !== "All Status"
                     ? "No matching orders"
                     : "No orders yet"}
               </Text>
@@ -316,7 +473,9 @@ export default function AllOrdersPage() {
                       marginTop: 8,
                     }}
                   >
-                    <Text style={{ flex: 1, color: colors.muted, fontSize: 12 }}>
+                    <Text
+                      style={{ flex: 1, color: colors.muted, fontSize: 12 }}
+                    >
                       {order.quantity} {order.quantity === 1 ? "item" : "items"}
                       {" · "}
                       {dateLabel}
