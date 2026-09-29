@@ -307,9 +307,7 @@ const initialForm = {
   description: "",
   ingredients: "",
   instructions: "",
-  subcategory: "",
   cuisine: "",
-  product_code: "",
   total_stock: "0",
   rating: "5",
   status: "Inactive",
@@ -322,8 +320,6 @@ const initialForm = {
   packaging_notes: "",
   heat_profile: "",
   serving_size: "",
-  spice_level: "Medium",
-  prep_time: "",
   preparation_url: "",
   shelf_life_days: "",
   mrp: "",
@@ -431,7 +427,6 @@ export default function AddProductScreen() {
           name: item.name || "",
           description: item.description || "",
           cuisine: item.cuisine || "",
-          prep_time: item.prep_time || "",
           preparation_url: item.preparation_url || "",
           shelf_life_days: item.shelf_life_days?.toString() || "",
           mrp: item.mrp?.toString() || "",
@@ -536,12 +531,8 @@ export default function AddProductScreen() {
     const hasText = (value: unknown) => String(value ?? "").trim().length > 0;
     const missingFields = [
       !hasText(form.name) && "Product Name",
-      !hasText(form.product_code) && "Product Code",
-      !hasText(form.subcategory) && "Subcategory",
       !hasText(form.category) && "Category",
       !hasText(form.cuisine) && "Cuisine",
-      !hasText(form.prep_time) && "Preparation Time",
-      !hasText(form.spice_level) && "Spice Level",
       !hasText(form.storage_instructions) && "Storage Instructions",
       !hasText(form.serving_size) && "Serving Size",
       !hasText(form.nutrition_info) && "Nutrition Info",
@@ -707,27 +698,6 @@ export default function AddProductScreen() {
           />
         </FormGroup>
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Product Code" required>
-              <InputField
-                value={form.product_code}
-                onChangeText={(t) => updateForm("product_code", t)}
-                placeholder="e.g. P123"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Subcategory" required>
-              <InputField
-                value={form.subcategory}
-                onChangeText={(t) => updateForm("subcategory", t)}
-                placeholder="e.g. Spices"
-              />
-            </FormGroup>
-          </View>
-        </View>
-
         <FormGroup label="Product Type">
           <View
             style={{
@@ -877,27 +847,6 @@ export default function AddProductScreen() {
             ))}
           </View>
         </FormGroup>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Preparation Time" required>
-              <InputField
-                value={form.prep_time}
-                onChangeText={(t) => updateForm("prep_time", t)}
-                placeholder="e.g. 30 mins"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Spice Level" required>
-              <InputField
-                value={form.spice_level}
-                onChangeText={(t) => updateForm("spice_level", t)}
-                placeholder="e.g. Medium"
-              />
-            </FormGroup>
-          </View>
-        </View>
 
         <SectionHeader title="Product Info" />
 
