@@ -3,8 +3,8 @@ import axios from "axios";
 import { clearPageCache } from "./lib/page-cache";
 
 export const API_BASE_URL =
-  // process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
-process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
+  process.env.EXPO_PUBLIC_API_URL || "https://veeturusi.qtechx.com/api";
+// process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.4:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
