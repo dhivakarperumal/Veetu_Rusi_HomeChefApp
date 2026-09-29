@@ -3,8 +3,7 @@ import * as Device from "expo-device";
 import * as NavigationBar from "expo-navigation-bar";
 import { Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Platform, StatusBar, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform, StatusBar } from "react-native";
 import "../../global.css";
 import api from "../api";
 import AppDialog from "../components/AppDialog";
@@ -126,16 +125,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: "#2E7A4F" }}>
-        <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        />
-        <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
-      </View>
-    </SafeAreaProvider>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#2E7A4F" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+      <AppDialog dialog={dialog} onClose={() => setDialog(null)} />
+    </>
   );
 }
