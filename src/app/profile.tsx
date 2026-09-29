@@ -1626,7 +1626,7 @@ export default function ProfileScreen() {
               {
                 label: "My Attendance",
                 icon: "time-outline" as const,
-                route: "/profile",
+                route: "/attendance",
               },
               {
                 label: "Show All Orders",
