@@ -21,8 +21,6 @@ export default function MaterialProductScreen() {
   const [product, setProduct] = useState<any>(null);
   const [favorite, setFavorite] = useState(false);
   const [inCart, setInCart] = useState(false);
-  const [favoriteCount, setFavoriteCount] = useState(0);
-  const [cartCount, setCartCount] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedWeight, setSelectedWeight] = useState("");
 
@@ -49,8 +47,6 @@ export default function MaterialProductScreen() {
     );
     setFavorite(isFavorite);
     setInCart(Boolean(savedCartItem));
-    setFavoriteCount(favorites.length);
-    setCartCount(cart.length);
     setQuantity(Number(savedCartItem?.quantity) || 1);
     setSelectedWeight(savedCartItem?.weight || "");
   }, [product]);
@@ -117,20 +113,12 @@ export default function MaterialProductScreen() {
       <PageHeader
         title="Product Details"
         onLeftPress={() => router.back()}
-        rightActions={
-          [
-            {
-              icon: "heart",
-              onPress: () => router.push("/favorites"),
-              badge: favoriteCount,
-            },
-            {
-              icon: "cart-outline",
-              onPress: () => router.push("/cart"),
-              badge: cartCount,
-            },
-          ] as any
-        }
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        safeAreaBackgroundColor="#2E7A4F"
+        statusBarStyle="light-content"
+        backButtonBackgroundColor="#2E7A4F"
+        backButtonIconColor="#FFFFFF"
       />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
         <View style={{ position: "relative" }}>

@@ -24,10 +24,17 @@ export default function PageHeader({
   headerBackgroundColor = colors.pageBackground,
   headerForegroundColor = colors.primaryDark,
   titleFontSize = 24,
+  safeAreaBackgroundColor = SAFE_AREA_GREEN,
+  statusBarStyle = "light-content",
+  backButtonBackgroundColor = colors.cardBackground,
+  backButtonIconColor = colors.primaryDark,
 }) {
   return (
-    <SafeAreaView edges={["top"]} style={{ backgroundColor: SAFE_AREA_GREEN }}>
-      <StatusBar barStyle="light-content" backgroundColor={SAFE_AREA_GREEN} />
+    <SafeAreaView edges={["top"]} style={{ backgroundColor: safeAreaBackgroundColor }}>
+      <StatusBar
+        barStyle={statusBarStyle}
+        backgroundColor={safeAreaBackgroundColor}
+      />
       <View
         style={{
           flexDirection: "row",
@@ -49,7 +56,7 @@ export default function PageHeader({
               borderRadius: 20,
               backgroundColor:
                 leftIcon === "arrow-back"
-                  ? colors.cardBackground
+                  ? backButtonBackgroundColor
                   : "transparent",
               alignItems: "center",
               justifyContent: "center",
@@ -66,7 +73,7 @@ export default function PageHeader({
               size={22}
               color={
                 leftIcon === "arrow-back"
-                  ? colors.primaryDark
+                  ? backButtonIconColor
                   : headerForegroundColor
               }
             />
