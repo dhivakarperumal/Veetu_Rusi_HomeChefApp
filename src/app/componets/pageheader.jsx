@@ -30,7 +30,10 @@ export default function PageHeader({
   backButtonIconColor = colors.primaryDark,
 }) {
   return (
-    <SafeAreaView edges={["top"]} style={{ backgroundColor: safeAreaBackgroundColor }}>
+    <SafeAreaView
+      edges={["top"]}
+      style={{ backgroundColor: safeAreaBackgroundColor }}
+    >
       <StatusBar
         barStyle={statusBarStyle}
         backgroundColor={safeAreaBackgroundColor}

@@ -4,12 +4,12 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import {
-  CART_KEY,
-  FAVORITES_KEY,
-  getMaterialImage,
-  loadMaterialCollection,
-  setMaterialInCollection,
-  showMaterialToast,
+    CART_KEY,
+    FAVORITES_KEY,
+    getMaterialImage,
+    loadMaterialCollection,
+    setMaterialInCollection,
+    showMaterialToast,
 } from "../lib/materials-store";
 import PageHeader from "./componets/pageheader";
 
