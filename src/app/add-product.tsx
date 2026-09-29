@@ -4,7 +4,7 @@ import { Image as ExpoImage } from "expo-image";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Platform,
@@ -39,6 +39,26 @@ const CUISINE_OPTIONS = [
   "Thai",
   "Mexican",
 ];
+
+type VariantDraft = {
+  weight: string;
+  price: string;
+  offer: string;
+  stock: string;
+};
+
+const createVariant = (variant?: Partial<VariantDraft>): VariantDraft => ({
+  weight: variant?.weight || "",
+  price: variant?.price || "",
+  offer: variant?.offer ?? "0",
+  stock: variant?.stock || "",
+});
+
+const getVariantFinalPrice = (variant: VariantDraft) => {
+  const price = Number(variant.price) || 0;
+  const offer = Number(variant.offer) || 0;
+  return Math.max(0, price - price * (offer / 100)).toFixed(2);
+};
 
 function parseImageCollection(value: unknown): string[] {
   let parsed = value;
@@ -139,8 +159,12 @@ function DatePickerField({
 
   return (
     <View style={{ marginBottom: 18 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}>
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+      >
+        <Text
+          style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}
+        >
           {label}
         </Text>
         {required ? (
@@ -206,8 +230,12 @@ function FormGroup({
 }) {
   return (
     <View style={{ marginBottom: 18 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}>
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+      >
+        <Text
+          style={{ fontSize: 13, fontWeight: "700", color: colors.primaryDark }}
+        >
           {label}
         </Text>
         {required ? (
@@ -333,6 +361,7 @@ const initialForm = {
   expiry_date: "",
   packaging_image: "",
   images: [] as string[],
+  variants: [createVariant()],
 };
 
 export default function AddProductScreen() {
@@ -420,6 +449,33 @@ export default function AddProductScreen() {
         const item = res.data?.data || res.data;
         if (!item) return;
 
+        let savedVariants = item.variants;
+        if (typeof savedVariants === "string") {
+          try {
+            savedVariants = JSON.parse(savedVariants);
+          } catch {
+            savedVariants = [];
+          }
+        }
+        const variants: VariantDraft[] = Array.isArray(savedVariants)
+          ? savedVariants.map((variant: any) =>
+              createVariant({
+                weight: String(variant.weight || ""),
+                price: String(variant.price ?? item.mrp ?? ""),
+                offer: String(variant.offer ?? item.offer ?? 0),
+                stock: String(variant.stock ?? ""),
+              }),
+            )
+          : [];
+        const firstVariant =
+          variants[0] ||
+          createVariant({
+            weight: item.net_weight || "",
+            price: String(item.mrp ?? ""),
+            offer: String(item.offer ?? 0),
+            stock: String(item.total_stock ?? ""),
+          });
+
         setForm({
           ...initialForm,
           category: item.category || "",
@@ -429,16 +485,24 @@ export default function AddProductScreen() {
           cuisine: item.cuisine || "",
           preparation_url: item.preparation_url || "",
           shelf_life_days: item.shelf_life_days?.toString() || "",
-          mrp: item.mrp?.toString() || "",
-          offer: item.offer?.toString() || "",
+          mrp: firstVariant.price,
+          offer: firstVariant.offer,
           final_price: item.final_price?.toString() || "",
           dietary_tag: item.dietary_tag || "veg",
-          net_weight: item.net_weight || "",
+          net_weight: firstVariant.weight,
           packaging_type: item.packaging_type || "Pouch",
           packaging_image: item.packaging_image || "",
-          total_stock: item.total_stock?.toString() || "0",
+          total_stock: String(
+            variants.length > 0
+              ? variants.reduce(
+                  (total, variant) => total + (Number(variant.stock) || 0),
+                  0,
+                )
+              : (item.total_stock ?? 0),
+          ),
           status: item.status || "Active",
           images: parseImageCollection(item.images),
+          variants: variants.length > 0 ? variants : [firstVariant],
         });
       } catch (err) {
         console.error(err);
@@ -453,12 +517,91 @@ export default function AddProductScreen() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const computedFinalPrice = useMemo(() => {
-    const mrp = parseFloat(form.mrp) || 0;
-    const offer = parseFloat(form.offer) || 0;
-    const computed = mrp - mrp * (offer / 100);
-    return computed > 0 ? computed.toFixed(2) : "0.00";
-  }, [form.mrp, form.offer]);
+  const variantRows: VariantDraft[] =
+    form.variants?.length > 0
+      ? form.variants
+      : [
+          createVariant({
+            weight: form.net_weight,
+            price: form.mrp,
+            offer: form.offer,
+            stock: form.total_stock,
+          }),
+        ];
+
+  const updateVariant = (
+    index: number,
+    field: keyof VariantDraft,
+    value: string,
+  ) => {
+    setForm((previous) => {
+      const rows = previous.variants?.length
+        ? previous.variants
+        : [
+            createVariant({
+              weight: previous.net_weight,
+              price: previous.mrp,
+              offer: previous.offer,
+              stock: previous.total_stock,
+            }),
+          ];
+      const nextVariants = rows.map((variant, variantIndex) =>
+        variantIndex === index ? { ...variant, [field]: value } : variant,
+      );
+      const firstVariant = nextVariants[0];
+      return {
+        ...previous,
+        variants: nextVariants,
+        net_weight: firstVariant.weight,
+        mrp: firstVariant.price,
+        offer: firstVariant.offer,
+        total_stock: firstVariant.stock,
+      };
+    });
+  };
+
+  const addVariant = () => {
+    setForm((previous) => {
+      const existingVariants = previous.variants?.length
+        ? previous.variants
+        : [
+            createVariant({
+              weight: previous.net_weight,
+              price: previous.mrp,
+              offer: previous.offer,
+              stock: previous.total_stock,
+            }),
+          ];
+      return { ...previous, variants: [...existingVariants, createVariant()] };
+    });
+  };
+
+  const removeVariant = (index: number) => {
+    setForm((previous) => {
+      const existingVariants = previous.variants?.length
+        ? previous.variants
+        : [
+            createVariant({
+              weight: previous.net_weight,
+              price: previous.mrp,
+              offer: previous.offer,
+              stock: previous.total_stock,
+            }),
+          ];
+      const rows = existingVariants.filter(
+        (_variant, variantIndex) => variantIndex !== index,
+      );
+      const firstVariant = rows[0] || createVariant();
+      return {
+        ...previous,
+        variants: rows.length > 0 ? rows : [firstVariant],
+        net_weight: firstVariant.weight,
+        mrp: firstVariant.price,
+        offer: firstVariant.offer,
+        total_stock: firstVariant.stock,
+      };
+    });
+  };
 
   const handlePickImage = async (field: "images" | "packaging_image") => {
     try {
@@ -537,10 +680,12 @@ export default function AddProductScreen() {
       !hasText(form.serving_size) && "Serving Size",
       !hasText(form.nutrition_info) && "Nutrition Info",
       !hasText(form.material) && "Material / Ingredients",
-      !hasText(form.total_stock) && "Total Stock",
-      !hasText(form.mrp) && "MRP",
-      !hasText(form.offer) && "Offer",
-      !hasText(form.net_weight) && "Net Weight",
+      ...variantRows.flatMap((variant, index) => [
+        !hasText(variant.weight) && `Variant ${index + 1} weight`,
+        !hasText(variant.price) && `Variant ${index + 1} price`,
+        !hasText(variant.offer) && `Variant ${index + 1} offer`,
+        !hasText(variant.stock) && `Variant ${index + 1} stock`,
+      ]),
       !hasText(form.shelf_life_days) && "Shelf Life",
       !hasText(form.package_count) && "Package Count",
       !hasText(form.manufacture_date) && "Manufacture Date",
@@ -563,20 +708,19 @@ export default function AddProductScreen() {
     }
 
     const numericFields = [
-      ["MRP", form.mrp, 0],
-      ["Offer", form.offer, 0, 100],
-      ["Total Stock", form.total_stock, 0],
       ["Shelf Life", form.shelf_life_days, 0],
       ["Package Count", form.package_count, 0],
     ] as const;
-    const invalidNumericField = numericFields.find(([, value, minimum, maximum]) => {
-      const number = Number(value);
-      return (
-        !Number.isFinite(number) ||
-        number < minimum ||
-        (maximum !== undefined && number > maximum)
-      );
-    });
+    const invalidNumericField = numericFields.find(
+      ([, value, minimum, maximum]) => {
+        const number = Number(value);
+        return (
+          !Number.isFinite(number) ||
+          number < minimum ||
+          (maximum !== undefined && number > maximum)
+        );
+      },
+    );
     if (invalidNumericField) {
       showAppDialog(
         "Check product details",
@@ -589,31 +733,63 @@ export default function AddProductScreen() {
       return;
     }
 
+    for (const [index, variant] of variantRows.entries()) {
+      const fields = [
+        [`Variant ${index + 1} price`, variant.price, 0],
+        [`Variant ${index + 1} offer`, variant.offer, 0, 100],
+        [`Variant ${index + 1} stock`, variant.stock, 0],
+      ] as const;
+      const invalidField = fields.find(([, value, minimum, maximum]) => {
+        const number = Number(value);
+        return (
+          !Number.isFinite(number) ||
+          number < minimum ||
+          (maximum !== undefined && number > maximum)
+        );
+      });
+      if (invalidField) {
+        showAppDialog(
+          "Check product variants",
+          `${invalidField[0]} must be a valid number${
+            invalidField[3] !== undefined
+              ? ` between ${invalidField[2]} and ${invalidField[3]}`
+              : ` greater than or equal to ${invalidField[2]}`
+          }.`,
+        );
+        return;
+      }
+    }
+
     setLoading(true);
 
-    // Construct single variant based on form MRP/Offer
-    const singleVariant = {
-      weight: form.net_weight || null,
-      price: Number(form.mrp) || 0,
-      offer: Number(form.offer) || 0,
-      final_price: Number(computedFinalPrice) || 0,
-      stock: Number(form.total_stock) || 0,
+    const savedVariants = variantRows.map((variant) => ({
+      weight: variant.weight.trim(),
+      price: Number(variant.price),
+      offer: Number(variant.offer),
+      final_price: Number(getVariantFinalPrice(variant)),
+      stock: Number(variant.stock),
       images: form.images,
-    };
+    }));
+    const firstVariant = savedVariants[0];
+    const totalStock = savedVariants.reduce(
+      (total, variant) => total + variant.stock,
+      0,
+    );
 
     const payload = {
       ...form,
       shelf_life_days: form.shelf_life_days
         ? Number(form.shelf_life_days)
         : null,
-      mrp: Number(form.mrp) || 0,
-      offer: Number(form.offer) || 0,
-      offer_price: Number(computedFinalPrice) || 0,
+      mrp: firstVariant.price,
+      offer: firstVariant.offer,
+      offer_price: firstVariant.final_price,
       product_type: "Food Product",
       packaging_image: form.packaging_image || null,
       preparation_url: form.preparation_url || null,
-      total_stock: Number(form.total_stock) || 0,
-      variants: [singleVariant],
+      net_weight: firstVariant.weight,
+      total_stock: totalStock,
+      variants: savedVariants,
       status: form.status || "Active",
     };
 
@@ -891,101 +1067,159 @@ export default function AddProductScreen() {
         {/* ── Pricing & Packaging ── */}
         <SectionHeader title="Pricing & Inventory" />
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Total Stock" required>
-              <InputField
-                value={form.total_stock}
-                onChangeText={(t) => updateForm("total_stock", t)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Status" required>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                {["Active", "Inactive"].map((opt) => (
-                  <Pressable
-                    key={opt}
-                    onPress={() => updateForm("status", opt)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      alignItems: "center",
-                      borderColor:
-                        form.status === opt ? colors.primary : colors.border,
-                      backgroundColor:
-                        form.status === opt ? "#E8F5E9" : colors.cardBackground,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: "700",
-                        color:
-                          form.status === opt
-                            ? colors.primary
-                            : colors.primaryDark,
-                      }}
-                    >
-                      {opt}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </FormGroup>
-          </View>
-        </View>
+        <Text style={{ marginTop: -8, marginBottom: 14, color: colors.muted }}>
+          Set a separate price and stock level for each size or pack.
+        </Text>
+        {variantRows.map((variant, index) => (
+          <View
+            key={`variant-${index}`}
+            style={{
+              marginBottom: 12,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 14,
+              backgroundColor: colors.cardBackground,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <Text
+                style={{ fontSize: 15, fontWeight: "800", color: colors.primaryDark }}
+              >
+                Variant {index + 1}
+              </Text>
+              {variantRows.length > 1 ? (
+                <Pressable
+                  onPress={() => removeVariant(index)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove variant ${index + 1}`}
+                >
+                  <Ionicons name="trash-outline" size={19} color="#C62828" />
+                </Pressable>
+              ) : null}
+            </View>
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="MRP" required>
-              <InputField
-                prefix="₹"
-                value={form.mrp}
-                onChangeText={(t) => updateForm("mrp", t)}
-                placeholder="0.00"
-                keyboardType="numeric"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Offer (%)" required>
-              <InputField
-                prefix="%"
-                value={form.offer}
-                onChangeText={(t) => updateForm("offer", t)}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <FormGroup label="Weight / Pack" required>
+                  <InputField
+                    value={variant.weight}
+                    onChangeText={(value) => updateVariant(index, "weight", value)}
+                    placeholder="e.g. 500 g"
+                  />
+                </FormGroup>
+              </View>
+              <View style={{ flex: 1 }}>
+                <FormGroup label="Stock" required>
+                  <InputField
+                    value={variant.stock}
+                    onChangeText={(value) => updateVariant(index, "stock", value)}
+                    placeholder="0"
+                    keyboardType="numeric"
+                  />
+                </FormGroup>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <FormGroup label="Price (MRP)" required>
+                  <InputField
+                    prefix="₹"
+                    value={variant.price}
+                    onChangeText={(value) => updateVariant(index, "price", value)}
+                    placeholder="0.00"
+                    keyboardType="numeric"
+                  />
+                </FormGroup>
+              </View>
+              <View style={{ flex: 1 }}>
+                <FormGroup label="Offer (%)" required>
+                  <InputField
+                    prefix="%"
+                    value={variant.offer}
+                    onChangeText={(value) => updateVariant(index, "offer", value)}
+                    placeholder="0"
+                    keyboardType="numeric"
+                  />
+                </FormGroup>
+              </View>
+            </View>
+
             <FormGroup label="Final Price">
               <InputField
                 prefix="₹"
-                value={computedFinalPrice}
+                value={getVariantFinalPrice(variant)}
                 placeholder="0.00"
                 editable={false}
               />
             </FormGroup>
           </View>
-        </View>
+        ))}
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Net Weight" required>
-              <InputField
-                value={form.net_weight}
-                onChangeText={(t) => updateForm("net_weight", t)}
-                placeholder="e.g. 500g"
-              />
-            </FormGroup>
+        <Pressable
+          onPress={addVariant}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            marginBottom: 18,
+            paddingVertical: 12,
+            borderWidth: 1,
+            borderColor: colors.primary,
+            borderRadius: 12,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Add product variant"
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Text style={{ fontWeight: "800", color: colors.primary }}>
+            Add Variant
+          </Text>
+        </Pressable>
+
+        <Text style={{ marginBottom: 16, color: colors.muted, fontSize: 13 }}>
+          Total inventory: {variantRows.reduce((total, variant) => total + (Number(variant.stock) || 0), 0)}
+        </Text>
+
+        <FormGroup label="Status" required>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {["Active", "Inactive"].map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => updateForm("status", opt)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  alignItems: "center",
+                  borderColor: form.status === opt ? colors.primary : colors.border,
+                  backgroundColor: form.status === opt ? "#E8F5E9" : colors.cardBackground,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: form.status === opt ? colors.primary : colors.primaryDark,
+                  }}
+                >
+                  {opt}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-        </View>
+        </FormGroup>
 
         <SectionHeader title="Packaging Details" />
 
