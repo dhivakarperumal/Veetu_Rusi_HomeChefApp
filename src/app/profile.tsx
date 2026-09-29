@@ -1668,7 +1668,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* ════════════════════════════════════ ATTENDANCE CARD */}
-          <View className="mx-5 mt-5 rounded-[20px] bg-white p-[18px] shadow-sm shadow-black/5">
+          {/* <View className="mx-5 mt-5 rounded-[20px] bg-white p-[18px] shadow-sm shadow-black/5">
             <View className="mb-3 flex-row items-center justify-between">
               <View className="flex-row items-center gap-[10px]">
                 <View
@@ -1756,7 +1756,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
-          </View>
+          </View> */}
 
           {/* ════════════════════════════════════ QUICK NAV */}
           <View
