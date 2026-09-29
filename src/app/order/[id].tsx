@@ -113,6 +113,12 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   Preparing: { color: "#1565C0", bg: "#E3F2FD" },
   Cooking: { color: "#1565C0", bg: "#E3F2FD" },
   Ready: { color: "#2E7D32", bg: "#E8F5E9" },
+  Packing: { color: "#9A5B00", bg: "#FFF3D6" },
+  Packed: { color: "#2E7D32", bg: "#E8F5E9" },
+  "Searching Delivery Partner": { color: "#1565C0", bg: "#E3F2FD" },
+  "Delivery Partner Assigned": { color: "#1565C0", bg: "#E3F2FD" },
+  "Out for Delivery": { color: "#9A5B00", bg: "#FFF3D6" },
+  Delivered: { color: "#2E7D32", bg: "#E8F5E9" },
   Completed: { color: "#4A675F", bg: "#ECEFF1" },
 };
 
@@ -130,17 +136,14 @@ const mapStatus = (status: string) => {
   if (isNewOrderStatus(s)) return "New";
   if (s === "accepted") return "Preparing";
   if (["preparing", "cooking"].includes(s)) return "Cooking";
-  if (
-    [
-      "food ready",
-      "packing",
-      "searching delivery partner",
-      "delivery partner assigned",
-    ].includes(s)
-  )
-    return "Ready";
-  if (["out for delivery", "delivered", "completed"].includes(s))
-    return "Completed";
+  if (["food ready", "ready"].includes(s)) return "Ready";
+  if (s === "packing") return "Packing";
+  if (s === "packed") return "Packed";
+  if (s === "searching delivery partner") return "Searching Delivery Partner";
+  if (s === "delivery partner assigned") return "Delivery Partner Assigned";
+  if (s === "out for delivery") return "Out for Delivery";
+  if (s === "delivered") return "Delivered";
+  if (s === "completed") return "Completed";
   return "New";
 };
 
@@ -175,8 +178,11 @@ const ORDER_TRACKING_STAGES = [
   "Cooking",
   "Ready",
   "Packing",
+  "Packed",
   "Searching Delivery Partner",
   "Delivery Partner Assigned",
+  "Out for Delivery",
+  "Delivered",
   "Completed",
 ];
 
@@ -219,8 +225,11 @@ function OrderStatusTracker({ status }: { status: string }) {
     if (["preparing", "cooking"].includes(normalizedStatus)) return 2;
     if (["food ready", "ready"].includes(normalizedStatus)) return 3;
     if (normalizedStatus === "packing") return 4;
-    if (normalizedStatus === "searching delivery partner") return 5;
-    if (normalizedStatus === "delivery partner assigned") return 6;
+    if (normalizedStatus === "packed") return 5;
+    if (normalizedStatus === "searching delivery partner") return 6;
+    if (normalizedStatus === "delivery partner assigned") return 7;
+    if (normalizedStatus === "out for delivery") return 8;
+    if (normalizedStatus === "delivered") return 9;
     const mappedStatus = mapStatus(status);
     return Math.max(0, ORDER_TRACKING_STAGES.indexOf(mappedStatus));
   })();
@@ -425,8 +434,29 @@ export default function OrderDetailScreen() {
     );
   }
 
-  const uiStatus = mapStatus(order.status);
+  const orderStatus = order.order_status || order.status;
+  const uiStatus = mapStatus(orderStatus);
   const cfg = STATUS_CONFIG[uiStatus] ?? STATUS_CONFIG["New"];
+  const packingImageValue =
+    order.packing_image || order.packing_image_url || order.packingImage;
+  const packingImagePath =
+    typeof packingImageValue === "string"
+      ? packingImageValue
+      : packingImageValue?.url || packingImageValue?.path;
+  const packingImageUrl = packingImagePath
+    ? resolveImageUrl(String(packingImagePath))
+    : undefined;
+  const packedAtValue = order.packed_at || order.packedAt;
+  const packedAtDate = packedAtValue ? new Date(String(packedAtValue)) : null;
+  const packedAtLabel =
+    packedAtDate && !Number.isNaN(packedAtDate.getTime())
+      ? packedAtDate.toLocaleString([], {
+          day: "2-digit",
+          month: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : undefined;
   const deliveryPartner =
     order.deliveryPartner ||
     order.delivery_partner ||
@@ -448,7 +478,7 @@ export default function OrderDetailScreen() {
     deliveryPartner.phone_number ||
     deliveryPartner.mobile ||
     deliveryPartner.mobile_number;
-  const isDeliveryPartnerAssigned = String(order.status || "")
+  const isDeliveryPartnerAssigned = String(orderStatus || "")
     .toLowerCase()
     .includes("delivery partner assigned");
 
@@ -540,8 +570,15 @@ export default function OrderDetailScreen() {
     const saveStatus = async (status: string) => {
       setActionLoading(true);
       try {
-        await api.patch(`/user-food-orders/status/${id}`, { status });
-        setOrder((previous: any) => ({ ...previous, status }));
+        await api.patch(`/user-food-orders/status/${id}`, {
+          order_status: status,
+          status,
+        });
+        setOrder((previous: any) => ({
+          ...previous,
+          order_status: status,
+          status,
+        }));
       } catch (error) {
         showAppDialog("Could not update order", getApiErrorMessage(error));
       } finally {
@@ -550,7 +587,7 @@ export default function OrderDetailScreen() {
     };
 
     showAppDialog("Update Order Status", "Choose the new status", [
-      ...STATUS_OPTIONS.filter((option) => option.value !== order.status).map(
+      ...STATUS_OPTIONS.filter((option) => option.value !== orderStatus).map(
         (option) => ({
           text: option.label,
           style: option.destructive
@@ -674,7 +711,43 @@ export default function OrderDetailScreen() {
           </View>
         </View>
 
-        <OrderStatusTracker status={order.status} />
+        <OrderStatusTracker status={orderStatus} />
+
+        {packingImageUrl ? (
+          <View
+            style={{
+              padding: 16,
+              marginBottom: 16,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.cardBackground,
+            }}
+          >
+            <SectionTitle title="Packed Order Photo" />
+            <Image
+              source={{ uri: packingImageUrl }}
+              style={{ width: "100%", height: 210, borderRadius: 12 }}
+              contentFit="cover"
+            />
+            {packedAtLabel ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginTop: 10,
+                }}
+              >
+                <Ionicons name="time-outline" size={15} color={colors.muted} />
+                <Text
+                  style={{ marginLeft: 5, color: colors.muted, fontSize: 12 }}
+                >
+                  Packed at {packedAtLabel}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {(isDeliveryPartnerAssigned ||
           deliveryPartnerName ||

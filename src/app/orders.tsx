@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image as ExpoImage } from "expo-image";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Modal,
     Pressable,
     RefreshControl,
@@ -26,25 +28,39 @@ import TopHeader from "./componets/topheader";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
-async function uploadPackingImage(asset: ImagePicker.ImagePickerAsset) {
+async function uploadPackingImage(
+  orderId: string,
+  orderCode: string,
+  asset: ImagePicker.ImagePickerAsset,
+  onProgress: (percent: number) => void,
+) {
   const compressed = await ImageManipulator.manipulateAsync(
     asset.uri,
     [{ resize: { width: 900 } }],
     { compress: 0.55, format: ImageManipulator.SaveFormat.JPEG },
   );
   const formData = new FormData();
+  formData.append("order_id", orderCode);
+  formData.append("order_record_id", orderId);
   formData.append("images", {
     uri: compressed.uri,
-    name: asset.fileName || `packing-${Date.now()}.jpg`,
+    name: `packing-${orderCode.replace(/[^a-z0-9_-]/gi, "_")}-${Date.now()}.jpg`,
     type: "image/jpeg",
   } as any);
 
   const response = await api.post(
-    "/upload/images?folder=orderPacking",
+    `/upload/images?folder=orderPacking&order_id=${encodeURIComponent(orderCode)}`,
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },
       timeout: 60000,
+      onUploadProgress: (event) => {
+        if (event.total) {
+          onProgress(
+            Math.min(100, Math.round((event.loaded / event.total) * 100)),
+          );
+        }
+      },
     },
   );
   const data = response.data;
@@ -71,7 +87,18 @@ async function uploadPackingImage(asset: ImagePicker.ImagePickerAsset) {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OrderStatus =
-  "New" | "Preparing" | "Cooking" | "Ready" | "Completed" | "Cancelled";
+  | "New"
+  | "Preparing"
+  | "Cooking"
+  | "Ready"
+  | "Packing"
+  | "Packed"
+  | "Searching Delivery Partner"
+  | "Delivery Partner Assigned"
+  | "Out for Delivery"
+  | "Delivered"
+  | "Completed"
+  | "Cancelled";
 type OrderTab =
   | OrderStatus
   | "All Status"
@@ -112,6 +139,24 @@ const STATUS_CONFIG: Record<
   Preparing: { color: "#1565C0", bg: "#E3F2FD", label: "Preparing" },
   Cooking: { color: "#1565C0", bg: "#E3F2FD", label: "Cooking" },
   Ready: { color: "#2E7D32", bg: "#E8F5E9", label: "Ready" },
+  Packing: { color: "#9A5B00", bg: "#FFF3D6", label: "Packing" },
+  Packed: { color: "#2E7D32", bg: "#E8F5E9", label: "Packed" },
+  "Searching Delivery Partner": {
+    color: "#1565C0",
+    bg: "#E3F2FD",
+    label: "Searching Delivery Partner",
+  },
+  "Delivery Partner Assigned": {
+    color: "#1565C0",
+    bg: "#E3F2FD",
+    label: "Delivery Partner Assigned",
+  },
+  "Out for Delivery": {
+    color: "#9A5B00",
+    bg: "#FFF3D6",
+    label: "Out for Delivery",
+  },
+  Delivered: { color: "#2E7D32", bg: "#E8F5E9", label: "Delivered" },
   Completed: { color: "#4A675F", bg: "#ECEFF1", label: "Completed" },
   Cancelled: { color: "#C62828", bg: "#FFEBEE", label: "Cancelled" },
 };
@@ -122,17 +167,14 @@ const mapStatus = (status: string): OrderStatus => {
   if (isNewOrderStatus(s)) return "New";
   if (s === "accepted") return "Preparing";
   if (["preparing", "cooking"].includes(s)) return "Cooking";
-  if (
-    [
-      "food ready",
-      "packing",
-      "searching delivery partner",
-      "delivery partner assigned",
-    ].includes(s)
-  )
-    return "Ready";
-  if (["out for delivery", "delivered", "completed"].includes(s))
-    return "Completed";
+  if (["food ready", "ready"].includes(s)) return "Ready";
+  if (s === "packing") return "Packing";
+  if (s === "packed") return "Packed";
+  if (s === "searching delivery partner") return "Searching Delivery Partner";
+  if (s === "delivery partner assigned") return "Delivery Partner Assigned";
+  if (s === "out for delivery") return "Out for Delivery";
+  if (s === "delivered") return "Delivered";
+  if (s === "completed") return "Completed";
   return "New";
 };
 
@@ -283,7 +325,7 @@ function OrderCard({
   onAccept?: (id: string) => void;
   onReject?: (order: Order) => void;
   onMarkReady?: (id: string) => void;
-  onStartPacking?: (id: string) => void;
+  onStartPacking?: (order: Order) => void;
   onStartCooking?: (id: string) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
@@ -309,15 +351,27 @@ function OrderCard({
     : undefined;
   const nextStatus =
     rawStatus === "food ready" || rawStatus === "ready"
-      ? { label: "Start Packing", status: "Packing" }
-      : rawStatus === "packing"
+      ? { label: "Packing", status: "Packing" }
+      : rawStatus === "packed"
         ? {
-            label: "Find Delivery Partner",
+            label: "Search Delivery Partner",
             status: "Searching Delivery Partner",
           }
-        : rawStatus === "searching delivery partner"
-          ? { label: "Partner Accepted", status: "Delivery Partner Assigned" }
-          : null;
+        : rawStatus === "out for delivery"
+          ? { label: "Mark Delivered", status: "Delivered" }
+          : rawStatus === "packing"
+            ? {
+                label: "Find Delivery Partner",
+                status: "Searching Delivery Partner",
+              }
+            : rawStatus === "searching delivery partner"
+              ? {
+                  label: "Partner Accepted",
+                  status: "Delivery Partner Assigned",
+                }
+              : rawStatus === "delivery partner assigned"
+                ? { label: "Out for Delivery", status: "Out for Delivery" }
+                : null;
 
   return (
     <Pressable
@@ -760,11 +814,14 @@ function OrderCard({
 
         {nextStatus && (
           <Pressable
-            onPress={() =>
-              nextStatus.status === "Packing"
-                ? onStartPacking?.(order.id)
-                : onStatusUpdate?.(order.id, nextStatus.status)
-            }
+            onPress={(event) => {
+              event.stopPropagation();
+              if (nextStatus.status === "Packing") {
+                onStartPacking?.(order);
+              } else {
+                onStatusUpdate?.(order.id, nextStatus.status);
+              }
+            }}
             disabled={busy || nextStatus.label === "Partner Accepted"}
             style={{
               backgroundColor:
@@ -794,8 +851,11 @@ const TABS: OrderTab[] = [
   "Cooking",
   "Ready",
   "Packing",
+  "Packed",
   "Searching Delivery Partner",
   "Delivery Partner Assigned",
+  "Out for Delivery",
+  "Delivered",
   "Cancelled",
   "Completed",
 ];
@@ -842,6 +902,15 @@ export default function OrdersScreen() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelNotes, setCancelNotes] = useState("");
   const [showReasons, setShowReasons] = useState(false);
+  const [packingOrder, setPackingOrder] = useState<Order | null>(null);
+  const [packingImage, setPackingImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [uploadedPackingImage, setUploadedPackingImage] = useState<
+    string | null
+  >(null);
+  const [packingUploadProgress, setPackingUploadProgress] = useState(0);
+  const [packingError, setPackingError] = useState("");
+  const [packingUploading, setPackingUploading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -862,7 +931,8 @@ export default function OrdersScreen() {
       setRefreshing(true);
       const res = await api.get("/user-food-orders/chef");
       const mappedOrders = res.data.map((o: any) => {
-        const rawStatus = String(o.status || "").toLowerCase();
+        const orderStatus = o.order_status || o.status;
+        const rawStatus = String(orderStatus || "").toLowerCase();
         const acceptedAt = [
           o.accepted_at,
           o.acceptedAt,
@@ -893,8 +963,8 @@ export default function OrdersScreen() {
         return {
           id: o.id || o._id,
           order_id: o.order_id || o.id || "Unknown",
-          status: mapStatus(o.status),
-          rawStatus: o.status,
+          status: mapStatus(orderStatus),
+          rawStatus: orderStatus,
           preparationMinutes: getOrderPreparationMinutes(o),
           customer: o.customer_name || "Unknown",
           items:
@@ -1064,6 +1134,133 @@ export default function OrdersScreen() {
     }
   };
 
+  const handleStartPacking = (order: Order) => {
+    const rawStatus = String(order.rawStatus || "").toLowerCase();
+    if (
+      order.status !== "Ready" ||
+      !["ready", "food ready"].includes(rawStatus)
+    ) {
+      return;
+    }
+    setPackingOrder(order);
+    setPackingImage(null);
+    setUploadedPackingImage(null);
+    setPackingUploadProgress(0);
+    setPackingError("");
+  };
+
+  const closePackingModal = () => {
+    if (packingUploading) return;
+    setPackingOrder(null);
+    setPackingImage(null);
+    setUploadedPackingImage(null);
+    setPackingUploadProgress(0);
+    setPackingError("");
+  };
+
+  const pickPackingImage = async (source: "library" | "camera") => {
+    if (!packingOrder || packingUploading) return;
+    setPackingError("");
+    try {
+      const permission =
+        source === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        setPackingError(
+          source === "camera"
+            ? "Allow camera access to take a packing photo."
+            : "Allow photo library access to select a packing photo.",
+        );
+        return;
+      }
+
+      const options = {
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3] as [number, number],
+        quality: 0.8,
+      };
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync(options);
+      const asset = result.assets?.[0];
+      if (result.canceled || !asset) return;
+
+      const mimeType = asset.mimeType?.toLowerCase();
+      const filePath = (asset.fileName || asset.uri).split(/[?#]/, 1)[0];
+      const validImage = mimeType
+        ? ["image/jpeg", "image/jpg", "image/png"].includes(mimeType)
+        : /\.(jpe?g|png)$/i.test(filePath);
+      if (!validImage) {
+        setPackingError("Choose a JPG, JPEG, or PNG image.");
+        return;
+      }
+
+      setPackingImage(asset);
+      setUploadedPackingImage(null);
+      setPackingUploadProgress(0);
+    } catch (error) {
+      setPackingError(
+        getApiErrorMessage(error, "Could not select the packing image."),
+      );
+    }
+  };
+
+  const confirmPacking = async () => {
+    if (!packingOrder || !packingImage || packingUploading) return;
+    const rawStatus = String(packingOrder.rawStatus || "").toLowerCase();
+    if (
+      packingOrder.status !== "Ready" ||
+      !["ready", "food ready"].includes(rawStatus)
+    ) {
+      setPackingError("This order is no longer ready to be packed.");
+      return;
+    }
+
+    setPackingUploading(true);
+    setPackingError("");
+    try {
+      const packingImageUrl =
+        uploadedPackingImage ||
+        (await uploadPackingImage(
+          packingOrder.id,
+          packingOrder.order_id,
+          packingImage,
+          setPackingUploadProgress,
+        ));
+      setUploadedPackingImage(packingImageUrl);
+      setPackingUploadProgress(100);
+
+      await api.patch(
+        `/user-food-orders/status/${encodeURIComponent(packingOrder.id)}`,
+        {
+          order_id: packingOrder.order_id,
+          order_status: "Packed",
+          status: "Packed",
+          packing_image: packingImageUrl,
+        },
+      );
+
+      setPackingOrder(null);
+      setPackingImage(null);
+      setUploadedPackingImage(null);
+      setPackingUploadProgress(0);
+      await fetchOrders();
+    } catch (error) {
+      console.error("Could not confirm packing:", error);
+      setPackingError(
+        getApiErrorMessage(
+          error,
+          "Packing image upload failed. The order status was not changed.",
+        ),
+      );
+    } finally {
+      setPackingUploading(false);
+    }
+  };
+
   const handleStartCooking = async (id: string) => {
     if (actionId) return;
     const order = orders.find((item) => String(item.id) === String(id));
@@ -1097,48 +1294,6 @@ export default function OrdersScreen() {
       await fetchOrders();
     } catch (error) {
       showAppDialog("Could not start cooking", getApiErrorMessage(error));
-    } finally {
-      setActionId(null);
-    }
-  };
-
-  const handleStartPacking = async (id: string) => {
-    if (actionId) return;
-    setActionId(id);
-    try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permission.status !== "granted") {
-        showAppDialog(
-          "Photo access required",
-          "Allow photo library access to upload a packing image.",
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
-      });
-      if (result.canceled || !result.assets?.[0]) return;
-
-      const packingImage = await uploadPackingImage(result.assets[0]);
-      await api.patch(`/user-food-orders/status/${id}`, {
-        status: "Packing",
-        packing_image: packingImage,
-      });
-      await fetchOrders();
-    } catch (error) {
-      console.error("Could not upload packing image:", error);
-      showAppDialog(
-        "Could not start packing",
-        getApiErrorMessage(
-          error,
-          "Please choose another packing image and try again.",
-        ),
-      );
     } finally {
       setActionId(null);
     }
@@ -1295,6 +1450,303 @@ export default function OrdersScreen() {
       </ScrollView>
 
       <BottomBar />
+
+      <Modal
+        visible={Boolean(packingOrder)}
+        transparent
+        animationType="slide"
+        onRequestClose={closePackingModal}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={closePackingModal}
+            disabled={packingUploading}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              backgroundColor: "rgba(0,0,0,0.5)",
+            }}
+          />
+          <View
+            style={{
+              maxHeight: "88%",
+              paddingHorizontal: 20,
+              paddingTop: 18,
+              paddingBottom: 26,
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
+              backgroundColor: colors.pageBackground,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <View>
+                <Text
+                  style={{
+                    color: colors.primaryDark,
+                    fontSize: 18,
+                    fontWeight: "800",
+                  }}
+                >
+                  Packing Confirmation
+                </Text>
+                <Text
+                  style={{ marginTop: 3, color: colors.muted, fontSize: 13 }}
+                >
+                  Order #{packingOrder?.order_id}
+                </Text>
+              </View>
+              <Pressable
+                onPress={closePackingModal}
+                disabled={packingUploading}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close packing confirmation"
+              >
+                <Ionicons name="close" size={23} color={colors.primaryDark} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={{ paddingBottom: 14 }}
+            >
+              <Text
+                style={{
+                  marginBottom: 8,
+                  color: colors.primaryDark,
+                  fontSize: 14,
+                  fontWeight: "800",
+                }}
+              >
+                Image Upload
+              </Text>
+
+              {packingImage ? (
+                <View
+                  style={{
+                    height: 190,
+                    overflow: "hidden",
+                    borderRadius: 14,
+                    backgroundColor: colors.softCard,
+                  }}
+                >
+                  <ExpoImage
+                    source={{ uri: packingImage.uri }}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="cover"
+                  />
+                  <Pressable
+                    onPress={() => {
+                      setPackingImage(null);
+                      setUploadedPackingImage(null);
+                      setPackingUploadProgress(0);
+                      setPackingError("");
+                    }}
+                    disabled={packingUploading}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove packing photo"
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      right: 10,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "rgba(255,255,255,0.94)",
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#C62828" />
+                  </Pressable>
+                </View>
+              ) : (
+                <View
+                  style={{
+                    height: 150,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    borderColor: colors.primary,
+                    backgroundColor: colors.softCard,
+                  }}
+                >
+                  <Ionicons
+                    name="image-outline"
+                    size={30}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      color: colors.primaryDark,
+                      fontSize: 14,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Add a photo of the packed order
+                  </Text>
+                  <Text
+                    style={{ marginTop: 4, color: colors.muted, fontSize: 12 }}
+                  >
+                    JPG, JPEG, or PNG
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <Pressable
+                  onPress={() => void pickPackingImage("library")}
+                  disabled={packingUploading}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                    borderRadius: 11,
+                    backgroundColor: colors.cardBackground,
+                  }}
+                >
+                  <Ionicons
+                    name="images-outline"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text style={{ color: colors.primary, fontWeight: "700" }}>
+                    {packingImage ? "Change Photo" : "Choose Photo"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void pickPackingImage("camera")}
+                  disabled={packingUploading}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 11,
+                    backgroundColor: colors.cardBackground,
+                  }}
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={18}
+                    color={colors.primaryDark}
+                  />
+                  <Text
+                    style={{ color: colors.primaryDark, fontWeight: "700" }}
+                  >
+                    Take Photo
+                  </Text>
+                </Pressable>
+              </View>
+
+              {packingUploading ? (
+                <View style={{ marginTop: 14 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      marginBottom: 7,
+                    }}
+                  >
+                    <Text style={{ color: colors.primaryDark, fontSize: 12 }}>
+                      {packingUploadProgress >= 100
+                        ? "Saving packed order..."
+                        : "Uploading packing image..."}
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.primary,
+                        fontSize: 12,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {packingUploadProgress}%
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      height: 7,
+                      overflow: "hidden",
+                      borderRadius: 4,
+                      backgroundColor: colors.border,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${packingUploadProgress}%`,
+                        height: "100%",
+                        backgroundColor: colors.primary,
+                      }}
+                    />
+                  </View>
+                </View>
+              ) : null}
+
+              {packingError ? (
+                <Text
+                  style={{
+                    marginTop: 12,
+                    color: "#C62828",
+                    fontSize: 13,
+                    lineHeight: 18,
+                  }}
+                >
+                  {packingError}
+                </Text>
+              ) : null}
+            </ScrollView>
+
+            <Pressable
+              onPress={() => void confirmPacking()}
+              disabled={!packingImage || packingUploading}
+              style={{
+                minHeight: 48,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderRadius: 12,
+                backgroundColor:
+                  !packingImage || packingUploading
+                    ? colors.muted
+                    : colors.primary,
+              }}
+            >
+              {packingUploading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : null}
+              <Text
+                style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}
+              >
+                {packingUploading ? "Confirming..." : "Confirm Packing"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={Boolean(cancelOrder)}
