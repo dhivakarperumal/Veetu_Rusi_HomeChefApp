@@ -111,6 +111,7 @@ const getProductImage = (item: any) => {
 const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
   New: { color: "#E65100", bg: "#FFF3E0" },
   Preparing: { color: "#1565C0", bg: "#E3F2FD" },
+  Cooking: { color: "#1565C0", bg: "#E3F2FD" },
   Ready: { color: "#2E7D32", bg: "#E8F5E9" },
   Completed: { color: "#4A675F", bg: "#ECEFF1" },
 };
@@ -127,7 +128,8 @@ const STATUS_OPTIONS = [
 const mapStatus = (status: string) => {
   const s = (status || "").toLowerCase();
   if (isNewOrderStatus(s)) return "New";
-  if (["accepted", "preparing"].includes(s)) return "Preparing";
+  if (s === "accepted") return "Preparing";
+  if (["preparing", "cooking"].includes(s)) return "Cooking";
   if (
     [
       "food ready",
@@ -170,6 +172,7 @@ function SectionTitle({ title }: { title: string }) {
 const ORDER_TRACKING_STAGES = [
   "New",
   "Preparing",
+  "Cooking",
   "Ready",
   "Packing",
   "Searching Delivery Partner",
@@ -212,11 +215,12 @@ function OrderStatusTracker({ status }: { status: string }) {
 
   const currentStageIndex = (() => {
     if (isNewOrderStatus(normalizedStatus)) return 0;
-    if (["accepted", "preparing"].includes(normalizedStatus)) return 1;
-    if (["food ready", "ready"].includes(normalizedStatus)) return 2;
-    if (normalizedStatus === "packing") return 3;
-    if (normalizedStatus === "searching delivery partner") return 4;
-    if (normalizedStatus === "delivery partner assigned") return 5;
+    if (normalizedStatus === "accepted") return 1;
+    if (["preparing", "cooking"].includes(normalizedStatus)) return 2;
+    if (["food ready", "ready"].includes(normalizedStatus)) return 3;
+    if (normalizedStatus === "packing") return 4;
+    if (normalizedStatus === "searching delivery partner") return 5;
+    if (normalizedStatus === "delivery partner assigned") return 6;
     const mappedStatus = mapStatus(status);
     return Math.max(0, ORDER_TRACKING_STAGES.indexOf(mappedStatus));
   })();
@@ -241,10 +245,14 @@ function OrderStatusTracker({ status }: { status: string }) {
           marginBottom: 16,
         }}
       >
-        <Text style={{ color: colors.primaryDark, fontSize: 14, fontWeight: "800" }}>
+        <Text
+          style={{ color: colors.primaryDark, fontSize: 14, fontWeight: "800" }}
+        >
           Status Tracking
         </Text>
-        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: "800" }}>
+        <Text
+          style={{ color: colors.primary, fontSize: 12, fontWeight: "800" }}
+        >
           {currentStage}
         </Text>
       </View>
@@ -272,12 +280,22 @@ function OrderStatusTracker({ status }: { status: string }) {
                   justifyContent: "center",
                   borderRadius: 13,
                   borderWidth: 1.5,
-                  borderColor: isComplete || isCurrent ? colors.primary : colors.border,
-                  backgroundColor: isComplete || isCurrent ? colors.primary : colors.cardBackground,
+                  borderColor:
+                    isComplete || isCurrent ? colors.primary : colors.border,
+                  backgroundColor:
+                    isComplete || isCurrent
+                      ? colors.primary
+                      : colors.cardBackground,
                 }}
               >
                 <Ionicons
-                  name={isComplete ? "checkmark" : isCurrent ? "ellipse" : "ellipse-outline"}
+                  name={
+                    isComplete
+                      ? "checkmark"
+                      : isCurrent
+                        ? "ellipse"
+                        : "ellipse-outline"
+                  }
                   size={isComplete ? 16 : 11}
                   color={isComplete || isCurrent ? "#FFFFFF" : colors.muted}
                 />
@@ -286,7 +304,8 @@ function OrderStatusTracker({ status }: { status: string }) {
                 style={{
                   flex: 1,
                   marginLeft: 12,
-                  color: isComplete || isCurrent ? colors.primaryDark : colors.muted,
+                  color:
+                    isComplete || isCurrent ? colors.primaryDark : colors.muted,
                   fontSize: 13,
                   fontWeight: isCurrent ? "800" : isComplete ? "700" : "500",
                 }}
@@ -682,7 +701,11 @@ export default function OrderDetailScreen() {
                 backgroundColor: colors.softCard,
               }}
             >
-              <Ionicons name="bicycle-outline" size={22} color={colors.primary} />
+              <Ionicons
+                name="bicycle-outline"
+                size={22}
+                color={colors.primary}
+              />
             </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text
@@ -716,7 +739,9 @@ export default function OrderDetailScreen() {
                   {String(deliveryPartnerPhone)}
                 </Text>
               ) : (
-                <Text style={{ marginTop: 3, color: colors.muted, fontSize: 12 }}>
+                <Text
+                  style={{ marginTop: 3, color: colors.muted, fontSize: 12 }}
+                >
                   Phone number unavailable
                 </Text>
               )}
@@ -740,7 +765,11 @@ export default function OrderDetailScreen() {
                   marginLeft: 10,
                 }}
               >
-                <Ionicons name="call-outline" size={19} color={colors.primary} />
+                <Ionicons
+                  name="call-outline"
+                  size={19}
+                  color={colors.primary}
+                />
               </Pressable>
             ) : null}
           </View>

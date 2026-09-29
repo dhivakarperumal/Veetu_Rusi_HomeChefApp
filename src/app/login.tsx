@@ -24,17 +24,6 @@ import {
 import { getStoredToken, loginWithIdentifier } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 
-const isValidIdentifier = (val: string) => {
-  const t = val.trim();
-  if (!t) return false;
-  if (t.includes("@")) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
-  }
-  const digitsOnly = t.replace(/\D/g, "");
-  if (digitsOnly.length >= 8) return true;
-  return t.length >= 3;
-};
-
 const isValidPassword = (val: string) => {
   return val.trim().length >= 4;
 };
@@ -54,8 +43,6 @@ export default function LoginScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const activeInputRef = useRef<"email" | "password" | null>(null);
 
-  const failedCredentialsRef = useRef<string>("");
-  const autoLoginTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
 
   const scrollToInput = (inputType: "email" | "password") => {
@@ -119,38 +106,18 @@ export default function LoginScreen() {
       }
     };
     restoreSession();
-
-    return () => {
-      if (autoLoginTimerRef.current) {
-        clearTimeout(autoLoginTimerRef.current);
-      }
-    };
   }, []);
 
-  const attemptLogin = async (
-    emailToUse?: string,
-    passToUse?: string,
-    options: { isAuto?: boolean } = {},
-  ) => {
-    if (autoLoginTimerRef.current) {
-      clearTimeout(autoLoginTimerRef.current);
-      autoLoginTimerRef.current = null;
-    }
-
-    const cleanEmail = (emailToUse !== undefined ? emailToUse : email).trim();
-    const cleanPass = (passToUse !== undefined ? passToUse : password).trim();
-    const credentialKey = `${cleanEmail.toLowerCase()}:${cleanPass}`;
+  const attemptLogin = async () => {
+    const cleanEmail = email.trim();
+    const cleanPass = password.trim();
 
     if (!cleanEmail) {
-      if (!options.isAuto) setError("Please enter your email or phone number.");
+      setError("Please enter your email or phone number.");
       return;
     }
     if (!cleanPass) {
-      if (!options.isAuto) setError("Please enter your password.");
-      return;
-    }
-
-    if (options.isAuto && failedCredentialsRef.current === credentialKey) {
+      setError("Please enter your password.");
       return;
     }
 
@@ -158,15 +125,12 @@ export default function LoginScreen() {
     inFlightRef.current = true;
 
     setLoading(true);
-    if (!options.isAuto) {
-      setError("");
-      Keyboard.dismiss();
-    }
+    setError("");
+    Keyboard.dismiss();
 
     try {
       const response = await loginWithIdentifier(cleanEmail, cleanPass);
       if (response?.token) {
-        failedCredentialsRef.current = "";
         Keyboard.dismiss();
         AsyncStorage.setItem("lastLoginIdentifier", cleanEmail).catch(() => {});
         router.replace("/dashboard");
@@ -175,62 +139,28 @@ export default function LoginScreen() {
         throw new Error(response?.message || "Login failed. Please try again.");
       }
     } catch (err) {
-      failedCredentialsRef.current = credentialKey;
-      const currentKey = `${email.trim().toLowerCase()}:${password.trim()}`;
-      if (!options.isAuto || currentKey === credentialKey) {
-        const msg =
-          (err as { message?: string })?.message ||
-          (err instanceof Error ? err.message : "Invalid email or password.");
-        setError(msg);
-      }
+      const msg =
+        (err as { message?: string })?.message ||
+        (err instanceof Error ? err.message : "Invalid email or password.");
+      setError(msg);
     } finally {
       inFlightRef.current = false;
       setLoading(false);
     }
   };
 
-  const scheduleAutoLogin = (
-    emailVal: string,
-    passVal: string,
-    delay = 700,
-  ) => {
-    if (autoLoginTimerRef.current) {
-      clearTimeout(autoLoginTimerRef.current);
-      autoLoginTimerRef.current = null;
-    }
-
-    const cleanEmail = emailVal.trim();
-    const cleanPass = passVal.trim();
-
-    if (!isValidIdentifier(cleanEmail) || !isValidPassword(cleanPass)) {
-      return;
-    }
-
-    const credKey = `${cleanEmail.toLowerCase()}:${cleanPass}`;
-    if (failedCredentialsRef.current === credKey) {
-      return;
-    }
-
-    autoLoginTimerRef.current = setTimeout(() => {
-      attemptLogin(cleanEmail, cleanPass, { isAuto: true });
-    }, delay);
-  };
-
   const handleEmailChange = (text: string) => {
     setEmail(text);
     if (error) setError("");
-    scheduleAutoLogin(text, password, 700);
   };
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
     if (error) setError("");
-    scheduleAutoLogin(email, text, 700);
   };
 
   const handleLogin = () => {
-    failedCredentialsRef.current = "";
-    attemptLogin(email, password, { isAuto: false });
+    void attemptLogin();
   };
 
   const handleForgotPassword = () => {
@@ -446,11 +376,6 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={handlePasswordChange}
                 onFocus={() => scrollToInput("password")}
-                onBlur={() => {
-                  if (isValidIdentifier(email) && isValidPassword(password)) {
-                    scheduleAutoLogin(email, password, 150);
-                  }
-                }}
                 placeholder="Enter your kitchen password"
                 placeholderTextColor="#8EA399"
                 secureTextEntry={!showPass}

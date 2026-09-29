@@ -14,9 +14,9 @@ import {
     View,
 } from "react-native";
 import api, {
-  API_BASE_URL,
-  getApiErrorMessage,
-  isNewOrderStatus,
+    API_BASE_URL,
+    getApiErrorMessage,
+    isNewOrderStatus,
 } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
@@ -33,14 +33,11 @@ async function uploadPackingImage(asset: ImagePicker.ImagePickerAsset) {
     { compress: 0.55, format: ImageManipulator.SaveFormat.JPEG },
   );
   const formData = new FormData();
-  formData.append(
-    "images",
-    {
-      uri: compressed.uri,
-      name: asset.fileName || `packing-${Date.now()}.jpg`,
-      type: "image/jpeg",
-    } as any,
-  );
+  formData.append("images", {
+    uri: compressed.uri,
+    name: asset.fileName || `packing-${Date.now()}.jpg`,
+    type: "image/jpeg",
+  } as any);
 
   const response = await api.post(
     "/upload/images?folder=orderPacking",
@@ -73,7 +70,8 @@ async function uploadPackingImage(asset: ImagePicker.ImagePickerAsset) {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type OrderStatus = "New" | "Preparing" | "Ready" | "Completed" | "Cancelled";
+type OrderStatus =
+  "New" | "Preparing" | "Cooking" | "Ready" | "Completed" | "Cancelled";
 type OrderTab =
   | OrderStatus
   | "All Status"
@@ -97,6 +95,7 @@ interface Order {
   acceptedTime?: string;
   deliveryAt?: string;
   deliveryTime?: string;
+  preparationMinutes?: number;
   cancellationReason?: string;
   cancellationNotes?: string;
   deliveryPartnerName?: string;
@@ -111,6 +110,7 @@ const STATUS_CONFIG: Record<
 > = {
   New: { color: "#E65100", bg: "#FFF3E0", label: "New" },
   Preparing: { color: "#1565C0", bg: "#E3F2FD", label: "Preparing" },
+  Cooking: { color: "#1565C0", bg: "#E3F2FD", label: "Cooking" },
   Ready: { color: "#2E7D32", bg: "#E8F5E9", label: "Ready" },
   Completed: { color: "#4A675F", bg: "#ECEFF1", label: "Completed" },
   Cancelled: { color: "#C62828", bg: "#FFEBEE", label: "Cancelled" },
@@ -120,7 +120,8 @@ const mapStatus = (status: string): OrderStatus => {
   const s = (status || "").toLowerCase();
   if (["cancelled", "canceled"].includes(s)) return "Cancelled";
   if (isNewOrderStatus(s)) return "New";
-  if (["accepted", "preparing"].includes(s)) return "Preparing";
+  if (s === "accepted") return "Preparing";
+  if (["preparing", "cooking"].includes(s)) return "Cooking";
   if (
     [
       "food ready",
@@ -160,6 +161,88 @@ const calculateDeliveryDeadline = (acceptedAt: unknown): string | undefined => {
   return new Date(acceptedDate.getTime() + 3 * 60 * 60 * 1000).toISOString();
 };
 
+const START_COOKING_BUFFER_MINUTES = 60;
+
+function parsePreparationMinutes(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0 ? value : undefined;
+  }
+  if (typeof value !== "string" || !value.trim()) return undefined;
+
+  const normalized = value.trim().toLowerCase();
+  const hours = normalized.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|hr|h)\b/);
+  const minutes = normalized.match(
+    /(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|min|m)\b/,
+  );
+  if (hours || minutes) {
+    return (
+      (hours ? Number(hours[1]) * 60 : 0) + (minutes ? Number(minutes[1]) : 0)
+    );
+  }
+
+  const numericValue = Number(normalized);
+  return Number.isFinite(numericValue) && numericValue >= 0
+    ? numericValue
+    : undefined;
+}
+
+function getOrderPreparationMinutes(order: any): number | undefined {
+  const directDuration = [
+    order.preparation_time_minutes,
+    order.food_preparation_time_minutes,
+    order.prep_time_minutes,
+    order.food_preparation_time,
+    order.preparation_time,
+    order.prep_time,
+  ]
+    .map(parsePreparationMinutes)
+    .find((minutes) => minutes !== undefined);
+  if (directDuration !== undefined) return directDuration;
+
+  let items = order.items;
+  if (typeof items === "string") {
+    try {
+      items = JSON.parse(items);
+    } catch {
+      items = [];
+    }
+  }
+  if (!Array.isArray(items)) return undefined;
+
+  const itemDurations = items.flatMap((item: any) =>
+    [
+      item.preparation_time_minutes,
+      item.food_preparation_time_minutes,
+      item.prep_time_minutes,
+      item.food_preparation_time,
+      item.preparation_time,
+      item.prep_time,
+      item.product?.prep_time,
+      item.food?.prep_time,
+    ]
+      .map(parsePreparationMinutes)
+      .filter((minutes): minutes is number => minutes !== undefined),
+  );
+  return itemDurations.length > 0 ? Math.max(...itemDurations) : undefined;
+}
+
+function getStartCookingTimestamp(order: Order): number | undefined {
+  const deliveryTimestamp = order.deliveryAt
+    ? Date.parse(order.deliveryAt)
+    : Number.NaN;
+  if (
+    !Number.isFinite(deliveryTimestamp) ||
+    order.preparationMinutes === undefined ||
+    !Number.isFinite(order.preparationMinutes)
+  ) {
+    return undefined;
+  }
+  return (
+    deliveryTimestamp -
+    (order.preparationMinutes + START_COOKING_BUFFER_MINUTES) * 60_000
+  );
+}
+
 const formatRemainingDeliveryTime = (
   acceptedAt: string | undefined,
   deliveryAt: string | undefined,
@@ -190,6 +273,7 @@ function OrderCard({
   onReject,
   onMarkReady,
   onStartPacking,
+  onStartCooking,
   onStatusUpdate,
   onPress,
   now,
@@ -200,6 +284,7 @@ function OrderCard({
   onReject?: (order: Order) => void;
   onMarkReady?: (id: string) => void;
   onStartPacking?: (id: string) => void;
+  onStartCooking?: (id: string) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onPress?: () => void;
   now: number;
@@ -210,8 +295,18 @@ function OrderCard({
   const showAccept = order.status === "New";
   const showStartCooking =
     order.status === "Preparing" && rawStatus === "accepted";
-  const showStart =
-    order.status === "Preparing" && rawStatus !== "accepted";
+  const showStart = order.status === "Cooking";
+  const startCookingTimestamp = showStartCooking
+    ? getStartCookingTimestamp(order)
+    : undefined;
+  const canStartCooking =
+    startCookingTimestamp !== undefined && now >= startCookingTimestamp;
+  const startCookingTime = startCookingTimestamp
+    ? new Date(startCookingTimestamp).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : undefined;
   const nextStatus =
     rawStatus === "food ready" || rawStatus === "ready"
       ? { label: "Start Packing", status: "Packing" }
@@ -332,7 +427,9 @@ function OrderCard({
             flexDirection: "row",
             alignItems: "center",
             marginBottom:
-              showAccept || showStartCooking || showStart || nextStatus ? 14 : 0,
+              showAccept || showStartCooking || showStart || nextStatus
+                ? 14
+                : 0,
           }}
         >
           <Ionicons name="location-outline" size={14} color={colors.muted} />
@@ -543,7 +640,9 @@ function OrderCard({
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom:
-              showAccept || showStartCooking || showStart || nextStatus ? 12 : 0,
+              showAccept || showStartCooking || showStart || nextStatus
+                ? 12
+                : 0,
           }}
         >
           <View>
@@ -611,10 +710,12 @@ function OrderCard({
 
         {showStartCooking && (
           <Pressable
-            onPress={() => onStatusUpdate?.(order.id, "Preparing")}
-            disabled={busy}
+            onPress={() => onStartCooking?.(order.id)}
+            disabled={busy || !canStartCooking}
+            accessibilityState={{ disabled: busy || !canStartCooking }}
             style={{
-              backgroundColor: colors.primary,
+              backgroundColor:
+                busy || !canStartCooking ? colors.muted : colors.primary,
               borderRadius: 14,
               paddingVertical: 13,
               alignItems: "center",
@@ -624,6 +725,20 @@ function OrderCard({
               {busy ? "Starting..." : "Start Cooking"}
             </Text>
           </Pressable>
+        )}
+        {showStartCooking && !canStartCooking && (
+          <Text
+            style={{
+              marginTop: 8,
+              color: colors.muted,
+              fontSize: 12,
+              textAlign: "center",
+            }}
+          >
+            {startCookingTime
+              ? `Start Cooking available at ${startCookingTime}`
+              : "Delivery or preparation time unavailable"}
+          </Text>
         )}
 
         {showStart && (
@@ -676,6 +791,7 @@ const TABS: OrderTab[] = [
   "All Status",
   "New",
   "Preparing",
+  "Cooking",
   "Ready",
   "Packing",
   "Searching Delivery Partner",
@@ -779,6 +895,7 @@ export default function OrdersScreen() {
           order_id: o.order_id || o.id || "Unknown",
           status: mapStatus(o.status),
           rawStatus: o.status,
+          preparationMinutes: getOrderPreparationMinutes(o),
           customer: o.customer_name || "Unknown",
           items:
             o.chef_total_quantity ??
@@ -865,7 +982,16 @@ export default function OrdersScreen() {
     setActionId(id);
     try {
       const acceptedAt = new Date();
-      const deliveryTime = new Date(acceptedAt.getTime() + 3 * 60 * 60 * 1000);
+      const selectedDeliveryAt = orders.find(
+        (order) => String(order.id) === String(id),
+      )?.deliveryAt;
+      const selectedDeliveryDate = selectedDeliveryAt
+        ? new Date(selectedDeliveryAt)
+        : null;
+      const deliveryTime =
+        selectedDeliveryDate && Number.isFinite(selectedDeliveryDate.getTime())
+          ? selectedDeliveryDate
+          : new Date(acceptedAt.getTime() + 3 * 60 * 60 * 1000);
       await api.patch(`/user-food-orders/status/${id}`, {
         status: "Accepted",
         accepted_at: acceptedAt.toISOString(),
@@ -938,6 +1064,44 @@ export default function OrdersScreen() {
     }
   };
 
+  const handleStartCooking = async (id: string) => {
+    if (actionId) return;
+    const order = orders.find((item) => String(item.id) === String(id));
+    const startCookingAt = order ? getStartCookingTimestamp(order) : undefined;
+    if (startCookingAt === undefined) {
+      showAppDialog(
+        "Start time unavailable",
+        "Delivery time or food preparation time is missing, so the start time cannot be calculated.",
+      );
+      return;
+    }
+
+    const now = Date.now();
+    if (now < startCookingAt) {
+      const availableAt = new Date(startCookingAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      showAppDialog(
+        "Cooking cannot start yet",
+        `Start Cooking available at ${availableAt}.`,
+      );
+      return;
+    }
+
+    setActionId(id);
+    try {
+      await api.patch(`/user-food-orders/status/${id}`, {
+        status: "Cooking",
+      });
+      await fetchOrders();
+    } catch (error) {
+      showAppDialog("Could not start cooking", getApiErrorMessage(error));
+    } finally {
+      setActionId(null);
+    }
+  };
+
   const handleStartPacking = async (id: string) => {
     if (actionId) return;
     setActionId(id);
@@ -970,7 +1134,10 @@ export default function OrdersScreen() {
       console.error("Could not upload packing image:", error);
       showAppDialog(
         "Could not start packing",
-        getApiErrorMessage(error, "Please choose another packing image and try again."),
+        getApiErrorMessage(
+          error,
+          "Please choose another packing image and try again.",
+        ),
       );
     } finally {
       setActionId(null);
@@ -1116,6 +1283,7 @@ export default function OrdersScreen() {
               onAccept={handleAccept}
               onReject={openCancelModal}
               onMarkReady={handleMarkReady}
+              onStartCooking={handleStartCooking}
               onStartPacking={handleStartPacking}
               onStatusUpdate={handleStatusUpdate}
               busy={actionId === order.id}
