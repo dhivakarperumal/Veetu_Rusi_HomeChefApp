@@ -23,8 +23,8 @@ import api, {
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import BottomBar from "./componets/buttombar";
-import TopHeader from "./componets/topheader";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 

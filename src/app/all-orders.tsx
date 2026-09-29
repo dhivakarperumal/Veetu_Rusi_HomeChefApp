@@ -14,7 +14,7 @@ import {
 import api, { getApiErrorMessage } from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 type AllOrder = {
   id: string;

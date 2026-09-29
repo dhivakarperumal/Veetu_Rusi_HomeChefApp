@@ -11,7 +11,7 @@ import {
     setMaterialInCollection,
     showMaterialToast,
 } from "../lib/materials-store";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 export default function MaterialProductScreen() {
   const router = useRouter();

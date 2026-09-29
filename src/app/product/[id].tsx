@@ -17,7 +17,7 @@ import {
     usePageLoadingState,
 } from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
-import PageHeader from "../componets/pageheader";
+import PageHeader from "../../components/pageheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 

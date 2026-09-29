@@ -18,8 +18,8 @@ import {
     saveMaterialCollection,
 } from "../lib/materials-store";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import BottomBar from "../components/buttombar";
+import PageHeader from "../components/pageheader";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";

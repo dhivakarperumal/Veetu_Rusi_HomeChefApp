@@ -17,7 +17,7 @@ import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 // ── Image Helper ──────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");

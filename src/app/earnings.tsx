@@ -11,8 +11,8 @@ import {
 import api, { getApiErrorMessage } from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import BottomBar from "./componets/buttombar";
-import TopHeader from "./componets/topheader";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Period = "Day" | "Week" | "Month";

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StatusBar, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../../theme/colors";
+import { colors } from "../theme/colors";
 
 const SAFE_AREA_GREEN = "#2E7A4F";
 

@@ -22,7 +22,7 @@ import {
     usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 const MAX_PRODUCT_IMAGES = 4;
 const MAX_PRODUCT_PAYLOAD_CHARS = 1500000;

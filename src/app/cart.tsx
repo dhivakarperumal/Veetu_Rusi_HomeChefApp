@@ -10,8 +10,8 @@ import {
   saveMaterialCollection,
   setMaterialInCollection,
 } from "../lib/materials-store";
-import BottomBar from "./componets/buttombar";
-import PageHeader from "./componets/pageheader";
+import BottomBar from "../components/buttombar";
+import PageHeader from "../components/pageheader";
 
 export default function CartScreen() {
   const router = useRouter();

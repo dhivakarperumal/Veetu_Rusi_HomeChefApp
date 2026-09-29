@@ -20,19 +20,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-    API_BASE_URL,
-    getHomeChefAttendance,
-    getStoredUser,
-    logoutUser,
-    setHomeChefAttendanceStatus,
+  API_BASE_URL,
+  getHomeChefAttendance,
+  getStoredUser,
+  logoutUser,
+  setHomeChefAttendanceStatus,
 } from "../api";
+import BottomBar from "../components/buttombar";
 import {
-    hasCachedPageData,
-    setCachedPageData,
-    usePageCacheState,
+  hasCachedPageData,
+  setCachedPageData,
+  usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import BottomBar from "./componets/buttombar";
 
 // ── Image resolver ────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");

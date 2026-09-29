@@ -20,7 +20,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../api";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 const GREEN = "#009B68";
 const DARK = "#172333";

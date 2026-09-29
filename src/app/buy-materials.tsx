@@ -26,8 +26,8 @@ import {
     setCachedPageData,
     usePageCacheState,
 } from "../lib/page-cache";
-import BottomBar from "./componets/buttombar";
-import TopHeader from "./componets/topheader";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
 
 type Product = {
   id: string | number;

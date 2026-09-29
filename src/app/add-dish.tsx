@@ -20,7 +20,7 @@ import {
     usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 const DIETARY_OPTIONS = ["veg", "non-veg"];
 const PACKAGING_OPTIONS = ["Pouch", "Box", "Foil", "Bottle", "Packet"];

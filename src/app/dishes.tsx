@@ -18,8 +18,8 @@ import api, { API_BASE_URL, getStoredUser } from "../api";
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import BottomBar from "./componets/buttombar";
-import TopHeader from "./componets/topheader";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
 
 // Strip /api suffix to get the bare server origin e.g. http://192.168.1.2:5000
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");

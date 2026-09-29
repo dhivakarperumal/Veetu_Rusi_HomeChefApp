@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import api from "../api";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import PageHeader from "./componets/pageheader";
+import PageHeader from "../components/pageheader";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";

@@ -19,8 +19,8 @@ import {
     isNewOrderStatus,
     logoutUser,
     setHomeChefAttendanceStatus,
-} from "../../api";
-import { showAppDialog } from "../../lib/app-dialog";
+} from "../api";
+import { showAppDialog } from "../lib/app-dialog";
 
 const GREEN = "#2E7A4F";
 const DARK = "#1A3328";
