@@ -96,10 +96,12 @@ function ProductCard({
   product,
   onDelete,
   onEdit,
+  onView,
 }: {
   product: any;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  onView: (id: string) => void;
 }) {
   const stock = Number(product.total_stock || 0);
   const isOutOfStock = stock <= 0;
@@ -122,6 +124,8 @@ function ProductCard({
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: colors.cardBackground,
+        borderWidth: 1,
+        borderColor: colors.border,
         borderRadius: 20,
         marginBottom: 12,
         padding: 12,
@@ -164,6 +168,9 @@ function ProductCard({
             )}
           </View>
           <View style={{ flexDirection: "row", gap: 12 }}>
+            <Pressable onPress={() => onView(product.id)} hitSlop={8}>
+              <Ionicons name="eye-outline" size={18} color={colors.primary} />
+            </Pressable>
             <Pressable onPress={() => onEdit(product.id)} hitSlop={8}>
               <Ionicons name="pencil" size={18} color={colors.primary} />
             </Pressable>
@@ -317,6 +324,17 @@ export default function MyProductsScreen() {
 
   const handleEdit = (id: string) => {
     router.push({ pathname: "/add-product", params: { id } } as any);
+  };
+
+  const handleView = (id: string) => {
+    if (!id) {
+      showAppDialog(
+        "Product unavailable",
+        "This product cannot be opened because its ID is missing.",
+      );
+      return;
+    }
+    router.push({ pathname: "/product/[id]", params: { id } } as any);
   };
 
   const handleDelete = (id: string) => {
@@ -525,6 +543,7 @@ export default function MyProductsScreen() {
               product={product}
               onDelete={handleDelete}
               onEdit={handleEdit}
+              onView={handleView}
             />
           ))
         )}

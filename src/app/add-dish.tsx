@@ -121,23 +121,33 @@ async function uploadFoodImages(assets: ImagePicker.ImagePickerAsset[]) {
 
 function FormGroup({
   label,
+  required = false,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ marginBottom: 18 }}>
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: "700",
-          color: colors.primaryDark,
-          marginBottom: 8,
-        }}
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
       >
-        {label}
-      </Text>
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.primaryDark,
+          }}
+        >
+          {label}
+        </Text>
+        {required ? (
+          <Text style={{ marginLeft: 4, color: "#C62828", fontWeight: "800" }}>
+            *
+          </Text>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -208,17 +218,29 @@ function InputField({
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <Text
+    <View
       style={{
-        fontSize: 18,
-        fontWeight: "800",
-        color: colors.primaryDark,
+        flexDirection: "row",
+        alignItems: "center",
         marginTop: 24,
         marginBottom: 16,
       }}
     >
-      {title}
-    </Text>
+      <View
+        style={{
+          width: 5,
+          height: 24,
+          borderRadius: 3,
+          marginRight: 10,
+          backgroundColor: colors.primary,
+        }}
+      />
+      <Text
+        style={{ fontSize: 18, fontWeight: "800", color: colors.primaryDark }}
+      >
+        {title}
+      </Text>
+    </View>
   );
 }
 
@@ -432,10 +454,27 @@ export default function AddDishScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!form.category || !form.name || !form.description || !form.mrp) {
+    const missingFields = [
+      !form.name.trim() && "Dish Name",
+      !form.category && "Category",
+      !form.cuisine && "Cuisine",
+      !form.prep_time.trim() && "Preparation Time",
+      !form.shelf_life_days.trim() && "Shelf Life",
+      !form.mrp.trim() && "MRP",
+      !form.offer.trim() && "Offer",
+      !form.net_weight.trim() && "Net Weight",
+      !form.ingredients.trim() && "Ingredients",
+      !form.instructions.trim() && "Instructions",
+      !form.description.trim() && "Description",
+      !form.preparation_url.trim() && "Preparation Video URL",
+      form.images.length === 0 && "Dish Image",
+      form.packaging_image.length === 0 && "Packaging Image",
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
       showAppDialog(
         "Missing details",
-        "Please complete the required name, category, description, and MRP fields.",
+        `Please complete: ${missingFields.join(", ")}.`,
       );
       return;
     }
@@ -512,6 +551,11 @@ export default function AddDishScreen() {
         title={id && id !== "new" ? "Edit Dish" : "Add New Dish"}
         onLeftPress={() => router.back()}
         leftIcon="arrow-back"
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        safeAreaBackgroundColor="#2E7A4F"
+        backButtonBackgroundColor="#2E7A4F"
+        backButtonIconColor="#FFFFFF"
       />
 
       <ScrollView
@@ -524,7 +568,7 @@ export default function AddDishScreen() {
         {/* ── Food Details ── */}
         <SectionHeader title="Food Details" />
 
-        <FormGroup label="Dish Name *">
+        <FormGroup label="Dish Name" required>
           <InputField
             value={form.name}
             onChangeText={(t) => updateForm("name", t)}
@@ -548,7 +592,7 @@ export default function AddDishScreen() {
           </View>
         </FormGroup>
 
-        <FormGroup label="Category *">
+        <FormGroup label="Category" required>
           {categories.filter((c) => {
             const t = (c.category_type || "").toLowerCase();
             return t === "food";
@@ -606,7 +650,7 @@ export default function AddDishScreen() {
           )}
         </FormGroup>
 
-        <FormGroup label="Cuisine">
+        <FormGroup label="Cuisine" required>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -644,7 +688,7 @@ export default function AddDishScreen() {
           </ScrollView>
         </FormGroup>
 
-        <FormGroup label="Dietary Tag">
+        <FormGroup label="Dietary Tag" required>
           <View style={{ flexDirection: "row", gap: 10 }}>
             {DIETARY_OPTIONS.map((opt) => (
               <Pressable
@@ -684,7 +728,7 @@ export default function AddDishScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Preparation Time">
+            <FormGroup label="Preparation Time" required>
               <InputField
                 value={form.prep_time}
                 onChangeText={(t) => updateForm("prep_time", t)}
@@ -693,7 +737,7 @@ export default function AddDishScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Shelf Life (Days)">
+            <FormGroup label="Shelf Life (Days)" required>
               <InputField
                 value={form.shelf_life_days}
                 onChangeText={(t) => updateForm("shelf_life_days", t)}
@@ -709,7 +753,7 @@ export default function AddDishScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="MRP *">
+            <FormGroup label="MRP" required>
               <InputField
                 prefix="₹"
                 value={form.mrp}
@@ -720,7 +764,7 @@ export default function AddDishScreen() {
             </FormGroup>
           </View>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Offer (%)">
+            <FormGroup label="Offer (%)" required>
               <InputField
                 prefix="%"
                 value={form.offer}
@@ -744,7 +788,7 @@ export default function AddDishScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Net Weight">
+            <FormGroup label="Net Weight" required>
               <InputField
                 value={form.net_weight}
                 onChangeText={(t) => updateForm("net_weight", t)}
@@ -754,7 +798,7 @@ export default function AddDishScreen() {
           </View>
         </View>
 
-        <FormGroup label="Packaging Type">
+        <FormGroup label="Packaging Type" required>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -795,7 +839,7 @@ export default function AddDishScreen() {
         {/* ── Ingredients & Instructions ── */}
         <SectionHeader title="Details & Instructions" />
 
-        <FormGroup label="Description *">
+        <FormGroup label="Description" required>
           <InputField
             value={form.description}
             onChangeText={(t) => updateForm("description", t)}
@@ -804,7 +848,7 @@ export default function AddDishScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Ingredients">
+        <FormGroup label="Ingredients" required>
           <InputField
             value={form.ingredients}
             onChangeText={(t) => updateForm("ingredients", t)}
@@ -813,7 +857,7 @@ export default function AddDishScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Instructions / Recipe">
+        <FormGroup label="Instructions / Recipe" required>
           <InputField
             value={form.instructions}
             onChangeText={(t) => updateForm("instructions", t)}
@@ -822,7 +866,7 @@ export default function AddDishScreen() {
           />
         </FormGroup>
 
-        <FormGroup label="Preparation Video URL">
+        <FormGroup label="Preparation Video URL" required>
           <InputField
             value={form.preparation_url}
             onChangeText={(t) => updateForm("preparation_url", t)}
@@ -836,7 +880,7 @@ export default function AddDishScreen() {
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <FormGroup label="Dish Image">
+            <FormGroup label="Dish Image" required>
               <Pressable
                 onPress={() => handlePickImage("images")}
                 style={{
@@ -913,7 +957,7 @@ export default function AddDishScreen() {
           </View>
 
           <View style={{ flex: 1 }}>
-            <FormGroup label="Packaging Image">
+            <FormGroup label="Packaging Image" required>
               <Pressable
                 onPress={() => handlePickImage("packaging_image")}
                 style={{

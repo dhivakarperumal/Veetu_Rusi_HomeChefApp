@@ -612,6 +612,11 @@ export default function AddProductScreen() {
         title={id && id !== "new" ? "Edit Product" : "Add New Product"}
         onLeftPress={() => router.back()}
         leftIcon="arrow-back"
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        safeAreaBackgroundColor="#2E7A4F"
+        backButtonBackgroundColor="#2E7A4F"
+        backButtonIconColor="#FFFFFF"
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
