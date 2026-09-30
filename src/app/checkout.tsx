@@ -12,14 +12,15 @@ import {
     View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
+import BottomBar from "../components/buttombar";
+import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import {
     CART_KEY,
     loadMaterialCollection,
     saveMaterialCollection,
 } from "../lib/materials-store";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import BottomBar from "../components/buttombar";
-import PageHeader from "../components/pageheader";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";
@@ -740,9 +741,11 @@ export default function CheckoutScreen() {
                 {item.name} x{Number(item.quantity) || 1}
               </Text>
               <Text style={{ fontWeight: "700", color: GREEN }}>
-                Rs.{" "}
-                {Number(item.offer_price || item.price || item.mrp || 0) *
-                  (Number(item.quantity) || 1)}
+                ₹{" "}
+                {formatCurrencyAmount(
+                  Number(item.offer_price || item.price || item.mrp || 0) *
+                    (Number(item.quantity) || 1),
+                )}
               </Text>
             </View>
           ))}
@@ -760,7 +763,7 @@ export default function CheckoutScreen() {
               Total
             </Text>
             <Text style={{ fontSize: 18, fontWeight: "800", color: GREEN }}>
-              Rs. {total}
+              ₹ {formatCurrencyAmount(total)}
             </Text>
           </View>
         </View>

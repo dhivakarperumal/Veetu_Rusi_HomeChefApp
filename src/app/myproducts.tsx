@@ -13,10 +13,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
+import PageHeader from "../components/pageheader";
 import { showAppDialog } from "../lib/app-dialog";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "../components/pageheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 const PRODUCT_FILTERS = [
@@ -199,9 +200,9 @@ function ProductCard({
               }}
             >
               ₹
-              {Number(product.offer_price || product.price || product.mrp || 0)
-                .toFixed(2)
-                .replace(/\.00$/, "")}
+              {formatCurrencyAmount(
+                product.offer_price || product.price || product.mrp || 0,
+              )}
             </Text>
             {product.mrp &&
               Number(product.mrp) >
@@ -214,7 +215,7 @@ function ProductCard({
                     textDecorationLine: "line-through",
                   }}
                 >
-                  ₹{Number(product.mrp).toFixed(2).replace(/\.00$/, "")}
+                  ₹{formatCurrencyAmount(product.mrp)}
                 </Text>
               )}
           </View>

@@ -58,6 +58,7 @@ export default function BottomBar() {
   const activeKey = (() => {
     if (pathname === "/" || pathname === "/dashboard") return "dashboard";
     const seg = pathname.replace("/", "").split("/")[0];
+    if (seg === "cart" || seg === "checkout") return "buy-materials";
     return TABS.find((t) => t.key === seg)?.key ?? "dashboard";
   })();
 

@@ -9,10 +9,11 @@ import {
     View,
 } from "react-native";
 import api, { getApiErrorMessage } from "../api";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import { colors } from "../theme/colors";
 import BottomBar from "../components/buttombar";
 import TopHeader from "../components/topheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
+import { colors } from "../theme/colors";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Period = "Day" | "Week" | "Month";
@@ -72,14 +73,11 @@ function startOfMonth(d: Date) {
 }
 
 function formatAmount(n: number) {
-  return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return formatCurrencyAmount(n);
 }
 
 function formatCurrency(n: number) {
-  return `₹${(Number(n) || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return `₹${formatCurrencyAmount(n)}`;
 }
 
 function trendPercent(current: number, previous: number): string {
@@ -422,7 +420,7 @@ function TransactionRow({
       </View>
 
       <Text style={{ fontSize: 15, fontWeight: "700", color: colors.primary }}>
-        + ₹{amount % 1 === 0 ? amount : amount.toFixed(2)}
+        + ₹{formatCurrencyAmount(amount)}
       </Text>
     </View>
   );

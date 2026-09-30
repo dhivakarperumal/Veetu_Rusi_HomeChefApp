@@ -1,17 +1,245 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import {
-    CART_KEY,
-    FAVORITES_KEY,
-    getMaterialImage,
-    loadMaterialCollection,
-    setMaterialInCollection,
-    showMaterialToast,
-} from "../lib/materials-store";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import {
+  CART_KEY,
+  FAVORITES_KEY,
+  getMaterialImage,
+  loadMaterialCollection,
+  setMaterialInCollection,
+  showMaterialToast,
+} from "../lib/materials-store";
+
+type MaterialReview = {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+};
+
+function MaterialReviewSection({ productId }: { productId: string | number }) {
+  const [reviews, setReviews] = useState<MaterialReview[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const storageKey = `material-reviews:${productId}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadReviews = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(storageKey);
+        const parsed = saved ? JSON.parse(saved) : [];
+        if (!cancelled) setReviews(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        if (!cancelled) setReviews([]);
+      }
+    };
+
+    void loadReviews();
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey]);
+
+  const submitReview = async () => {
+    if (rating < 1) {
+      showMaterialToast("Select a star rating first");
+      return;
+    }
+
+    setSaving(true);
+    const nextReviews: MaterialReview[] = [
+      {
+        id: `${Date.now()}`,
+        rating,
+        comment: comment.trim(),
+        createdAt: new Date().toISOString(),
+      },
+      ...reviews,
+    ];
+
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(nextReviews));
+      setReviews(nextReviews);
+      setRating(0);
+      setComment("");
+      setIsOpen(false);
+      showMaterialToast("Review saved");
+    } catch {
+      showMaterialToast("Could not save review");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <View
+      style={{
+        marginTop: 24,
+        paddingTop: 18,
+        borderTopWidth: 1,
+        borderTopColor: "#DCE7DF",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ fontSize: 17, fontWeight: "800", color: "#214D38" }}>
+          Reviews
+        </Text>
+        <Text style={{ fontSize: 12, color: "#5A7A6E" }}>
+          {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+        </Text>
+      </View>
+
+      {reviews.length === 0 ? (
+        <Text style={{ marginTop: 9, color: "#6B7D74", fontSize: 13 }}>
+          No reviews yet
+        </Text>
+      ) : (
+        reviews.map((review) => (
+          <View
+            key={review.id}
+            style={{
+              paddingVertical: 12,
+              borderBottomWidth: 1,
+              borderBottomColor: "#E5ECE7",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+              >
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Ionicons
+                    key={star}
+                    name={star <= review.rating ? "star" : "star-outline"}
+                    size={14}
+                    color="#E2A52E"
+                  />
+                ))}
+              </View>
+              <Text style={{ color: "#87958E", fontSize: 11 }}>
+                {new Date(review.createdAt).toLocaleDateString([], {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </Text>
+            </View>
+            {review.comment ? (
+              <Text style={{ marginTop: 6, color: "#52665B", lineHeight: 20 }}>
+                {review.comment}
+              </Text>
+            ) : null}
+          </View>
+        ))
+      )}
+
+      <Pressable
+        onPress={() => setIsOpen((visible) => !visible)}
+        accessibilityRole="button"
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 7,
+          minHeight: 42,
+          marginTop: 12,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: "#2E7A4F",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        <Ionicons name="create-outline" size={17} color="#2E7A4F" />
+        <Text style={{ color: "#2E7A4F", fontSize: 13, fontWeight: "800" }}>
+          {isOpen ? "Close review form" : "Write a review"}
+        </Text>
+      </Pressable>
+
+      {isOpen && (
+        <View style={{ marginTop: 14 }}>
+          <Text style={{ color: "#214D38", fontSize: 13, fontWeight: "700" }}>
+            Your rating
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Pressable
+                key={star}
+                onPress={() => setRating(star)}
+                accessibilityRole="button"
+                accessibilityLabel={`${star} star${star === 1 ? "" : "s"}`}
+                accessibilityState={{ selected: rating === star }}
+                hitSlop={4}
+              >
+                <Ionicons
+                  name={star <= rating ? "star" : "star-outline"}
+                  size={27}
+                  color="#E2A52E"
+                />
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Share your experience (optional)"
+            placeholderTextColor="#87958E"
+            multiline
+            textAlignVertical="top"
+            style={{
+              minHeight: 88,
+              marginTop: 12,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: "#D5E3DA",
+              borderRadius: 10,
+              backgroundColor: "#FFFFFF",
+              color: "#214D38",
+              fontSize: 13,
+              lineHeight: 19,
+            }}
+          />
+          <Pressable
+            onPress={submitReview}
+            disabled={saving}
+            accessibilityRole="button"
+            style={{
+              minHeight: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 10,
+              borderRadius: 10,
+              backgroundColor: saving ? "#91B5A0" : "#2E7A4F",
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>
+              {saving ? "Saving..." : "Submit review"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
 
 export default function MaterialProductScreen() {
   const router = useRouter();
@@ -107,7 +335,6 @@ export default function MaterialProductScreen() {
         product: JSON.stringify({ ...product, quantity, weight: activeWeight }),
       },
     } as any);
-
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
       <PageHeader
@@ -175,7 +402,7 @@ export default function MaterialProductScreen() {
               color: "#2E7A4F",
             }}
           >
-            Rs. {price}
+            ₹ {formatCurrencyAmount(price)}
           </Text>
           {product.category && (
             <Text style={{ marginTop: 12, color: "#5A7A6E" }}>
@@ -349,6 +576,7 @@ export default function MaterialProductScreen() {
               </Text>
             </Pressable>
           </View>
+          <MaterialReviewSection productId={product.id} />
         </View>
       </ScrollView>
     </View>

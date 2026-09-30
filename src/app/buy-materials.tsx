@@ -12,6 +12,9 @@ import {
     View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import {
     CART_KEY,
     FAVORITES_KEY,
@@ -26,22 +29,41 @@ import {
     setCachedPageData,
     usePageCacheState,
 } from "../lib/page-cache";
-import BottomBar from "../components/buttombar";
-import TopHeader from "../components/topheader";
 
 type Product = {
   id: string | number;
   name: string;
-  category?: string;
+  category?: unknown;
+  category_name?: unknown;
   description?: string;
   price?: number | string;
   mrp?: number | string;
   offer_price?: number | string;
   images?: string[] | string;
+  rating?: number | string;
+  average_rating?: number | string;
+  avg_rating?: number | string;
+  reviews?: number | string | unknown[];
+  review_count?: number | string;
+  reviews_count?: number | string;
 };
 
 const getImage = (product: Product) => {
   return getMaterialImage(product);
+};
+
+const getCategoryName = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+  if (!value || typeof value !== "object") return "";
+
+  const category = value as Record<string, unknown>;
+  const name =
+    category.name ?? category.category_name ?? category.label ?? category.title;
+  return typeof name === "string" || typeof name === "number"
+    ? String(name).trim()
+    : "";
 };
 
 export default function BuyMaterialsScreen() {
@@ -170,7 +192,11 @@ export default function BuyMaterialsScreen() {
         "All",
         ...new Set(
           matchingProducts
-            .map((product) => product.category)
+            .map(
+              (product) =>
+                getCategoryName(product.category_name) ||
+                getCategoryName(product.category),
+            )
             .filter(Boolean) as string[],
         ),
       ]);
@@ -227,17 +253,24 @@ export default function BuyMaterialsScreen() {
 
   const visibleProducts = products.filter((product) => {
     const search = searchTerm.trim().toLowerCase();
+    const categoryName =
+      getCategoryName(product.category_name) ||
+      getCategoryName(product.category);
     const matchesSearch =
       !search ||
-      [product.name, product.description, product.category].some((value) =>
+      [product.name, product.description, categoryName].some((value) =>
         String(value || "")
           .toLowerCase()
           .includes(search),
       );
     const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
+      selectedCategory.trim().toLowerCase() === "all" ||
+      categoryName.toLowerCase() === selectedCategory.trim().toLowerCase();
     return matchesSearch && matchesCategory;
   });
+  const hasActiveFilter =
+    searchTerm.trim().length > 0 ||
+    selectedCategory.trim().toLowerCase() !== "all";
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
@@ -323,6 +356,7 @@ export default function BuyMaterialsScreen() {
 
       <FlatList
         data={visibleProducts}
+        extraData={{ searchTerm, selectedCategory, favoriteIds, cartIds }}
         numColumns={2}
         columnWrapperStyle={{
           gap: 12,
@@ -411,6 +445,22 @@ export default function BuyMaterialsScreen() {
           const productId = String(product.id);
           const isFavorite = favoriteIds.has(productId);
           const inCart = cartIds.has(productId);
+          const currentPrice = Number(
+            product.offer_price || product.price || product.mrp || 0,
+          );
+          const comparePrice = Number(product.mrp || 0);
+          const hasComparePrice = comparePrice > currentPrice;
+          const rating = Number(
+            product.rating ?? product.average_rating ?? product.avg_rating ?? 0,
+          );
+          const reviewCountValue =
+            product.review_count ??
+            product.reviews_count ??
+            (Array.isArray(product.reviews)
+              ? product.reviews.length
+              : product.reviews) ??
+            0;
+          const reviewCount = Number(reviewCountValue);
           const openProductDetails = () =>
             router.push({
               pathname: "/material-product",
@@ -420,96 +470,187 @@ export default function BuyMaterialsScreen() {
             <View
               style={{
                 flex: 1,
-                backgroundColor: "#fff",
-                borderRadius: 14,
-                padding: 10,
-                marginBottom: 12,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 15,
+                borderWidth: 1,
+                borderColor: "#E3EBE5",
+                padding: 9,
+                marginBottom: 14,
                 minWidth: 0,
-                minHeight: 338,
+                shadowColor: "#183A2B",
+                shadowOpacity: 0.06,
+                shadowOffset: { width: 0, height: 3 },
+                shadowRadius: 8,
+                elevation: 2,
               }}
             >
-              <Pressable onPress={openProductDetails} style={{ flex: 1 }}>
-                <Image
-                  source={{ uri: getImage(product) }}
-                  style={{ width: "100%", aspectRatio: 1, borderRadius: 10 }}
-                  contentFit="cover"
-                />
-                <View style={{ marginTop: 10 }}>
-                  <Text
+              <View style={{ position: "relative" }}>
+                <Pressable
+                  onPress={openProductDetails}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${product.name}`}
+                >
+                  <Image
+                    source={{ uri: getImage(product) }}
                     style={{
-                      height: 22,
-                      fontSize: 16,
-                      fontWeight: "800",
-                      color: "#214D38",
+                      width: "100%",
+                      aspectRatio: 1.12,
+                      borderRadius: 11,
+                      backgroundColor: "#F1F5F2",
                     }}
-                    numberOfLines={1}
-                  >
-                    {product.name}
-                  </Text>
-                  <Text
-                    style={{ height: 40, marginTop: 4, color: "#5A7A6E" }}
-                    numberOfLines={2}
-                  >
-                    {product.description ||
-                      product.category ||
-                      "Quality cooking material"}
-                  </Text>
+                    contentFit="cover"
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleFavorite(product)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isFavorite ? "Remove from favorites" : "Add to favorites"
+                  }
+                  accessibilityState={{ selected: isFavorite }}
+                  style={{
+                    position: "absolute",
+                    top: 7,
+                    right: 7,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(255,255,255,0.96)",
+                    shadowColor: "#183A2B",
+                    shadowOpacity: 0.12,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}
+                >
+                  <Ionicons
+                    name={isFavorite ? "heart" : "heart-outline"}
+                    size={19}
+                    color={isFavorite ? "#C2415D" : "#6B7D74"}
+                  />
+                </Pressable>
+              </View>
+              <Pressable
+                onPress={openProductDetails}
+                style={{ flex: 1, paddingTop: 9 }}
+              >
+                <Text
+                  style={{
+                    minHeight: 36,
+                    fontSize: 14,
+                    lineHeight: 18,
+                    fontWeight: "800",
+                    color: "#214D38",
+                  }}
+                  numberOfLines={2}
+                >
+                  {product.name}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    minHeight: 17,
+                    marginTop: 2,
+                  }}
+                >
+                  <Ionicons name="star" size={12} color="#E2A52E" />
                   <Text
                     style={{
-                      marginTop: 6,
+                      color: "#52665B",
+                      fontSize: 11,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {Number.isFinite(rating) && rating > 0
+                      ? rating.toFixed(1)
+                      : "New"}
+                  </Text>
+                  {Number.isFinite(reviewCount) && reviewCount > 0 && (
+                    <Text style={{ color: "#87958E", fontSize: 10 }}>
+                      ({reviewCount})
+                    </Text>
+                  )}
+                </View>
+                <Text
+                  style={{
+                    minHeight: 32,
+                    marginTop: 4,
+                    color: "#6B7D74",
+                    fontSize: 11,
+                    lineHeight: 16,
+                  }}
+                  numberOfLines={2}
+                >
+                  {product.description ||
+                    (getCategoryName(product.category_name) ||
+                      getCategoryName(product.category)) ||
+                    "Quality cooking material"}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "baseline",
+                    gap: 6,
+                    marginTop: 7,
+                  }}
+                >
+                  <Text
+                    style={{
                       fontSize: 15,
                       fontWeight: "800",
                       color: "#2E7A4F",
                     }}
                   >
-                    Rs.{" "}
-                    {product.offer_price || product.price || product.mrp || 0}
+                    ₹ {formatCurrencyAmount(currentPrice)}
                   </Text>
+                  {hasComparePrice && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#87958E",
+                        textDecorationLine: "line-through",
+                      }}
+                    >
+                      ₹ {formatCurrencyAmount(comparePrice)}
+                    </Text>
+                  )}
                 </View>
               </Pressable>
-              <View
+              <Pressable
+                onPress={() => toggleCart(product)}
+                accessibilityRole="button"
+                accessibilityLabel={inCart ? "In cart" : "Add to cart"}
+                accessibilityState={{ selected: inCart }}
                 style={{
                   flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                  minHeight: 39,
                   marginTop: 10,
+                  borderRadius: 10,
+                  backgroundColor: inCart ? "#E5F2E9" : "#2E7A4F",
                 }}
               >
-                <Pressable
-                  onPress={() => toggleFavorite(product)}
+                <Ionicons
+                  name={inCart ? "checkmark" : "bag-outline"}
+                  size={16}
+                  color={inCart ? "#237A4B" : "#FFFFFF"}
+                />
+                <Text
                   style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 9,
-                    paddingVertical: 8,
-                    backgroundColor: isFavorite ? "#FFDDE2" : "#FFF1F2",
+                    fontSize: 12,
+                    fontWeight: "800",
+                    color: inCart ? "#237A4B" : "#FFFFFF",
                   }}
                 >
-                  <Ionicons
-                    name={isFavorite ? "heart" : "heart-outline"}
-                    size={23}
-                    color={isFavorite ? "#C2415D" : "#A75D6C"}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => toggleCart(product)}
-                  style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 9,
-                    paddingVertical: 8,
-                    backgroundColor: inCart ? "#CDEDDD" : "#EAF7F0",
-                  }}
-                >
-                  <Ionicons
-                    name={inCart ? "bag" : "bag-outline"}
-                    size={23}
-                    color={inCart ? "#237A4B" : "#5F9274"}
-                  />
-                </Pressable>
-              </View>
+                  {inCart ? "In cart" : "Add to cart"}
+                </Text>
+              </Pressable>
             </View>
           );
         }}
@@ -522,10 +663,35 @@ export default function BuyMaterialsScreen() {
             />
           ) : (
             <View style={{ alignItems: "center", marginTop: 80 }}>
-              <Ionicons name="bag-outline" size={48} color="#2E7A4F" />
+              <Ionicons
+                name={hasActiveFilter ? "search-outline" : "bag-outline"}
+                size={48}
+                color="#2E7A4F"
+              />
               <Text style={{ marginTop: 12, color: "#5A7A6E" }}>
-                No materials available
+                {hasActiveFilter
+                  ? "No materials match these filters"
+                  : "No materials available"}
               </Text>
+              {hasActiveFilter && (
+                <Pressable
+                  onPress={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("All");
+                  }}
+                  style={{
+                    marginTop: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: "#E2EDE7",
+                  }}
+                >
+                  <Text style={{ color: "#2E7A4F", fontWeight: "700" }}>
+                    Clear filters
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )
         }

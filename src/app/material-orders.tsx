@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -12,12 +13,25 @@ import {
     View,
 } from "react-native";
 import api from "../api";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import { getMaterialImage } from "../lib/materials-store";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";
 const MUTED = "#5A7A6E";
+
+const getOrderItemImage = (item: any) =>
+  getMaterialImage({
+    ...item,
+    images:
+      item?.images ??
+      item?.image ??
+      item?.image_url ??
+      item?.product?.images ??
+      item?.product?.image,
+  });
 
 export default function MaterialOrdersScreen() {
   const router = useRouter();
@@ -110,29 +124,63 @@ export default function MaterialOrdersScreen() {
                   <Text
                     style={{ fontSize: 16, fontWeight: "800", color: DARK }}
                   >
-                    Order #{order.order_id || order.id || "-"}
+                    Order #
+                    {String(order.order_id || order.id || "-")
+                      .replace(/\D/g, "")
+                      .slice(-3) || "-"}
                   </Text>
                   <Text style={{ color: GREEN, fontWeight: "800" }}>
-                    Rs. {Number(order.total_amount || 0).toFixed(2)}
+                    ₹ {formatCurrencyAmount(order.total_amount || 0)}
                   </Text>
                 </View>
-                <Text style={{ marginTop: 8, color: MUTED }}>
-                  {order.created_at
-                    ? new Date(order.created_at).toLocaleDateString()
-                    : "Recent order"}
-                </Text>
-                <Text style={{ marginTop: 5, color: DARK }}>
-                  {order.items?.length || 0} material item(s)
-                </Text>
-                <Text
+                <View
                   style={{
-                    marginTop: 8,
-                    color: MUTED,
-                    textTransform: "capitalize",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 10,
                   }}
                 >
-                  Status: {order.status || "pending"}
-                </Text>
+                  <View
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 8,
+                      backgroundColor: "#F1F5F2",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {order.items?.[0] ? (
+                      <Image
+                        source={{ uri: getOrderItemImage(order.items[0]) }}
+                        style={{ width: "100%", height: "100%" }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Ionicons name="image-outline" size={22} color={MUTED} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ color: MUTED, fontSize: 12 }}>
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleDateString()
+                        : "Recent order"}
+                    </Text>
+                    <Text style={{ marginTop: 5, color: DARK }}>
+                      {order.items?.length || 0} material item(s)
+                    </Text>
+                    <Text
+                      style={{
+                        marginTop: 5,
+                        color: MUTED,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      Status: {order.status || "pending"}
+                    </Text>
+                  </View>
+                </View>
               </Pressable>
             ))
           )}
@@ -182,7 +230,10 @@ export default function MaterialOrdersScreen() {
                   <Text
                     style={{ fontSize: 21, fontWeight: "800", color: DARK }}
                   >
-                    Order #{selectedOrder?.order_id || selectedOrder?.id || "-"}
+                    Order #
+                    {String(selectedOrder?.order_id || selectedOrder?.id || "-")
+                      .replace(/\D/g, "")
+                      .slice(-3) || "-"}
                   </Text>
                   <Pressable onPress={() => setSelectedOrder(null)} hitSlop={8}>
                     <Ionicons name="close-circle" size={26} color={MUTED} />
@@ -269,20 +320,32 @@ export default function MaterialOrdersScreen() {
                         key={item.id || item.product_id || itemIndex}
                         style={{
                           flexDirection: "row",
-                          justifyContent: "space-between",
+                          alignItems: "center",
                           paddingVertical: 11,
                           borderBottomWidth: 1,
                           borderBottomColor: "#E2EDE7",
                         }}
                       >
-                        <Text style={{ flex: 1, color: DARK }}>
+                        <Image
+                          source={{ uri: getOrderItemImage(item) }}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 7,
+                            backgroundColor: "#F1F5F2",
+                          }}
+                          contentFit="cover"
+                        />
+                        <Text
+                          style={{ flex: 1, marginHorizontal: 10, color: DARK }}
+                        >
                           {item.name ||
                             item.product_name ||
                             `Material ${itemIndex + 1}`}{" "}
                           x{item.quantity || 1}
                         </Text>
                         <Text style={{ fontWeight: "700", color: GREEN }}>
-                          Rs. {item.price || 0}
+                          ₹ {formatCurrencyAmount(item.price || 0)}
                         </Text>
                       </View>
                     ),
@@ -302,7 +365,7 @@ export default function MaterialOrdersScreen() {
                     <Text
                       style={{ fontSize: 18, fontWeight: "800", color: GREEN }}
                     >
-                      Rs. {Number(selectedOrder?.total_amount || 0).toFixed(2)}
+                      ₹ {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
                     </Text>
                   </View>
                 </ScrollView>

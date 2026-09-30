@@ -15,11 +15,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
-import { showAppDialog } from "../lib/app-dialog";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import { colors } from "../theme/colors";
 import BottomBar from "../components/buttombar";
 import TopHeader from "../components/topheader";
+import { showAppDialog } from "../lib/app-dialog";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
+import { colors } from "../theme/colors";
 
 // Strip /api suffix to get the bare server origin e.g. http://192.168.1.2:5000
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -254,7 +255,7 @@ function DishCard({
                 color: colors.primaryDark,
               }}
             >
-              ₹{Number(dish.price).toFixed(2).replace(/\.00$/, "")}
+              ₹{formatCurrencyAmount(dish.price)}
             </Text>
             {dish.mrp && dish.mrp > dish.price && (
               <Text
@@ -265,7 +266,7 @@ function DishCard({
                   textDecorationLine: "line-through",
                 }}
               >
-                ₹{Number(dish.mrp).toFixed(2).replace(/\.00$/, "")}
+                ₹{formatCurrencyAmount(dish.mrp)}
               </Text>
             )}
           </View>

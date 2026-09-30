@@ -6,31 +6,31 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Linking,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Linking,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-  API_BASE_URL,
-  getHomeChefAttendance,
-  getStoredUser,
-  logoutUser,
-  setHomeChefAttendanceStatus,
+    API_BASE_URL,
+    getHomeChefAttendance,
+    getStoredUser,
+    logoutUser,
+    setHomeChefAttendanceStatus,
 } from "../api";
 import BottomBar from "../components/buttombar";
 import {
-  hasCachedPageData,
-  setCachedPageData,
-  usePageCacheState,
+    hasCachedPageData,
+    setCachedPageData,
+    usePageCacheState,
 } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 
@@ -750,7 +750,9 @@ export default function ProfileScreen() {
       const data = await getHomeChefAttendance();
       const currentSession =
         data?.currentSession ?? data?.current_session ?? data?.session ?? null;
-      setAttendance(currentSession ? { ...data, currentSession } : data || null);
+      setAttendance(
+        currentSession ? { ...data, currentSession } : data || null,
+      );
     } catch (error) {
       if ((error as any)?.status === 401) return;
       setAttendance(null);
@@ -767,7 +769,9 @@ export default function ProfileScreen() {
         result?.current_session ??
         result?.session ??
         null;
-      setAttendance(currentSession ? { ...result, currentSession } : result || null);
+      setAttendance(
+        currentSession ? { ...result, currentSession } : result || null,
+      );
       showDialog({
         title: action === "check_in" ? "Checked in" : "Checked out",
         message:
@@ -1092,7 +1096,7 @@ export default function ProfileScreen() {
               tintColor={colors.primary}
             />
           }
-          contentContainerStyle={{ paddingBottom: 110 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
         >
           {/* ════════════════════════════════════ HERO HEADER */}
           <View style={{ backgroundColor: "#2E7A4F" }}>
@@ -1679,7 +1683,11 @@ export default function ProfileScreen() {
                   }
                 >
                   <Ionicons
-                    name={attendance?.currentSession ? "checkmark-circle" : "time-outline"}
+                    name={
+                      attendance?.currentSession
+                        ? "checkmark-circle"
+                        : "time-outline"
+                    }
                     size={20}
                     color={attendance?.currentSession ? "#2E7A4F" : "#E65100"}
                   />
@@ -1730,7 +1738,9 @@ export default function ProfileScreen() {
                 }
               >
                 {attendance?.currentSession
-                  ? `Checked in since ${new Date(attendance.currentSession.check_in_at).toLocaleTimeString("en-IN", {
+                  ? `Checked in since ${new Date(
+                      attendance.currentSession.check_in_at,
+                    ).toLocaleTimeString("en-IN", {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}`
@@ -1745,10 +1755,13 @@ export default function ProfileScreen() {
                     Latest session
                   </Text>
                   <Text className="mt-1 text-[13px] font-bold text-[#1A3328]">
-                    {new Date(todaysAttendance.check_in_at).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                    })}
+                    {new Date(todaysAttendance.check_in_at).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                      },
+                    )}
                   </Text>
                 </View>
                 <Text className="self-center text-[13px] font-bold text-[#1A3328]">
