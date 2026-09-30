@@ -10,14 +10,15 @@ import {
     View,
 } from "react-native";
 import api, { API_BASE_URL } from "../../api";
+import PageHeader from "../../components/pageheader";
 import { showAppDialog } from "../../lib/app-dialog";
+import { formatCurrencyAmount } from "../../lib/format-currency";
 import {
     hasCachedPageData,
     usePageCacheState,
     usePageLoadingState,
 } from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
-import PageHeader from "../../components/pageheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
@@ -212,7 +213,7 @@ export default function DishDetailsScreen() {
             color: colors.primary,
           }}
         >
-          ₹{Number(finalPrice).toFixed(2)}
+          ₹{formatCurrencyAmount(finalPrice)}
         </Text>
 
         <View
@@ -228,7 +229,10 @@ export default function DishDetailsScreen() {
           <DetailRow label="Dietary tag" value={dish.dietary_tag} />
           <DetailRow label="Net weight" value={dish.net_weight} />
           <DetailRow label="Packaging" value={dish.packaging_type} />
-          <DetailRow label="MRP" value={dish.mrp ? `₹${dish.mrp}` : null} />
+          <DetailRow
+            label="MRP"
+            value={dish.mrp ? `₹${formatCurrencyAmount(dish.mrp)}` : null}
+          />
           <DetailRow
             label="Offer"
             value={dish.offer ? `${dish.offer}%` : null}

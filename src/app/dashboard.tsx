@@ -17,11 +17,12 @@ import api, {
     getApiErrorMessage,
     isNewOrderStatus,
 } from "../api";
-import { showAppDialog } from "../lib/app-dialog";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import { colors } from "../theme/colors";
 import BottomBar from "../components/buttombar";
 import TopHeader from "../components/topheader";
+import { showAppDialog } from "../lib/app-dialog";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
+import { colors } from "../theme/colors";
 
 // ── Mini chart fallback without external SVG dependency ─────────────────────
 function Sparkline({
@@ -378,11 +379,11 @@ export default function DashboardScreen() {
               </Text>
               <Text style={styles.popupAmount}>
                 ₹
-                {Number(
+                {formatCurrencyAmount(
                   popupOrder?.chef_total_amount ??
                     popupOrder?.total_amount ??
                     0,
-                ).toLocaleString("en-IN")}
+                )}
               </Text>
             </View>
             <View style={styles.popupActions}>
@@ -433,10 +434,7 @@ export default function DashboardScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.earningsLabel}>Earnings Today</Text>
             <Text style={styles.earningsAmount}>
-              ₹
-              {todayEarnings.toLocaleString("en-IN", {
-                minimumFractionDigits: 0,
-              })}
+              ₹{formatCurrencyAmount(todayEarnings)}
             </Text>
             <View style={styles.earningsBadgeRow}>
               <View
@@ -463,7 +461,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <Text style={styles.earningsMeta}>
-                Total: ₹{totalEarnings.toLocaleString("en-IN")}
+                Total: ₹{formatCurrencyAmount(totalEarnings)}
               </Text>
             </View>
           </View>
@@ -637,9 +635,9 @@ export default function DashboardScreen() {
                   </View>
                   <Text style={styles.orderAmt}>
                     ₹
-                    {Number(
+                    {formatCurrencyAmount(
                       order.chef_total_amount ?? order.total_amount ?? 0,
-                    ).toLocaleString("en-IN")}
+                    )}
                   </Text>
                 </View>
               </Pressable>

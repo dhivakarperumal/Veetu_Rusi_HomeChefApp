@@ -3,15 +3,16 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-import {
-  CART_KEY,
-  getMaterialImage,
-  loadMaterialCollection,
-  saveMaterialCollection,
-  setMaterialInCollection,
-} from "../lib/materials-store";
 import BottomBar from "../components/buttombar";
 import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import {
+    CART_KEY,
+    getMaterialImage,
+    loadMaterialCollection,
+    saveMaterialCollection,
+    setMaterialInCollection,
+} from "../lib/materials-store";
 
 export default function CartScreen() {
   const router = useRouter();
@@ -107,8 +108,10 @@ export default function CartScreen() {
                 style={{ marginTop: 5, fontWeight: "700", color: "#2E7A4F" }}
               >
                 Rs.{" "}
-                {Number(item.offer_price || item.price || item.mrp || 0) *
-                  (Number(item.quantity) || 1)}
+                {formatCurrencyAmount(
+                  Number(item.offer_price || item.price || item.mrp || 0) *
+                    (Number(item.quantity) || 1),
+                )}
               </Text>
               <View
                 style={{
@@ -188,7 +191,7 @@ export default function CartScreen() {
               Total
             </Text>
             <Text style={{ fontSize: 18, fontWeight: "800", color: "#2E7A4F" }}>
-              Rs. {total}
+              Rs. {formatCurrencyAmount(total)}
             </Text>
           </View>
           <Pressable

@@ -3,6 +3,8 @@ import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import {
     CART_KEY,
     FAVORITES_KEY,
@@ -11,7 +13,6 @@ import {
     setMaterialInCollection,
     showMaterialToast,
 } from "../lib/materials-store";
-import PageHeader from "../components/pageheader";
 
 export default function MaterialProductScreen() {
   const router = useRouter();
@@ -175,7 +176,7 @@ export default function MaterialProductScreen() {
               color: "#2E7A4F",
             }}
           >
-            Rs. {price}
+            Rs. {formatCurrencyAmount(price)}
           </Text>
           {product.category && (
             <Text style={{ marginTop: 12, color: "#5A7A6E" }}>

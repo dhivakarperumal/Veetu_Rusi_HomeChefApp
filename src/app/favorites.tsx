@@ -3,17 +3,18 @@ import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-import {
-  CART_KEY,
-  FAVORITES_KEY,
-  addMaterialsToCart,
-  getMaterialImage,
-  loadMaterialCollection,
-  setMaterialInCollection,
-  showMaterialToast,
-} from "../lib/materials-store";
 import BottomBar from "../components/buttombar";
 import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import {
+    CART_KEY,
+    FAVORITES_KEY,
+    addMaterialsToCart,
+    getMaterialImage,
+    loadMaterialCollection,
+    setMaterialInCollection,
+    showMaterialToast,
+} from "../lib/materials-store";
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -121,7 +122,10 @@ export default function FavoritesScreen() {
               <Text
                 style={{ marginTop: 5, fontWeight: "700", color: "#2E7A4F" }}
               >
-                Rs. {item.offer_price || item.price || item.mrp || 0}
+                Rs.{" "}
+                {formatCurrencyAmount(
+                  item.offer_price || item.price || item.mrp || 0,
+                )}
               </Text>
             </View>
             <Pressable

@@ -14,10 +14,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api, { API_BASE_URL, getStoredUser } from "../api";
+import PageHeader from "../components/pageheader";
 import { showAppDialog } from "../lib/app-dialog";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "../components/pageheader";
 
 // ── Image Helper ──────────────────────────────────────────────────────────────
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -687,7 +688,7 @@ export default function MenuScreen() {
                             marginBottom: 6,
                           }}
                         >
-                          ₹{item.price.toFixed(2)}
+                          ₹{formatCurrencyAmount(item.price)}
                         </Text>
 
                         <Text

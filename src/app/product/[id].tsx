@@ -10,14 +10,15 @@ import {
     View,
 } from "react-native";
 import api, { API_BASE_URL } from "../../api";
+import PageHeader from "../../components/pageheader";
 import { showAppDialog } from "../../lib/app-dialog";
+import { formatCurrencyAmount } from "../../lib/format-currency";
 import {
     hasCachedPageData,
     usePageCacheState,
     usePageLoadingState,
 } from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
-import PageHeader from "../../components/pageheader";
 
 const IMAGE_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
 
@@ -212,7 +213,7 @@ export default function ProductDetailsScreen() {
             color: colors.primary,
           }}
         >
-          ₹{Number(finalPrice || 0).toFixed(2)}
+          ₹{formatCurrencyAmount(finalPrice)}
         </Text>
 
         <View
@@ -230,7 +231,7 @@ export default function ProductDetailsScreen() {
           <DetailRow label="Packaging" value={product.packaging_type} />
           <DetailRow
             label="MRP"
-            value={product.mrp ? `₹${product.mrp}` : null}
+            value={product.mrp ? `₹${formatCurrencyAmount(product.mrp)}` : null}
           />
           <DetailRow
             label="Offer"

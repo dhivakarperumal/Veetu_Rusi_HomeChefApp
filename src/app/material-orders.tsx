@@ -1,3 +1,5 @@
+                    Rs. {formatCurrencyAmount(order.total_amount || 0)}
+                      Rs. {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -13,6 +15,7 @@ import {
     View,
 } from "react-native";
 import api from "../api";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { getMaterialImage } from "../lib/materials-store";
 import PageHeader from "../components/pageheader";
@@ -130,7 +133,7 @@ export default function MaterialOrdersScreen() {
                     }
                   </Text>
                   <Text style={{ color: GREEN, fontWeight: "800" }}>
-                    Rs. {Number(order.total_amount || 0).toFixed(2)}
+                    Rs. {formatCurrencyAmount(order.total_amount || 0)}
                   </Text>
                 </View>
                 <View
@@ -343,7 +346,7 @@ export default function MaterialOrdersScreen() {
                           x{item.quantity || 1}
                         </Text>
                         <Text style={{ fontWeight: "700", color: GREEN }}>
-                          Rs. {item.price || 0}
+                          Rs. {formatCurrencyAmount(item.price || 0)}
                         </Text>
                       </View>
                     ),
@@ -363,7 +366,7 @@ export default function MaterialOrdersScreen() {
                     <Text
                       style={{ fontSize: 18, fontWeight: "800", color: GREEN }}
                     >
-                      Rs. {Number(selectedOrder?.total_amount || 0).toFixed(2)}
+                      Rs. {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
                     </Text>
                   </View>
                 </ScrollView>

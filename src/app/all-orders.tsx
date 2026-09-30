@@ -12,9 +12,10 @@ import {
     View,
 } from "react-native";
 import api, { getApiErrorMessage } from "../api";
+import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import PageHeader from "../components/pageheader";
 
 type AllOrder = {
   id: string;
@@ -504,7 +505,7 @@ export default function AllOrdersPage() {
                         fontWeight: "700",
                       }}
                     >
-                      ₹{order.amount.toFixed(2)}
+                      ₹{formatCurrencyAmount(order.amount)}
                     </Text>
                   </View>
                   <View

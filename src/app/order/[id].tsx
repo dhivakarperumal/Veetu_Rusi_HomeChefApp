@@ -3,26 +3,27 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Linking,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    Text,
-    View,
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api, {
-    API_BASE_URL,
-    getApiErrorMessage,
-    isNewOrderStatus,
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
 } from "../../api";
 import { showAppDialog } from "../../lib/app-dialog";
+import { formatCurrencyAmount } from "../../lib/format-currency";
 import {
-    hasCachedPageData,
-    usePageCacheState,
-    usePageLoadingState,
+  hasCachedPageData,
+  usePageCacheState,
+  usePageLoadingState,
 } from "../../lib/page-cache";
 import { colors } from "../../theme/colors";
 
@@ -180,7 +181,6 @@ const ORDER_TRACKING_STAGES = [
   "Delivery Partner Assigned",
   "Out for Delivery",
   "Delivered",
-  
 ];
 
 function OrderStatusTracker({ status }: { status: string }) {
@@ -1022,10 +1022,7 @@ export default function OrderDetailScreen() {
                       color: colors.primaryDark,
                     }}
                   >
-                    ₹
-                    {Number(item.price || item.total_price || 0)
-                      .toFixed(2)
-                      .replace(/\.00$/, "")}
+                    ₹{formatCurrencyAmount(item.price || item.total_price || 0)}
                   </Text>
                 </View>
                 {idx < parsedItems.length - 1 && (
@@ -1069,7 +1066,7 @@ export default function OrderDetailScreen() {
                 fontWeight: "500",
               }}
             >
-              ₹{itemTotal.toFixed(2).replace(/\.00$/, "")}
+              ₹{formatCurrencyAmount(itemTotal)}
             </Text>
           </View>
 
@@ -1092,7 +1089,7 @@ export default function OrderDetailScreen() {
                   fontWeight: "500",
                 }}
               >
-                ₹{deliveryCharge.toFixed(2).replace(/\.00$/, "")}
+                ₹{formatCurrencyAmount(deliveryCharge)}
               </Text>
             </View>
           )}
@@ -1116,7 +1113,7 @@ export default function OrderDetailScreen() {
                   fontWeight: "500",
                 }}
               >
-                ₹{platformFee.toFixed(2).replace(/\.00$/, "")}
+                ₹{formatCurrencyAmount(platformFee)}
               </Text>
             </View>
           )}
@@ -1143,7 +1140,7 @@ export default function OrderDetailScreen() {
             <Text
               style={{ fontSize: 20, fontWeight: "800", color: colors.primary }}
             >
-              ₹{grandTotal.toFixed(2).replace(/\.00$/, "")}
+              ₹{formatCurrencyAmount(grandTotal)}
             </Text>
           </View>
         </View>

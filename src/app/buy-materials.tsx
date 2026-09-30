@@ -12,6 +12,9 @@ import {
     View,
 } from "react-native";
 import api, { getStoredUser } from "../api";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
 import {
     CART_KEY,
     FAVORITES_KEY,
@@ -26,8 +29,6 @@ import {
     setCachedPageData,
     usePageCacheState,
 } from "../lib/page-cache";
-import BottomBar from "../components/buttombar";
-import TopHeader from "../components/topheader";
 
 type Product = {
   id: string | number;
@@ -463,7 +464,9 @@ export default function BuyMaterialsScreen() {
                     }}
                   >
                     Rs.{" "}
-                    {product.offer_price || product.price || product.mrp || 0}
+                    {formatCurrencyAmount(
+                      product.offer_price || product.price || product.mrp || 0,
+                    )}
                   </Text>
                 </View>
               </Pressable>
