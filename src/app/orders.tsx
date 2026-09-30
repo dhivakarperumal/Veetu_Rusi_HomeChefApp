@@ -5,26 +5,26 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import api, {
-    API_BASE_URL,
-    getApiErrorMessage,
-    isNewOrderStatus,
+  API_BASE_URL,
+  getApiErrorMessage,
+  isNewOrderStatus,
 } from "../api";
+import BottomBar from "../components/buttombar";
+import TopHeader from "../components/topheader";
 import { showAppDialog } from "../lib/app-dialog";
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
-import BottomBar from "../components/buttombar";
-import TopHeader from "../components/topheader";
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
@@ -113,6 +113,8 @@ interface Order {
   status: OrderStatus;
   rawStatus: string;
   customer: string;
+  firstItemImage?: string;
+  itemNames: string[];
   items: number;
   amount: number;
   location: string;
@@ -188,6 +190,90 @@ const formatOrderDateTime = (value: unknown): string | undefined => {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+const getFirstItemImage = (items: unknown): string | undefined => {
+  if (!Array.isArray(items) || !items[0]) return undefined;
+
+  const item = items[0];
+  const imageValues = [
+    item.image,
+    item.image_url,
+    item.product_image,
+    item.food_image,
+    item.images,
+    item.packaging_image,
+    item.product?.image,
+    item.product?.image_url,
+    item.product?.product_image,
+    item.product?.images,
+    item.food?.image,
+    item.food?.image_url,
+    item.food?.images,
+  ];
+
+  for (const value of imageValues) {
+    let candidate = value;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (Array.isArray(candidate)) {
+        candidate = candidate.find(Boolean);
+        continue;
+      }
+      if (candidate && typeof candidate === "object") {
+        candidate =
+          candidate.url ||
+          candidate.uri ||
+          candidate.path ||
+          candidate.image ||
+          candidate.src;
+        continue;
+      }
+      if (typeof candidate !== "string" || !candidate.trim()) break;
+
+      try {
+        candidate = JSON.parse(candidate.trim());
+      } catch {
+        candidate = candidate.trim();
+        break;
+      }
+    }
+
+    if (typeof candidate !== "string" || !candidate.trim()) continue;
+    const imagePath = candidate
+      .trim()
+      .replace(/https?:\/\/(localhost|127\.0\.0\.1):5000/g, API_ORIGIN);
+    if (/^https?:\/\//i.test(imagePath) || imagePath.startsWith("data:")) {
+      return imagePath;
+    }
+    return imagePath.startsWith("/")
+      ? `${API_ORIGIN}${imagePath}`
+      : `${API_ORIGIN}/${imagePath}`;
+  }
+
+  return undefined;
+};
+
+const getOrderItemNames = (items: unknown): string[] => {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map(
+      (item: any) =>
+        item?.name ||
+        item?.item_name ||
+        item?.product_name ||
+        item?.food_name ||
+        item?.dish_name ||
+        item?.product?.name ||
+        item?.product?.product_name ||
+        item?.food?.name ||
+        item?.food?.food_name,
+    )
+    .filter(
+      (name: unknown): name is string =>
+        typeof name === "string" && name.trim().length > 0,
+    )
+    .map((name: string) => name.trim());
 };
 
 const normalizeTimestamp = (value: unknown): string | undefined => {
@@ -333,6 +419,7 @@ function OrderCard({
   busy?: boolean;
 }) {
   const cfg = STATUS_CONFIG[order.status];
+  const itemNames = Array.isArray(order.itemNames) ? order.itemNames : [];
   const rawStatus = (order.rawStatus || "").toLowerCase();
   const showAccept = order.status === "New";
   const showStartCooking =
@@ -413,7 +500,7 @@ function OrderCard({
             }}
             numberOfLines={1}
           >
-            Order #{order.order_id}
+            Order #{String(order.order_id).replace(/\D/g, "").slice(-3)}
           </Text>
           <View
             style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}
@@ -448,48 +535,42 @@ function OrderCard({
         >
           <View
             style={{
-              height: 42,
-              width: 42,
-              borderRadius: 21,
+              height: 48,
+              width: 48,
+              borderRadius: 8,
               backgroundColor: colors.softCard,
               alignItems: "center",
               justifyContent: "center",
               marginRight: 12,
+              overflow: "hidden",
             }}
           >
-            <Ionicons name="person" size={20} color={colors.primarySoft} />
+            {order.firstItemImage ? (
+              <ExpoImage
+                source={{ uri: order.firstItemImage }}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+              />
+            ) : (
+              <Ionicons name="person" size={20} color={colors.primarySoft} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                color: colors.primaryDark,
-                fontSize: 15,
-                fontWeight: "700",
-              }}
-            >
-              {order.customer}
-            </Text>
+            {itemNames.length > 0 && (
+              <Text
+                style={{
+                  color: colors.primaryDark,
+                  fontSize: 13,
+                  fontWeight: "600",
+                }}
+              >
+                {itemNames.join(", ")}
+              </Text>
+            )}
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
               {order.items} {order.items === 1 ? "item" : "items"}
             </Text>
           </View>
-        </View>
-
-        {/* Location */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom:
-              showAccept || showStartCooking || showStart || nextStatus
-                ? 14
-                : 0,
-          }}
-        >
-          <Ionicons name="location-outline" size={14} color={colors.muted} />
-          <Text style={{ color: colors.muted, fontSize: 12, marginLeft: 4 }}>
-            {order.location}
-          </Text>
         </View>
 
         {(order.acceptedTime ||
@@ -854,7 +935,6 @@ const TABS: OrderTab[] = [
   "Out for Delivery",
   "Delivered",
   "Cancelled",
-  
 ];
 
 const matchesTab = (order: Order, tab: OrderTab) => {
@@ -964,6 +1044,8 @@ export default function OrdersScreen() {
           rawStatus: orderStatus,
           preparationMinutes: getOrderPreparationMinutes(o),
           customer: o.customer_name || "Unknown",
+          firstItemImage: getFirstItemImage(o.items),
+          itemNames: getOrderItemNames(o.items),
           items:
             o.chef_total_quantity ??
             (o.items?.reduce(

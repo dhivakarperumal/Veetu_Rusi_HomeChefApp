@@ -175,15 +175,12 @@ function SectionTitle({ title }: { title: string }) {
 const ORDER_TRACKING_STAGES = [
   "New",
   "Preparing",
-  "Cooking",
-  "Ready",
   "Packing",
-  "Packed",
   "Searching Delivery Partner",
   "Delivery Partner Assigned",
   "Out for Delivery",
   "Delivered",
-  "Completed",
+  
 ];
 
 function OrderStatusTracker({ status }: { status: string }) {
