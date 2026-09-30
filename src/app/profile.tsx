@@ -1092,7 +1092,7 @@ export default function ProfileScreen() {
               tintColor={colors.primary}
             />
           }
-          contentContainerStyle={{ paddingBottom: 110 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
         >
           {/* ════════════════════════════════════ HERO HEADER */}
           <View style={{ backgroundColor: "#2E7A4F" }}>

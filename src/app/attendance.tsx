@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -17,8 +18,7 @@ import {
     getHomeChefAttendance,
     setHomeChefAttendanceStatus,
 } from "../api";
-import BottomBar from "../components/buttombar";
-import TopHeader from "../components/topheader";
+import PageHeader from "../components/pageheader";
 import { showAppDialog } from "../lib/app-dialog";
 import { colors } from "../theme/colors";
 
@@ -75,6 +75,7 @@ function normalizeAttendance(value: any): AttendanceData {
 }
 
 export default function AttendanceScreen() {
+  const router = useRouter();
   const [attendance, setAttendance] = useState(EMPTY_ATTENDANCE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -204,7 +205,13 @@ export default function AttendanceScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.pageBackground }} edges={["left", "right"]}>
-      <TopHeader showHero={false} title="Attendance" />
+      <PageHeader
+        title="Attendance"
+        onLeftPress={() => router.back()}
+        headerBackgroundColor={colors.primary}
+        headerForegroundColor="#FFFFFF"
+        titleFontSize={18}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -434,8 +441,6 @@ export default function AttendanceScreen() {
           </View>
         )}
       </ScrollView>
-      <BottomBar />
-
       <Modal
         visible={showDatePicker}
         transparent
