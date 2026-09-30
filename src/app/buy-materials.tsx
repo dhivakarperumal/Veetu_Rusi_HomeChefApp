@@ -33,7 +33,8 @@ import {
 type Product = {
   id: string | number;
   name: string;
-  category?: string;
+  category?: unknown;
+  category_name?: unknown;
   description?: string;
   price?: number | string;
   mrp?: number | string;
@@ -49,6 +50,20 @@ type Product = {
 
 const getImage = (product: Product) => {
   return getMaterialImage(product);
+};
+
+const getCategoryName = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim();
+  }
+  if (!value || typeof value !== "object") return "";
+
+  const category = value as Record<string, unknown>;
+  const name =
+    category.name ?? category.category_name ?? category.label ?? category.title;
+  return typeof name === "string" || typeof name === "number"
+    ? String(name).trim()
+    : "";
 };
 
 export default function BuyMaterialsScreen() {
@@ -177,7 +192,11 @@ export default function BuyMaterialsScreen() {
         "All",
         ...new Set(
           matchingProducts
-            .map((product) => product.category)
+            .map(
+              (product) =>
+                getCategoryName(product.category_name) ||
+                getCategoryName(product.category),
+            )
             .filter(Boolean) as string[],
         ),
       ]);
@@ -234,17 +253,24 @@ export default function BuyMaterialsScreen() {
 
   const visibleProducts = products.filter((product) => {
     const search = searchTerm.trim().toLowerCase();
+    const categoryName =
+      getCategoryName(product.category_name) ||
+      getCategoryName(product.category);
     const matchesSearch =
       !search ||
-      [product.name, product.description, product.category].some((value) =>
+      [product.name, product.description, categoryName].some((value) =>
         String(value || "")
           .toLowerCase()
           .includes(search),
       );
     const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
+      selectedCategory.trim().toLowerCase() === "all" ||
+      categoryName.toLowerCase() === selectedCategory.trim().toLowerCase();
     return matchesSearch && matchesCategory;
   });
+  const hasActiveFilter =
+    searchTerm.trim().length > 0 ||
+    selectedCategory.trim().toLowerCase() !== "all";
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
@@ -330,6 +356,7 @@ export default function BuyMaterialsScreen() {
 
       <FlatList
         data={visibleProducts}
+        extraData={{ searchTerm, selectedCategory, favoriteIds, cartIds }}
         numColumns={2}
         columnWrapperStyle={{
           gap: 12,
@@ -559,7 +586,8 @@ export default function BuyMaterialsScreen() {
                   numberOfLines={2}
                 >
                   {product.description ||
-                    product.category ||
+                    (getCategoryName(product.category_name) ||
+                      getCategoryName(product.category)) ||
                     "Quality cooking material"}
                 </Text>
                 <View
@@ -635,10 +663,35 @@ export default function BuyMaterialsScreen() {
             />
           ) : (
             <View style={{ alignItems: "center", marginTop: 80 }}>
-              <Ionicons name="bag-outline" size={48} color="#2E7A4F" />
+              <Ionicons
+                name={hasActiveFilter ? "search-outline" : "bag-outline"}
+                size={48}
+                color="#2E7A4F"
+              />
               <Text style={{ marginTop: 12, color: "#5A7A6E" }}>
-                No materials available
+                {hasActiveFilter
+                  ? "No materials match these filters"
+                  : "No materials available"}
               </Text>
+              {hasActiveFilter && (
+                <Pressable
+                  onPress={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("All");
+                  }}
+                  style={{
+                    marginTop: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: "#E2EDE7",
+                  }}
+                >
+                  <Text style={{ color: "#2E7A4F", fontWeight: "700" }}>
+                    Clear filters
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )
         }
