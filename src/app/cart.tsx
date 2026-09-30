@@ -62,7 +62,14 @@ export default function CartScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F6F1" }}>
-      <PageHeader title="Cart" onLeftPress={() => router.back()} />
+      <PageHeader
+        title="Cart"
+        onLeftPress={() => router.back()}
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        safeAreaBackgroundColor="#2E7A4F"
+        titleFontSize={18}
+      />
       <FlatList
         data={items}
         keyExtractor={(item) => String(item.id)}

@@ -63,6 +63,10 @@ export default function FavoritesScreen() {
       <PageHeader
         title="Favorites"
         onLeftPress={() => router.back()}
+        headerBackgroundColor="#2E7A4F"
+        headerForegroundColor="#FFFFFF"
+        safeAreaBackgroundColor="#2E7A4F"
+        titleFontSize={18}
         rightActions={
           [
             {

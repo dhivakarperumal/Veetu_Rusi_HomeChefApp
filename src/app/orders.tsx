@@ -24,8 +24,6 @@ import BottomBar from "../components/buttombar";
 import TopHeader from "../components/topheader";
 import { showAppDialog } from "../lib/app-dialog";
 import { formatCurrencyAmount } from "../lib/format-currency";
-import { formatCurrencyAmount } from "../lib/format-currency";
-              ₹{formatCurrencyAmount(order.amount)}
 import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 import { colors } from "../theme/colors";
 
