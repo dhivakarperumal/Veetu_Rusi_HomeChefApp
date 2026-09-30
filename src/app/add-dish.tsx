@@ -459,7 +459,6 @@ export default function AddDishScreen() {
       !form.category && "Category",
       !form.cuisine && "Cuisine",
       !form.prep_time.trim() && "Preparation Time",
-      !form.shelf_life_days.trim() && "Shelf Life",
       !form.mrp.trim() && "MRP",
       !form.offer.trim() && "Offer",
       !form.net_weight.trim() && "Net Weight",
@@ -726,27 +725,13 @@ export default function AddDishScreen() {
           </View>
         </FormGroup>
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Preparation Time" required>
-              <InputField
-                value={form.prep_time}
-                onChangeText={(t) => updateForm("prep_time", t)}
-                placeholder="e.g. 30 mins"
-              />
-            </FormGroup>
-          </View>
-          <View style={{ flex: 1 }}>
-            <FormGroup label="Shelf Life (Days)" required>
-              <InputField
-                value={form.shelf_life_days}
-                onChangeText={(t) => updateForm("shelf_life_days", t)}
-                placeholder="e.g. 2"
-                keyboardType="numeric"
-              />
-            </FormGroup>
-          </View>
-        </View>
+        <FormGroup label="Preparation Time" required>
+          <InputField
+            value={form.prep_time}
+            onChangeText={(t) => updateForm("prep_time", t)}
+            placeholder="e.g. 30 mins"
+          />
+        </FormGroup>
 
         {/* ── Pricing & Packaging ── */}
         <SectionHeader title="Pricing & Packaging" />
