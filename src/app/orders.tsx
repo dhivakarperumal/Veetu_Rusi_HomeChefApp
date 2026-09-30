@@ -192,6 +192,28 @@ const formatOrderDateTime = (value: unknown): string | undefined => {
   });
 };
 
+const formatOrderListTime = (value: unknown): string => {
+  if (!value) return "-";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const dateLabel =
+    date.toDateString() === today.toDateString()
+      ? "Today"
+      : date.toDateString() === yesterday.toDateString()
+        ? "Yesterday"
+        : date.toLocaleDateString([], { day: "2-digit", month: "short" });
+  const timeLabel = date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${dateLabel}, ${timeLabel}`;
+};
+
 const getFirstItemImage = (items: unknown): string | undefined => {
   if (!Array.isArray(items) || !items[0]) return undefined;
 
@@ -466,8 +488,8 @@ function OrderCard({
       style={{
         backgroundColor: colors.cardBackground,
         borderRadius: 16,
-        marginTop: 12,
-        marginBottom: 12,
+        marginTop: 8,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: colors.border,
         overflow: "hidden",
@@ -485,7 +507,7 @@ function OrderCard({
           justifyContent: "space-between",
           alignItems: "center",
           paddingHorizontal: 16,
-          paddingVertical: 13,
+          paddingVertical: 10,
           backgroundColor: "#2E7A4F",
           borderBottomWidth: 1,
           borderBottomColor: "#286E48",
@@ -525,23 +547,23 @@ function OrderCard({
         </View>
       </View>
 
-      <View style={{ padding: 16 }}>
+      <View style={{ padding: 12 }}>
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            marginBottom: 8,
+            marginBottom: 4,
           }}
         >
           <View
             style={{
-              height: 48,
-              width: 48,
+              height: 42,
+              width: 42,
               borderRadius: 8,
               backgroundColor: colors.softCard,
               alignItems: "center",
               justifyContent: "center",
-              marginRight: 12,
+              marginRight: 10,
               overflow: "hidden",
             }}
           >
@@ -560,14 +582,15 @@ function OrderCard({
               <Text
                 style={{
                   color: colors.primaryDark,
-                  fontSize: 13,
+                  fontSize: 12,
+                  lineHeight: 16,
                   fontWeight: "600",
                 }}
               >
                 {itemNames.join(", ")}
               </Text>
             )}
-            <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>
               {order.items} {order.items === 1 ? "item" : "items"}
             </Text>
           </View>
@@ -580,11 +603,11 @@ function OrderCard({
             style={{
               flexDirection: "row",
               flexWrap: "wrap",
-              gap: 12,
-              marginTop: 8,
+              gap: 8,
+              marginTop: 4,
               marginBottom:
                 showAccept || showStartCooking || showStart || nextStatus
-                  ? 14
+                  ? 8
                   : 0,
             }}
           >
@@ -762,8 +785,8 @@ function OrderCard({
       {/* Card footer */}
       <View
         style={{
-          paddingHorizontal: 16,
-          paddingVertical: 13,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: "#FBFCFA",
@@ -775,9 +798,7 @@ function OrderCard({
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom:
-              showAccept || showStartCooking || showStart || nextStatus
-                ? 12
-                : 0,
+              showAccept || showStartCooking || showStart || nextStatus ? 8 : 0,
           }}
         >
           <View>
@@ -787,7 +808,7 @@ function OrderCard({
             <Text
               style={{
                 color: colors.primaryDark,
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: "800",
                 marginTop: 2,
               }}
@@ -815,7 +836,7 @@ function OrderCard({
                 borderWidth: 1,
                 borderColor: "#C62828",
                 borderRadius: 14,
-                paddingVertical: 13,
+                paddingVertical: 10,
                 alignItems: "center",
               }}
             >
@@ -832,7 +853,7 @@ function OrderCard({
                 flex: 1.5,
                 backgroundColor: colors.primary,
                 borderRadius: 14,
-                paddingVertical: 13,
+                paddingVertical: 10,
                 alignItems: "center",
               }}
             >
@@ -852,7 +873,7 @@ function OrderCard({
               backgroundColor:
                 busy || !canStartCooking ? colors.muted : colors.primary,
               borderRadius: 14,
-              paddingVertical: 13,
+              paddingVertical: 10,
               alignItems: "center",
             }}
           >
@@ -883,7 +904,7 @@ function OrderCard({
             style={{
               backgroundColor: colors.primary,
               borderRadius: 14,
-              paddingVertical: 13,
+              paddingVertical: 10,
               alignItems: "center",
             }}
           >
@@ -910,7 +931,7 @@ function OrderCard({
                   ? colors.muted
                   : colors.primary,
               borderRadius: 14,
-              paddingVertical: 13,
+              paddingVertical: 10,
               alignItems: "center",
             }}
           >
@@ -1077,13 +1098,7 @@ export default function OrdersScreen() {
             o.delivery_partner_vehicle ||
             o.deliveryPartner?.vehicle ||
             o.delivery_partner?.vehicle,
-          time:
-            o.ordered_at || o.created_at
-              ? new Date(o.ordered_at || o.created_at).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "-",
+          time: formatOrderListTime(o.ordered_at || o.created_at),
           acceptedTime: formatOrderDateTime(acceptedAt),
           acceptedAt,
           deliveryAt,

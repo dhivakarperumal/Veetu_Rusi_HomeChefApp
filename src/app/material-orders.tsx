@@ -110,7 +110,11 @@ export default function MaterialOrdersScreen() {
                   <Text
                     style={{ fontSize: 16, fontWeight: "800", color: DARK }}
                   >
-                    Order #{order.order_id || order.id || "-"}
+                    Order #{
+                      String(order.order_id || order.id || "-")
+                        .replace(/\D/g, "")
+                        .slice(-3) || "-"
+                    }
                   </Text>
                   <Text style={{ color: GREEN, fontWeight: "800" }}>
                     Rs. {Number(order.total_amount || 0).toFixed(2)}
@@ -182,7 +186,10 @@ export default function MaterialOrdersScreen() {
                   <Text
                     style={{ fontSize: 21, fontWeight: "800", color: DARK }}
                   >
-                    Order #{selectedOrder?.order_id || selectedOrder?.id || "-"}
+                    Order #
+                    {String(
+                      selectedOrder?.order_id || selectedOrder?.id || "-",
+                    ).replace(/\D/g, "").slice(-3) || "-"}
                   </Text>
                   <Pressable onPress={() => setSelectedOrder(null)} hitSlop={8}>
                     <Ionicons name="close-circle" size={26} color={MUTED} />
