@@ -39,6 +39,12 @@ type Product = {
   mrp?: number | string;
   offer_price?: number | string;
   images?: string[] | string;
+  rating?: number | string;
+  average_rating?: number | string;
+  avg_rating?: number | string;
+  reviews?: number | string | unknown[];
+  review_count?: number | string;
+  reviews_count?: number | string;
 };
 
 const getImage = (product: Product) => {
@@ -417,6 +423,17 @@ export default function BuyMaterialsScreen() {
           );
           const comparePrice = Number(product.mrp || 0);
           const hasComparePrice = comparePrice > currentPrice;
+          const rating = Number(
+            product.rating ?? product.average_rating ?? product.avg_rating ?? 0,
+          );
+          const reviewCountValue =
+            product.review_count ??
+            product.reviews_count ??
+            (Array.isArray(product.reviews)
+              ? product.reviews.length
+              : product.reviews) ??
+            0;
+          const reviewCount = Number(reviewCountValue);
           const openProductDetails = () =>
             router.push({
               pathname: "/material-product",
@@ -504,10 +521,37 @@ export default function BuyMaterialsScreen() {
                 >
                   {product.name}
                 </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    minHeight: 17,
+                    marginTop: 2,
+                  }}
+                >
+                  <Ionicons name="star" size={12} color="#E2A52E" />
+                  <Text
+                    style={{
+                      color: "#52665B",
+                      fontSize: 11,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {Number.isFinite(rating) && rating > 0
+                      ? rating.toFixed(1)
+                      : "New"}
+                  </Text>
+                  {Number.isFinite(reviewCount) && reviewCount > 0 && (
+                    <Text style={{ color: "#87958E", fontSize: 10 }}>
+                      ({reviewCount})
+                    </Text>
+                  )}
+                </View>
                 <Text
                   style={{
                     minHeight: 32,
-                    marginTop: 3,
+                    marginTop: 4,
                     color: "#6B7D74",
                     fontSize: 11,
                     lineHeight: 16,

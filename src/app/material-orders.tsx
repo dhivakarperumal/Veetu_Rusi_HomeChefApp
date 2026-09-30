@@ -365,8 +365,7 @@ export default function MaterialOrdersScreen() {
                     <Text
                       style={{ fontSize: 18, fontWeight: "800", color: GREEN }}
                     >
-                      ₹{" "}
-                      {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
+                      ₹ {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
                     </Text>
                   </View>
                 </ScrollView>
