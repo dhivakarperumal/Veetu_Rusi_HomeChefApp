@@ -848,16 +848,13 @@ const TABS: OrderTab[] = [
   "All Status",
   "New",
   "Preparing",
-  "Cooking",
-  "Ready",
   "Packing",
-  "Packed",
   "Searching Delivery Partner",
   "Delivery Partner Assigned",
   "Out for Delivery",
   "Delivered",
   "Cancelled",
-  "Completed",
+  
 ];
 
 const matchesTab = (order: Order, tab: OrderTab) => {
