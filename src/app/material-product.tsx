@@ -176,7 +176,7 @@ export default function MaterialProductScreen() {
               color: "#2E7A4F",
             }}
           >
-            Rs. {formatCurrencyAmount(price)}
+            ₹ {formatCurrencyAmount(price)}
           </Text>
           {product.category && (
             <Text style={{ marginTop: 12, color: "#5A7A6E" }}>

@@ -412,6 +412,11 @@ export default function BuyMaterialsScreen() {
           const productId = String(product.id);
           const isFavorite = favoriteIds.has(productId);
           const inCart = cartIds.has(productId);
+          const currentPrice = Number(
+            product.offer_price || product.price || product.mrp || 0,
+          );
+          const comparePrice = Number(product.mrp || 0);
+          const hasComparePrice = comparePrice > currentPrice;
           const openProductDetails = () =>
             router.push({
               pathname: "/material-product",
@@ -421,98 +426,159 @@ export default function BuyMaterialsScreen() {
             <View
               style={{
                 flex: 1,
-                backgroundColor: "#fff",
-                borderRadius: 14,
-                padding: 10,
-                marginBottom: 12,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 15,
+                borderWidth: 1,
+                borderColor: "#E3EBE5",
+                padding: 9,
+                marginBottom: 14,
                 minWidth: 0,
-                minHeight: 338,
+                shadowColor: "#183A2B",
+                shadowOpacity: 0.06,
+                shadowOffset: { width: 0, height: 3 },
+                shadowRadius: 8,
+                elevation: 2,
               }}
             >
-              <Pressable onPress={openProductDetails} style={{ flex: 1 }}>
-                <Image
-                  source={{ uri: getImage(product) }}
-                  style={{ width: "100%", aspectRatio: 1, borderRadius: 10 }}
-                  contentFit="cover"
-                />
-                <View style={{ marginTop: 10 }}>
-                  <Text
+              <View style={{ position: "relative" }}>
+                <Pressable
+                  onPress={openProductDetails}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${product.name}`}
+                >
+                  <Image
+                    source={{ uri: getImage(product) }}
                     style={{
-                      height: 22,
-                      fontSize: 16,
-                      fontWeight: "800",
-                      color: "#214D38",
+                      width: "100%",
+                      aspectRatio: 1.12,
+                      borderRadius: 11,
+                      backgroundColor: "#F1F5F2",
                     }}
-                    numberOfLines={1}
-                  >
-                    {product.name}
-                  </Text>
-                  <Text
-                    style={{ height: 40, marginTop: 4, color: "#5A7A6E" }}
-                    numberOfLines={2}
-                  >
-                    {product.description ||
-                      product.category ||
-                      "Quality cooking material"}
-                  </Text>
+                    contentFit="cover"
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleFavorite(product)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isFavorite ? "Remove from favorites" : "Add to favorites"
+                  }
+                  accessibilityState={{ selected: isFavorite }}
+                  style={{
+                    position: "absolute",
+                    top: 7,
+                    right: 7,
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(255,255,255,0.96)",
+                    shadowColor: "#183A2B",
+                    shadowOpacity: 0.12,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    elevation: 2,
+                  }}
+                >
+                  <Ionicons
+                    name={isFavorite ? "heart" : "heart-outline"}
+                    size={19}
+                    color={isFavorite ? "#C2415D" : "#6B7D74"}
+                  />
+                </Pressable>
+              </View>
+              <Pressable
+                onPress={openProductDetails}
+                style={{ flex: 1, paddingTop: 9 }}
+              >
+                <Text
+                  style={{
+                    minHeight: 36,
+                    fontSize: 14,
+                    lineHeight: 18,
+                    fontWeight: "800",
+                    color: "#214D38",
+                  }}
+                  numberOfLines={2}
+                >
+                  {product.name}
+                </Text>
+                <Text
+                  style={{
+                    minHeight: 32,
+                    marginTop: 3,
+                    color: "#6B7D74",
+                    fontSize: 11,
+                    lineHeight: 16,
+                  }}
+                  numberOfLines={2}
+                >
+                  {product.description ||
+                    product.category ||
+                    "Quality cooking material"}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "baseline",
+                    gap: 6,
+                    marginTop: 7,
+                  }}
+                >
                   <Text
                     style={{
-                      marginTop: 6,
                       fontSize: 15,
                       fontWeight: "800",
                       color: "#2E7A4F",
                     }}
                   >
-                    Rs.{" "}
-                    {formatCurrencyAmount(
-                      product.offer_price || product.price || product.mrp || 0,
-                    )}
+                    ₹ {formatCurrencyAmount(currentPrice)}
                   </Text>
+                  {hasComparePrice && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#87958E",
+                        textDecorationLine: "line-through",
+                      }}
+                    >
+                      ₹ {formatCurrencyAmount(comparePrice)}
+                    </Text>
+                  )}
                 </View>
               </Pressable>
-              <View
+              <Pressable
+                onPress={() => toggleCart(product)}
+                accessibilityRole="button"
+                accessibilityLabel={inCart ? "In cart" : "Add to cart"}
+                accessibilityState={{ selected: inCart }}
                 style={{
                   flexDirection: "row",
-                  justifyContent: "space-between",
-                  gap: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 7,
+                  minHeight: 39,
                   marginTop: 10,
+                  borderRadius: 10,
+                  backgroundColor: inCart ? "#E5F2E9" : "#2E7A4F",
                 }}
               >
-                <Pressable
-                  onPress={() => toggleFavorite(product)}
+                <Ionicons
+                  name={inCart ? "checkmark" : "bag-outline"}
+                  size={16}
+                  color={inCart ? "#237A4B" : "#FFFFFF"}
+                />
+                <Text
                   style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 9,
-                    paddingVertical: 8,
-                    backgroundColor: isFavorite ? "#FFDDE2" : "#FFF1F2",
+                    fontSize: 12,
+                    fontWeight: "800",
+                    color: inCart ? "#237A4B" : "#FFFFFF",
                   }}
                 >
-                  <Ionicons
-                    name={isFavorite ? "heart" : "heart-outline"}
-                    size={23}
-                    color={isFavorite ? "#C2415D" : "#A75D6C"}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => toggleCart(product)}
-                  style={{
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 9,
-                    paddingVertical: 8,
-                    backgroundColor: inCart ? "#CDEDDD" : "#EAF7F0",
-                  }}
-                >
-                  <Ionicons
-                    name={inCart ? "bag" : "bag-outline"}
-                    size={23}
-                    color={inCart ? "#237A4B" : "#5F9274"}
-                  />
-                </Pressable>
-              </View>
+                  {inCart ? "In cart" : "Add to cart"}
+                </Text>
+              </Pressable>
             </View>
           );
         }}

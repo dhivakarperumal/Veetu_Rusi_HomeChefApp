@@ -126,7 +126,7 @@ export default function FavoritesScreen() {
               <Text
                 style={{ marginTop: 5, fontWeight: "700", color: "#2E7A4F" }}
               >
-                Rs.{" "}
+                ₹{" "}
                 {formatCurrencyAmount(
                   item.offer_price || item.price || item.mrp || 0,
                 )}

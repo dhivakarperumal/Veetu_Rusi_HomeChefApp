@@ -13,10 +13,10 @@ import {
     View,
 } from "react-native";
 import api from "../api";
-import { formatCurrencyAmount } from "../lib/format-currency";
-import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
-import { getMaterialImage } from "../lib/materials-store";
 import PageHeader from "../components/pageheader";
+import { formatCurrencyAmount } from "../lib/format-currency";
+import { getMaterialImage } from "../lib/materials-store";
+import { hasCachedPageData, usePageCacheState } from "../lib/page-cache";
 
 const GREEN = "#2E7A4F";
 const DARK = "#214D38";
@@ -124,14 +124,13 @@ export default function MaterialOrdersScreen() {
                   <Text
                     style={{ fontSize: 16, fontWeight: "800", color: DARK }}
                   >
-                    Order #{
-                      String(order.order_id || order.id || "-")
-                        .replace(/\D/g, "")
-                        .slice(-3) || "-"
-                    }
+                    Order #
+                    {String(order.order_id || order.id || "-")
+                      .replace(/\D/g, "")
+                      .slice(-3) || "-"}
                   </Text>
                   <Text style={{ color: GREEN, fontWeight: "800" }}>
-                    Rs. {formatCurrencyAmount(order.total_amount || 0)}
+                    ₹ {formatCurrencyAmount(order.total_amount || 0)}
                   </Text>
                 </View>
                 <View
@@ -232,9 +231,9 @@ export default function MaterialOrdersScreen() {
                     style={{ fontSize: 21, fontWeight: "800", color: DARK }}
                   >
                     Order #
-                    {String(
-                      selectedOrder?.order_id || selectedOrder?.id || "-",
-                    ).replace(/\D/g, "").slice(-3) || "-"}
+                    {String(selectedOrder?.order_id || selectedOrder?.id || "-")
+                      .replace(/\D/g, "")
+                      .slice(-3) || "-"}
                   </Text>
                   <Pressable onPress={() => setSelectedOrder(null)} hitSlop={8}>
                     <Ionicons name="close-circle" size={26} color={MUTED} />
@@ -337,14 +336,16 @@ export default function MaterialOrdersScreen() {
                           }}
                           contentFit="cover"
                         />
-                        <Text style={{ flex: 1, marginHorizontal: 10, color: DARK }}>
+                        <Text
+                          style={{ flex: 1, marginHorizontal: 10, color: DARK }}
+                        >
                           {item.name ||
                             item.product_name ||
                             `Material ${itemIndex + 1}`}{" "}
                           x{item.quantity || 1}
                         </Text>
                         <Text style={{ fontWeight: "700", color: GREEN }}>
-                          Rs. {formatCurrencyAmount(item.price || 0)}
+                          ₹ {formatCurrencyAmount(item.price || 0)}
                         </Text>
                       </View>
                     ),
@@ -364,7 +365,8 @@ export default function MaterialOrdersScreen() {
                     <Text
                       style={{ fontSize: 18, fontWeight: "800", color: GREEN }}
                     >
-                      Rs. {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
+                      ₹{" "}
+                      {formatCurrencyAmount(selectedOrder?.total_amount || 0)}
                     </Text>
                   </View>
                 </ScrollView>

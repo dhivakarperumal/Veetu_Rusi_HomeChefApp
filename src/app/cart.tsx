@@ -114,7 +114,7 @@ export default function CartScreen() {
               <Text
                 style={{ marginTop: 5, fontWeight: "700", color: "#2E7A4F" }}
               >
-                Rs.{" "}
+                ₹{" "}
                 {formatCurrencyAmount(
                   Number(item.offer_price || item.price || item.mrp || 0) *
                     (Number(item.quantity) || 1),
@@ -198,7 +198,7 @@ export default function CartScreen() {
               Total
             </Text>
             <Text style={{ fontSize: 18, fontWeight: "800", color: "#2E7A4F" }}>
-              Rs. {formatCurrencyAmount(total)}
+              ₹ {formatCurrencyAmount(total)}
             </Text>
           </View>
           <Pressable

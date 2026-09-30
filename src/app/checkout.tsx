@@ -741,7 +741,7 @@ export default function CheckoutScreen() {
                 {item.name} x{Number(item.quantity) || 1}
               </Text>
               <Text style={{ fontWeight: "700", color: GREEN }}>
-                Rs.{" "}
+                ₹{" "}
                 {formatCurrencyAmount(
                   Number(item.offer_price || item.price || item.mrp || 0) *
                     (Number(item.quantity) || 1),
@@ -763,7 +763,7 @@ export default function CheckoutScreen() {
               Total
             </Text>
             <Text style={{ fontSize: 18, fontWeight: "800", color: GREEN }}>
-              Rs. {formatCurrencyAmount(total)}
+              ₹ {formatCurrencyAmount(total)}
             </Text>
           </View>
         </View>
